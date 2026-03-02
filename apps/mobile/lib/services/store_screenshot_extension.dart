@@ -57,8 +57,8 @@ void registerStoreScreenshotExtensions() {
     description:
         'Navigate to a store screenshot scenario by name. '
         'Available scenarios: Session List (Recent), Session List, '
-        'Multi-Question Approval, Markdown Input, Session List (Named), '
-        'Image Attach, Git Diff, New Session, Coding Session, Task Planning',
+        'Multi-Question Approval, Markdown Input, '
+        'Image Attach, Git Diff, New Session',
     callback: (params) async {
       final scenario = params['scenario'];
       if (scenario == null || scenario.isEmpty) {
@@ -120,16 +120,6 @@ void _pushStoreScenario(NavigatorState navigator, String scenarioName) {
           ),
         ),
       );
-    case 'Session List (Named)':
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => _StoreSessionListRoute(
-            draftService: draftService,
-            minimalRunning: true,
-            useNamedSessions: true,
-          ),
-        ),
-      );
     case 'New Session':
       navigator.push(
         MaterialPageRoute(
@@ -158,13 +148,6 @@ void _pushStoreScenario(NavigatorState navigator, String scenarioName) {
       navigator.push(
         MaterialPageRoute(builder: (_) => const _StoreDiffRoute()),
       );
-    default:
-      // Legacy chat scenarios: Coding Session, Task Planning
-      navigator.push(
-        MaterialPageRoute(
-          builder: (_) => _StoreChatRoute(scenarioName: scenarioName),
-        ),
-      );
   }
 }
 
@@ -180,12 +163,10 @@ void _pushStoreScenario(NavigatorState navigator, String scenarioName) {
 class _StoreSessionListRoute extends StatefulWidget {
   final DraftService? draftService;
   final bool minimalRunning;
-  final bool useNamedSessions;
 
   const _StoreSessionListRoute({
     this.draftService,
     this.minimalRunning = false,
-    this.useNamedSessions = false,
   });
 
   @override
@@ -215,9 +196,7 @@ class _StoreSessionListRouteState extends State<_StoreSessionListRoute> {
     final running = widget.minimalRunning
         ? storeRunningSessionsMinimal()
         : storeRunningSessions();
-    final recent = widget.useNamedSessions
-        ? storeRecentSessionsNamed()
-        : storeRecentSessions();
+    final recent = storeRecentSessions();
     final projectPaths = {
       ...running.map((s) => s.projectPath),
       ...recent.map((s) => s.projectPath),
@@ -284,7 +263,7 @@ class _StoreSessionListRouteState extends State<_StoreSessionListRoute> {
   }
 }
 
-/// Chat route for store screenshots (Multi-Question, Coding Session, etc.).
+/// Chat route for store screenshots (Multi-Question Approval).
 class _StoreChatRoute extends StatefulWidget {
   final String scenarioName;
   const _StoreChatRoute({required this.scenarioName});
@@ -302,8 +281,6 @@ class _StoreChatRouteState extends State<_StoreChatRoute> {
     _mockService = MockBridgeService();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final history = switch (widget.scenarioName) {
-        'Coding Session' => storeChatCodingSession,
-        'Task Planning' => storeChatTaskPlanning,
         'Multi-Question Approval' => storeChatMultiQuestion,
         _ => <ServerMessage>[],
       };

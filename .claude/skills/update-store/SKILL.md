@@ -40,18 +40,17 @@ head -80 CHANGELOG.md
 AskUserQuestion（multiSelect）で更新対象を確認する。
 変更分析結果に基づいて推奨をdescriptionに含める。
 
-**スクリーンショット（8シナリオ）:**
+**スクリーンショット（7シナリオ）:**
 
 | Key | シナリオ名 | 内容 |
 |-----|-----------|------|
-| `01_session_list` | Session List (Recent) | ホーム画面（最近のセッション） |
+| `01_session_list` | Session List (Recent) | ホーム画面（名前付きセッション） |
 | `02_approval_list` | Session List | 承認待ち一覧（3セッション） |
 | `03_multi_question` | Multi-Question Approval | 質問UI（3問） |
 | `04_markdown_input` | Markdown Input | Markdown箇条書き入力 |
-| `05_named_sessions` | Session List (Named) | 名前付きセッション |
-| `06_image_attach` | Image Attach | 画像添付UI |
-| `07_git_diff` | Git Diff | Diff表示画面 |
-| `08_new_session` | New Session | 新規セッションシート |
+| `05_image_attach` | Image Attach | 画像添付UI |
+| `06_git_diff` | Git Diff | Diff表示画面 |
+| `07_new_session` | New Session | 新規セッションシート |
 
 **メタデータテキスト:**
 
@@ -192,10 +191,9 @@ git diff --stat
 | Session List | `02_approval_list` |
 | Multi-Question Approval | `03_multi_question` |
 | Markdown Input | `04_markdown_input` |
-| Session List (Named) | `05_named_sessions` |
-| Image Attach | `06_image_attach` |
-| Git Diff | `07_git_diff` |
-| New Session | `08_new_session` |
+| Image Attach | `05_image_attach` |
+| Git Diff | `06_git_diff` |
+| New Session | `07_new_session` |
 
 ## 注意事項
 

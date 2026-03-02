@@ -128,17 +128,6 @@ class _ScenariosTab extends StatelessWidget {
             ),
           ),
         );
-      case 'Session List (Named)':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => _StoreSessionListWrapper(
-              draftService: draftService,
-              minimalRunning: true,
-              useNamedSessions: true,
-            ),
-          ),
-        );
       case 'New Session':
         Navigator.push(
           context,
@@ -176,16 +165,6 @@ class _ScenariosTab extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const _StoreDiffWrapper()),
-        );
-      default:
-        // Legacy chat scenarios (Coding Session, Task Planning)
-        final mockService = MockBridgeService();
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) =>
-                _StoreChatWrapper(mockService: mockService, scenario: scenario),
-          ),
         );
     }
   }
@@ -839,11 +818,9 @@ class _MockSessionListWrapperState extends State<_MockSessionListWrapper> {
 class _StoreSessionListWrapper extends StatefulWidget {
   final DraftService draftService;
   final bool minimalRunning;
-  final bool useNamedSessions;
   const _StoreSessionListWrapper({
     required this.draftService,
     this.minimalRunning = false,
-    this.useNamedSessions = false,
   });
 
   @override
@@ -874,9 +851,7 @@ class _StoreSessionListWrapperState extends State<_StoreSessionListWrapper> {
     final running = widget.minimalRunning
         ? storeRunningSessionsMinimal()
         : storeRunningSessions();
-    final recent = widget.useNamedSessions
-        ? storeRecentSessionsNamed()
-        : storeRecentSessions();
+    final recent = storeRecentSessions();
     final projectPaths = {
       ...running.map((s) => s.projectPath),
       ...recent.map((s) => s.projectPath),
@@ -958,8 +933,6 @@ class _StoreChatWrapperState extends State<_StoreChatWrapper> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final history = switch (widget.scenario.name) {
-        'Coding Session' => storeChatCodingSession,
-        'Task Planning' => storeChatTaskPlanning,
         'Multi-Question Approval' => storeChatMultiQuestion,
         _ => <ServerMessage>[],
       };
