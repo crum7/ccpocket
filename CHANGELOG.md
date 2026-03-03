@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.30.0] - 2026-03-03
+
+### Added
+- Project path validation with `BRIDGE_ALLOWED_DIRS` whitelist support
+- Allowed directories display in New Session sheet for path input assistance
+- API key SecureStorage migration (from SharedPreferences plaintext to FlutterSecureStorage)
+- Dismissible swipe-to-delete for recent projects with confirmation dialog
+
+### Changed
+- Reactive project list: projects appear immediately on connect (fixed broadcast stream race condition)
+- Project removal UI changed from long-press to swipe gesture
+
+### Fixed
+- Recent projects not appearing in New Session sheet on first connect (broadcast stream timing)
+
 ## [1.29.0] - 2026-03-02
 
 ### Added
