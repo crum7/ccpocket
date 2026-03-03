@@ -2,6 +2,12 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.10.1] - 2026-03-04
+
+### Fixed
+- Restore slash commands on `get_history` after history eviction — long sessions (100+ messages) lost `init`/`supported_commands` from in-memory history, causing slash completion to fall back to 4 built-in commands when re-entering the session
+- Protect `system` messages from history eviction alongside `user_input`
+
 ## [1.10.0] - 2026-03-03
 
 ### Added
