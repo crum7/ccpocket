@@ -2,6 +2,14 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.11.0] - 2026-03-06
+
+### Added
+- Deliver available model lists (Claude / Codex) in `session_list` message so clients can display dynamic dropdowns instead of hardcoded values
+
+### Changed
+- Update model lists to latest versions: Claude 4.6 series (opus, sonnet, haiku), Codex gpt-5.4 default
+
 ## [1.10.1] - 2026-03-04
 
 ### Fixed

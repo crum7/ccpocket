@@ -30,7 +30,7 @@ import type { PromptHistoryBackupStore } from "./prompt-history-backup.js";
 const CLAUDE_MODELS: string[] = [
   "claude-opus-4-6",
   "claude-sonnet-4-6",
-  "claude-haiku-4-5",
+  "claude-haiku-4-6",
 ];
 
 const CODEX_MODELS: string[] = [
