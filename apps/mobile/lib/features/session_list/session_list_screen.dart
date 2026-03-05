@@ -730,14 +730,40 @@ class _SessionListScreenState extends State<SessionListScreen>
     }
 
     if (action == 'archive') {
-      if (_archivingSessionIds.contains(session.sessionId)) return;
-      setState(() => _archivingSessionIds.add(session.sessionId));
-      context.read<BridgeService>().archiveSession(
-        sessionId: session.sessionId,
-        provider: session.provider ?? 'claude',
-        projectPath: session.projectPath,
-      );
+      _archiveSessionWithConfirm(session);
     }
+  }
+
+  Future<void> _archiveSessionWithConfirm(RecentSession session) async {
+    if (_archivingSessionIds.contains(session.sessionId)) return;
+    final l = AppLocalizations.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.archiveConfirm),
+        content: Text(l.archiveConfirmMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l.cancel),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l.archive),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _archivingSessionIds.add(session.sessionId));
+    context.read<BridgeService>().archiveSession(
+      sessionId: session.sessionId,
+      provider: session.provider ?? 'claude',
+      projectPath: session.projectPath,
+    );
   }
 
   void _navigateToChat(
@@ -1088,6 +1114,7 @@ class _SessionListScreenState extends State<SessionListScreen>
                   },
                   onResumeSession: _resumeSession,
                   onLongPressRecentSession: _showRecentSessionActions,
+                  onArchiveSession: _archiveSessionWithConfirm,
                   onLongPressRunningSession: _showRunningSessionActions,
                   onSelectProject: (path) =>
                       context.read<SessionListCubit>().selectProject(path),

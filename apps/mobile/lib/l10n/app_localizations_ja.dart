@@ -1041,6 +1041,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get archive => 'アーカイブ';
 
   @override
+  String get archiveConfirm => 'このセッションをアーカイブしますか？';
+
+  @override
+  String get archiveConfirmMessage =>
+      'セッションは一覧から非表示になります。Claude Codeからは引き続きアクセスできます。';
+
+  @override
   String get sessionArchived => 'セッションをアーカイブしました';
 
   @override

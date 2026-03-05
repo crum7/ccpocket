@@ -2036,6 +2036,18 @@ abstract class AppLocalizations {
   /// **'アーカイブ'**
   String get archive;
 
+  /// No description provided for @archiveConfirm.
+  ///
+  /// In ja, this message translates to:
+  /// **'このセッションをアーカイブしますか？'**
+  String get archiveConfirm;
+
+  /// No description provided for @archiveConfirmMessage.
+  ///
+  /// In ja, this message translates to:
+  /// **'セッションは一覧から非表示になります。Claude Codeからは引き続きアクセスできます。'**
+  String get archiveConfirmMessage;
+
   /// No description provided for @sessionArchived.
   ///
   /// In ja, this message translates to:

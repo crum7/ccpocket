@@ -481,6 +481,8 @@
   "voiceInputLanguage": "音声入力の言語",
 
   "archive": "アーカイブ",
+  "archiveConfirm": "このセッションをアーカイブしますか？",
+  "archiveConfirmMessage": "セッションは一覧から非表示になります。Claude Codeからは引き続きアクセスできます。",
   "sessionArchived": "セッションをアーカイブしました",
   "archiveFailed": "セッションのアーカイブに失敗しました",
   "archiveFailedWithError": "セッションのアーカイブに失敗しました: {error}",

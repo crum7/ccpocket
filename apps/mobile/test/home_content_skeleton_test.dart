@@ -125,6 +125,7 @@ Widget _buildHomeContent({
             onStopSession: (_) {},
             onResumeSession: (_) {},
             onLongPressRecentSession: (_) {},
+            onArchiveSession: (_) {},
             onLongPressRunningSession: (_) {},
             onSelectProject: (_) {},
             onLoadMore: () {},

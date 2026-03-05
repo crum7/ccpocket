@@ -406,6 +406,8 @@
   "voiceInputLanguage": "Voice Input Language",
 
   "archive": "Archive",
+  "archiveConfirm": "Archive this session?",
+  "archiveConfirmMessage": "This session will be hidden from the list. You can still access it from Claude Code.",
   "sessionArchived": "Session archived",
   "archiveFailed": "Failed to archive session",
   "archiveFailedWithError": "Failed to archive session: {error}",

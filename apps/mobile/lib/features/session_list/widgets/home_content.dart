@@ -52,6 +52,7 @@ class HomeContent extends StatefulWidget {
   onAnswerQuestion;
   final ValueChanged<RecentSession> onResumeSession;
   final ValueChanged<RecentSession> onLongPressRecentSession;
+  final ValueChanged<RecentSession> onArchiveSession;
   final ValueChanged<SessionInfo> onLongPressRunningSession;
   final ValueChanged<String?> onSelectProject;
   final VoidCallback onLoadMore;
@@ -81,6 +82,7 @@ class HomeContent extends StatefulWidget {
     this.onAnswerQuestion,
     required this.onResumeSession,
     required this.onLongPressRecentSession,
+    required this.onArchiveSession,
     required this.onLongPressRunningSession,
     required this.onSelectProject,
     required this.onLoadMore,
@@ -380,17 +382,30 @@ class _HomeContentState extends State<HomeContent> {
               )
             else
               for (final session in filteredSessions)
-                RecentSessionCard(
-                  session: session,
-                  displayMode: _displayMode,
-                  draftText: context.read<DraftService>().getDraft(
-                    session.sessionId,
+                Dismissible(
+                  key: ValueKey('recent_session_${session.sessionId}'),
+                  direction: DismissDirection.endToStart,
+                  background: const SizedBox.shrink(),
+                  secondaryBackground: _ArchiveSessionSwipeBackground(
+                    color: Theme.of(context).colorScheme.error,
                   ),
-                  isProcessing: widget.archivingSessionIds.contains(
-                    session.sessionId,
+                  confirmDismiss: (_) async {
+                    widget.onArchiveSession(session);
+                    // Keep the card visible; the archive flow handles removal.
+                    return false;
+                  },
+                  child: RecentSessionCard(
+                    session: session,
+                    displayMode: _displayMode,
+                    draftText: context.read<DraftService>().getDraft(
+                      session.sessionId,
+                    ),
+                    isProcessing: widget.archivingSessionIds.contains(
+                      session.sessionId,
+                    ),
+                    onTap: () => widget.onResumeSession(session),
+                    onLongPress: () => widget.onLongPressRecentSession(session),
                   ),
-                  onTap: () => widget.onResumeSession(session),
-                  onLongPress: () => widget.onLongPressRecentSession(session),
                 ),
             if (widget.hasMoreSessions) ...[
               const SizedBox(height: 8),
@@ -460,6 +475,27 @@ class _RecentSessionsEmptyResult extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ArchiveSessionSwipeBackground extends StatelessWidget {
+  final Color color;
+
+  const _ArchiveSessionSwipeBackground({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.centerRight,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Icon(Icons.archive_outlined, color: color),
     );
   }
 }

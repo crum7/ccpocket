@@ -1055,6 +1055,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get archive => 'Archive';
 
   @override
+  String get archiveConfirm => 'Archive this session?';
+
+  @override
+  String get archiveConfirmMessage =>
+      'This session will be hidden from the list. You can still access it from Claude Code.';
+
+  @override
   String get sessionArchived => 'Session archived';
 
   @override
