@@ -55,6 +55,8 @@ class BridgeService implements BridgeServiceBase {
   List<GalleryImage> _galleryImages = [];
   List<String> _projectHistory = [];
   List<String> _allowedDirs = [];
+  List<String> _claudeModels = [];
+  List<String> _codexModels = [];
   UsageResultMessage? _lastUsageResult;
 
   // Diff image cache: survives screen navigation, cleared on session stop.
@@ -120,6 +122,8 @@ class BridgeService implements BridgeServiceBase {
   List<GalleryImage> get galleryImages => _galleryImages;
   List<String> get projectHistory => _projectHistory;
   List<String> get allowedDirs => _allowedDirs;
+  List<String> get claudeModels => _claudeModels;
+  List<String> get codexModels => _codexModels;
   UsageResultMessage? get lastUsageResult => _lastUsageResult;
 
   /// The last WebSocket URL used for connection (or reconnection).
@@ -170,10 +174,17 @@ class BridgeService implements BridgeServiceBase {
             final sessionId = json['sessionId'] as String?;
             final msg = ServerMessage.fromJson(json);
             switch (msg) {
-              case SessionListMessage(:final sessions, :final allowedDirs):
+              case SessionListMessage(
+                :final sessions,
+                :final allowedDirs,
+                :final claudeModels,
+                :final codexModels,
+              ):
                 _sessions = sessions;
                 _sessionListController.add(_sessions);
                 _allowedDirs = allowedDirs;
+                _claudeModels = claudeModels;
+                _codexModels = codexModels;
               case RecentSessionsMessage(:final sessions, :final hasMore):
                 _recentSessionsHasMore = hasMore;
                 if (_appendMode) {

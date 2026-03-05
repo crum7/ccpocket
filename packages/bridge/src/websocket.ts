@@ -25,6 +25,21 @@ import { type PushLocale, normalizePushLocale, t } from "./push-i18n.js";
 import { fetchAllUsage } from "./usage.js";
 import type { PromptHistoryBackupStore } from "./prompt-history-backup.js";
 
+// ---- Available model lists (delivered to clients via session_list) ----
+
+const CLAUDE_MODELS: string[] = [
+  "claude-sonnet-4-5",
+  "claude-opus-4",
+  "claude-haiku-4-5",
+];
+
+const CODEX_MODELS: string[] = [
+  "gpt-5.3-codex",
+  "gpt-5.3-codex-spark",
+  "gpt-5.2-codex",
+  "gpt-5.1-codex-max",
+];
+
 // ---- Codex mode mapping helpers ----
 
 /** Map unified PermissionMode to Codex approval_policy.
@@ -1665,14 +1680,14 @@ export class BridgeWebSocketServer {
   private sendSessionList(ws: WebSocket): void {
     this.pruneDebugEvents();
     const sessions = this.sessionManager.list();
-    this.send(ws, { type: "session_list", sessions, allowedDirs: this.allowedDirs });
+    this.send(ws, { type: "session_list", sessions, allowedDirs: this.allowedDirs, claudeModels: CLAUDE_MODELS, codexModels: CODEX_MODELS });
   }
 
   /** Broadcast session list to all connected clients. */
   private broadcastSessionList(): void {
     this.pruneDebugEvents();
     const sessions = this.sessionManager.list();
-    this.broadcast({ type: "session_list", sessions, allowedDirs: this.allowedDirs });
+    this.broadcast({ type: "session_list", sessions, allowedDirs: this.allowedDirs, claudeModels: CLAUDE_MODELS, codexModels: CODEX_MODELS });
   }
 
   private broadcastSessionMessage(sessionId: string, msg: ServerMessage): void {

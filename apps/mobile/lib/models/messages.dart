@@ -391,6 +391,12 @@ sealed class ServerMessage {
         allowedDirs:
             (json['allowedDirs'] as List?)?.map((e) => e as String).toList() ??
             const [],
+        claudeModels:
+            (json['claudeModels'] as List?)?.map((e) => e as String).toList() ??
+            const [],
+        codexModels:
+            (json['codexModels'] as List?)?.map((e) => e as String).toList() ??
+            const [],
       ),
       'recent_sessions' => RecentSessionsMessage(
         sessions: (json['sessions'] as List)
@@ -719,9 +725,13 @@ class ThinkingDeltaMessage implements ServerMessage {
 class SessionListMessage implements ServerMessage {
   final List<SessionInfo> sessions;
   final List<String> allowedDirs;
+  final List<String> claudeModels;
+  final List<String> codexModels;
   const SessionListMessage({
     required this.sessions,
     this.allowedDirs = const [],
+    this.claudeModels = const [],
+    this.codexModels = const [],
   });
 }
 

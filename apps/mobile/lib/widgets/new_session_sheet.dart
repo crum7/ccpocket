@@ -212,21 +212,26 @@ enum _WorktreeMode {
   useExisting,
 }
 
-/// Available Codex models for the dropdown.
-const _codexModels = <String>[
+/// Fallback Codex models when Bridge hasn't delivered a list yet.
+const _defaultCodexModels = <String>[
   'gpt-5.3-codex',
   'gpt-5.3-codex-spark',
   'gpt-5.2-codex',
   'gpt-5.1-codex-max',
 ];
 
+/// Fallback Claude models when Bridge hasn't delivered a list yet.
+const _defaultClaudeModels = <String>[
+  'claude-sonnet-4-5',
+  'claude-opus-4',
+  'claude-haiku-4-5',
+];
+
 class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   final _pathController = TextEditingController();
   final _branchController = TextEditingController();
-  final _claudeModelController = TextEditingController();
   final _claudeMaxTurnsController = TextEditingController();
   final _claudeMaxBudgetController = TextEditingController();
-  final _claudeFallbackModelController = TextEditingController();
   var _provider = Provider.claude;
   var _permissionMode = PermissionMode.acceptEdits;
   var _useWorktree = false;
@@ -244,9 +249,15 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   late List<String> _liveProjectHistory;
 
   // Claude-specific options
+  String? _selectedClaudeModel;
+  String? _selectedClaudeFallbackModel;
   ClaudeEffort? _claudeEffort;
   bool _claudeForkSession = false;
   bool _claudePersistSession = true;
+
+  // Model lists from Bridge (with fallbacks)
+  late final List<String> _claudeModelList;
+  late final List<String> _codexModelList;
 
   // Codex-specific options
   String? _selectedModel;
@@ -305,6 +316,16 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     // was registered.
     _liveProjectHistory =
         widget.bridge?.projectHistory ?? widget.projectHistory;
+
+    // Load available models from Bridge (with hardcoded fallbacks).
+    final bridgeClaudeModels = widget.bridge?.claudeModels ?? const [];
+    _claudeModelList = bridgeClaudeModels.isNotEmpty
+        ? bridgeClaudeModels
+        : _defaultClaudeModels;
+    final bridgeCodexModels = widget.bridge?.codexModels ?? const [];
+    _codexModelList = bridgeCodexModels.isNotEmpty
+        ? bridgeCodexModels
+        : _defaultCodexModels;
     _worktreeSub = widget.bridge?.worktreeList.listen((msg) {
       if (mounted) setState(() => _worktrees = msg.worktrees);
     });
@@ -346,10 +367,8 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     _projectHistorySub?.cancel();
     _pathController.dispose();
     _branchController.dispose();
-    _claudeModelController.dispose();
     _claudeMaxTurnsController.dispose();
     _claudeMaxBudgetController.dispose();
-    _claudeFallbackModelController.dispose();
     super.dispose();
   }
 
@@ -375,16 +394,21 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     _permissionMode = p.permissionMode;
     _useWorktree = p.useWorktree || p.existingWorktreePath != null;
     _branchController.text = p.worktreeBranch ?? "";
-    _selectedModel = p.model;
+    _selectedModel = _codexModelList.contains(p.model) ? p.model : null;
     _sandboxMode = p.sandboxMode ?? _sandboxMode;
     _modelReasoningEffort = p.modelReasoningEffort;
     _networkAccessEnabled = p.networkAccessEnabled ?? _networkAccessEnabled;
     _webSearchMode = p.webSearchMode;
-    _claudeModelController.text = p.claudeModel ?? "";
+    _selectedClaudeModel = _claudeModelList.contains(p.claudeModel)
+        ? p.claudeModel
+        : null;
     _claudeEffort = p.claudeEffort;
     _claudeMaxTurnsController.text = p.claudeMaxTurns?.toString() ?? "";
     _claudeMaxBudgetController.text = p.claudeMaxBudgetUsd?.toString() ?? "";
-    _claudeFallbackModelController.text = p.claudeFallbackModel ?? "";
+    _selectedClaudeFallbackModel =
+        _claudeModelList.contains(p.claudeFallbackModel)
+        ? p.claudeFallbackModel
+        : null;
     _claudeForkSession = p.claudeForkSession ?? _claudeForkSession;
     _claudePersistSession = p.claudePersistSession ?? _claudePersistSession;
 
@@ -487,12 +511,10 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     final path = _pathController.text.trim();
     final branch = _branchController.text.trim();
     final isCodex = _provider == Provider.codex;
-    final claudeModel = _claudeModelController.text.trim();
     final claudeMaxTurns = int.tryParse(_claudeMaxTurnsController.text.trim());
     final claudeMaxBudgetUsd = double.tryParse(
       _claudeMaxBudgetController.text.trim(),
     );
-    final claudeFallbackModel = _claudeFallbackModelController.text.trim();
 
     final useExisting =
         _useWorktree && _worktreeMode == _WorktreeMode.useExisting;
@@ -513,13 +535,11 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
       modelReasoningEffort: isCodex ? _modelReasoningEffort : null,
       networkAccessEnabled: isCodex ? _networkAccessEnabled : null,
       webSearchMode: isCodex ? _webSearchMode : null,
-      claudeModel: !isCodex && claudeModel.isNotEmpty ? claudeModel : null,
+      claudeModel: !isCodex ? _selectedClaudeModel : null,
       claudeEffort: !isCodex ? _claudeEffort : null,
       claudeMaxTurns: !isCodex ? claudeMaxTurns : null,
       claudeMaxBudgetUsd: !isCodex ? claudeMaxBudgetUsd : null,
-      claudeFallbackModel: !isCodex && claudeFallbackModel.isNotEmpty
-          ? claudeFallbackModel
-          : null,
+      claudeFallbackModel: !isCodex ? _selectedClaudeFallbackModel : null,
       claudeForkSession: !isCodex ? _claudeForkSession : null,
       claudePersistSession: !isCodex ? _claudePersistSession : null,
     );
@@ -653,7 +673,11 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
                       branchController: _branchController,
                       buildInputDecoration: _buildInputDecoration,
                       // Claude advanced
-                      claudeModelController: _claudeModelController,
+                      claudeModels: _claudeModelList,
+                      selectedClaudeModel: _selectedClaudeModel,
+                      onClaudeModelChanged: (value) {
+                        setState(() => _selectedClaudeModel = value);
+                      },
                       claudeEffort: _claudeEffort,
                       onClaudeEffortChanged: (value) {
                         setState(() => _claudeEffort = value);
@@ -668,8 +692,10 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
                       onMaxBudgetChanged: () {
                         setState(() => _validateMaxBudget());
                       },
-                      claudeFallbackModelController:
-                          _claudeFallbackModelController,
+                      selectedClaudeFallbackModel: _selectedClaudeFallbackModel,
+                      onClaudeFallbackModelChanged: (value) {
+                        setState(() => _selectedClaudeFallbackModel = value);
+                      },
                       claudeForkSession: _claudeForkSession,
                       onClaudeForkSessionChanged: (value) {
                         setState(() => _claudeForkSession = value);
@@ -679,6 +705,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
                         setState(() => _claudePersistSession = value);
                       },
                       // Codex advanced
+                      codexModels: _codexModelList,
                       selectedModel: _selectedModel,
                       onSelectedModelChanged: (value) {
                         setState(() => _selectedModel = value);
@@ -1067,7 +1094,9 @@ class _OptionsSection extends StatelessWidget {
   buildInputDecoration;
 
   // Claude advanced
-  final TextEditingController claudeModelController;
+  final List<String> claudeModels;
+  final String? selectedClaudeModel;
+  final ValueChanged<String?> onClaudeModelChanged;
   final ClaudeEffort? claudeEffort;
   final ValueChanged<ClaudeEffort?> onClaudeEffortChanged;
   final TextEditingController claudeMaxTurnsController;
@@ -1076,13 +1105,15 @@ class _OptionsSection extends StatelessWidget {
   final TextEditingController claudeMaxBudgetController;
   final String? maxBudgetError;
   final VoidCallback onMaxBudgetChanged;
-  final TextEditingController claudeFallbackModelController;
+  final String? selectedClaudeFallbackModel;
+  final ValueChanged<String?> onClaudeFallbackModelChanged;
   final bool claudeForkSession;
   final ValueChanged<bool> onClaudeForkSessionChanged;
   final bool claudePersistSession;
   final ValueChanged<bool> onClaudePersistSessionChanged;
 
   // Codex advanced
+  final List<String> codexModels;
   final String? selectedModel;
   final ValueChanged<String?> onSelectedModelChanged;
   final SandboxMode sandboxMode;
@@ -1108,7 +1139,9 @@ class _OptionsSection extends StatelessWidget {
     required this.onWorktreeSelected,
     required this.branchController,
     required this.buildInputDecoration,
-    required this.claudeModelController,
+    required this.claudeModels,
+    required this.selectedClaudeModel,
+    required this.onClaudeModelChanged,
     required this.claudeEffort,
     required this.onClaudeEffortChanged,
     required this.claudeMaxTurnsController,
@@ -1117,11 +1150,13 @@ class _OptionsSection extends StatelessWidget {
     required this.claudeMaxBudgetController,
     required this.maxBudgetError,
     required this.onMaxBudgetChanged,
-    required this.claudeFallbackModelController,
+    required this.selectedClaudeFallbackModel,
+    required this.onClaudeFallbackModelChanged,
     required this.claudeForkSession,
     required this.onClaudeForkSessionChanged,
     required this.claudePersistSession,
     required this.onClaudePersistSessionChanged,
+    required this.codexModels,
     required this.selectedModel,
     required this.onSelectedModelChanged,
     required this.sandboxMode,
@@ -1320,7 +1355,9 @@ class _OptionsSection extends StatelessWidget {
             provider: provider,
             buildInputDecoration: buildInputDecoration,
             // Claude
-            claudeModelController: claudeModelController,
+            claudeModels: claudeModels,
+            selectedClaudeModel: selectedClaudeModel,
+            onClaudeModelChanged: onClaudeModelChanged,
             claudeEffort: claudeEffort,
             onClaudeEffortChanged: onClaudeEffortChanged,
             claudeMaxTurnsController: claudeMaxTurnsController,
@@ -1329,12 +1366,14 @@ class _OptionsSection extends StatelessWidget {
             claudeMaxBudgetController: claudeMaxBudgetController,
             maxBudgetError: maxBudgetError,
             onMaxBudgetChanged: onMaxBudgetChanged,
-            claudeFallbackModelController: claudeFallbackModelController,
+            selectedClaudeFallbackModel: selectedClaudeFallbackModel,
+            onClaudeFallbackModelChanged: onClaudeFallbackModelChanged,
             claudeForkSession: claudeForkSession,
             onClaudeForkSessionChanged: onClaudeForkSessionChanged,
             claudePersistSession: claudePersistSession,
             onClaudePersistSessionChanged: onClaudePersistSessionChanged,
             // Codex
+            codexModels: codexModels,
             selectedModel: selectedModel,
             onSelectedModelChanged: onSelectedModelChanged,
             modelReasoningEffort: modelReasoningEffort,
@@ -1362,7 +1401,9 @@ class _AdvancedOptions extends StatelessWidget {
   buildInputDecoration;
 
   // Claude
-  final TextEditingController claudeModelController;
+  final List<String> claudeModels;
+  final String? selectedClaudeModel;
+  final ValueChanged<String?> onClaudeModelChanged;
   final ClaudeEffort? claudeEffort;
   final ValueChanged<ClaudeEffort?> onClaudeEffortChanged;
   final TextEditingController claudeMaxTurnsController;
@@ -1371,13 +1412,15 @@ class _AdvancedOptions extends StatelessWidget {
   final TextEditingController claudeMaxBudgetController;
   final String? maxBudgetError;
   final VoidCallback onMaxBudgetChanged;
-  final TextEditingController claudeFallbackModelController;
+  final String? selectedClaudeFallbackModel;
+  final ValueChanged<String?> onClaudeFallbackModelChanged;
   final bool claudeForkSession;
   final ValueChanged<bool> onClaudeForkSessionChanged;
   final bool claudePersistSession;
   final ValueChanged<bool> onClaudePersistSessionChanged;
 
   // Codex
+  final List<String> codexModels;
   final String? selectedModel;
   final ValueChanged<String?> onSelectedModelChanged;
   final ReasoningEffort? modelReasoningEffort;
@@ -1391,7 +1434,9 @@ class _AdvancedOptions extends StatelessWidget {
     required this.appColors,
     required this.provider,
     required this.buildInputDecoration,
-    required this.claudeModelController,
+    required this.claudeModels,
+    required this.selectedClaudeModel,
+    required this.onClaudeModelChanged,
     required this.claudeEffort,
     required this.onClaudeEffortChanged,
     required this.claudeMaxTurnsController,
@@ -1400,11 +1445,13 @@ class _AdvancedOptions extends StatelessWidget {
     required this.claudeMaxBudgetController,
     required this.maxBudgetError,
     required this.onMaxBudgetChanged,
-    required this.claudeFallbackModelController,
+    required this.selectedClaudeFallbackModel,
+    required this.onClaudeFallbackModelChanged,
     required this.claudeForkSession,
     required this.onClaudeForkSessionChanged,
     required this.claudePersistSession,
     required this.onClaudePersistSessionChanged,
+    required this.codexModels,
     required this.selectedModel,
     required this.onSelectedModelChanged,
     required this.modelReasoningEffort,
@@ -1437,7 +1484,9 @@ class _AdvancedOptions extends StatelessWidget {
         children: provider == Provider.claude
             ? _ClaudeAdvancedOptions(
                 buildInputDecoration: buildInputDecoration,
-                claudeModelController: claudeModelController,
+                claudeModels: claudeModels,
+                selectedClaudeModel: selectedClaudeModel,
+                onClaudeModelChanged: onClaudeModelChanged,
                 claudeEffort: claudeEffort,
                 onClaudeEffortChanged: onClaudeEffortChanged,
                 claudeMaxTurnsController: claudeMaxTurnsController,
@@ -1446,7 +1495,8 @@ class _AdvancedOptions extends StatelessWidget {
                 claudeMaxBudgetController: claudeMaxBudgetController,
                 maxBudgetError: maxBudgetError,
                 onMaxBudgetChanged: onMaxBudgetChanged,
-                claudeFallbackModelController: claudeFallbackModelController,
+                selectedClaudeFallbackModel: selectedClaudeFallbackModel,
+                onClaudeFallbackModelChanged: onClaudeFallbackModelChanged,
                 claudeForkSession: claudeForkSession,
                 onClaudeForkSessionChanged: onClaudeForkSessionChanged,
                 claudePersistSession: claudePersistSession,
@@ -1454,6 +1504,7 @@ class _AdvancedOptions extends StatelessWidget {
               ).buildChildren(context)
             : _CodexAdvancedOptions(
                 buildInputDecoration: buildInputDecoration,
+                codexModels: codexModels,
                 selectedModel: selectedModel,
                 onSelectedModelChanged: onSelectedModelChanged,
                 modelReasoningEffort: modelReasoningEffort,
@@ -1476,7 +1527,9 @@ class _ClaudeAdvancedOptions extends StatelessWidget {
     String? errorText,
   })
   buildInputDecoration;
-  final TextEditingController claudeModelController;
+  final List<String> claudeModels;
+  final String? selectedClaudeModel;
+  final ValueChanged<String?> onClaudeModelChanged;
   final ClaudeEffort? claudeEffort;
   final ValueChanged<ClaudeEffort?> onClaudeEffortChanged;
   final TextEditingController claudeMaxTurnsController;
@@ -1485,7 +1538,8 @@ class _ClaudeAdvancedOptions extends StatelessWidget {
   final TextEditingController claudeMaxBudgetController;
   final String? maxBudgetError;
   final VoidCallback onMaxBudgetChanged;
-  final TextEditingController claudeFallbackModelController;
+  final String? selectedClaudeFallbackModel;
+  final ValueChanged<String?> onClaudeFallbackModelChanged;
   final bool claudeForkSession;
   final ValueChanged<bool> onClaudeForkSessionChanged;
   final bool claudePersistSession;
@@ -1493,7 +1547,9 @@ class _ClaudeAdvancedOptions extends StatelessWidget {
 
   const _ClaudeAdvancedOptions({
     required this.buildInputDecoration,
-    required this.claudeModelController,
+    required this.claudeModels,
+    required this.selectedClaudeModel,
+    required this.onClaudeModelChanged,
     required this.claudeEffort,
     required this.onClaudeEffortChanged,
     required this.claudeMaxTurnsController,
@@ -1502,7 +1558,8 @@ class _ClaudeAdvancedOptions extends StatelessWidget {
     required this.claudeMaxBudgetController,
     required this.maxBudgetError,
     required this.onMaxBudgetChanged,
-    required this.claudeFallbackModelController,
+    required this.selectedClaudeFallbackModel,
+    required this.onClaudeFallbackModelChanged,
     required this.claudeForkSession,
     required this.onClaudeForkSessionChanged,
     required this.claudePersistSession,
@@ -1512,15 +1569,29 @@ class _ClaudeAdvancedOptions extends StatelessWidget {
   List<Widget> buildChildren(BuildContext context) {
     final l = AppLocalizations.of(context);
     return [
-      TextField(
+      DropdownButtonFormField<String?>(
         key: const ValueKey('dialog_claude_model'),
-        controller: claudeModelController,
+        initialValue: selectedClaudeModel,
         decoration: buildInputDecoration(
           l.modelOptional,
-          hintText: 'claude-sonnet-4-5',
           prefixIcon: const Icon(Icons.psychology_outlined, size: 18),
         ),
-        style: const TextStyle(fontSize: 13),
+        style: TextStyle(
+          fontSize: 13,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+        items: [
+          DropdownMenuItem<String?>(
+            value: null,
+            child: Text(l.defaultLabel, style: const TextStyle(fontSize: 13)),
+          ),
+          for (final model in claudeModels)
+            DropdownMenuItem<String?>(
+              value: model,
+              child: Text(model, style: const TextStyle(fontSize: 13)),
+            ),
+        ],
+        onChanged: (value) => onClaudeModelChanged(value),
       ),
       const SizedBox(height: 8),
       Row(
@@ -1598,14 +1669,29 @@ class _ClaudeAdvancedOptions extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: TextField(
+            child: DropdownButtonFormField<String?>(
               key: const ValueKey('dialog_claude_fallback_model'),
-              controller: claudeFallbackModelController,
-              decoration: buildInputDecoration(
-                l.fallbackModel,
-                hintText: 'claude-haiku-4-5',
+              initialValue: selectedClaudeFallbackModel,
+              decoration: buildInputDecoration(l.fallbackModel),
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
-              style: const TextStyle(fontSize: 13),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text(
+                    l.defaultLabel,
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                ),
+                for (final model in claudeModels)
+                  DropdownMenuItem<String?>(
+                    value: model,
+                    child: Text(model, style: const TextStyle(fontSize: 13)),
+                  ),
+              ],
+              onChanged: (value) => onClaudeFallbackModelChanged(value),
             ),
           ),
         ],
@@ -1652,6 +1738,7 @@ class _CodexAdvancedOptions extends StatelessWidget {
     String? errorText,
   })
   buildInputDecoration;
+  final List<String> codexModels;
   final String? selectedModel;
   final ValueChanged<String?> onSelectedModelChanged;
   final ReasoningEffort? modelReasoningEffort;
@@ -1663,6 +1750,7 @@ class _CodexAdvancedOptions extends StatelessWidget {
 
   const _CodexAdvancedOptions({
     required this.buildInputDecoration,
+    required this.codexModels,
     required this.selectedModel,
     required this.onSelectedModelChanged,
     required this.modelReasoningEffort,
@@ -1692,7 +1780,7 @@ class _CodexAdvancedOptions extends StatelessWidget {
             value: null,
             child: Text(l.defaultLabel, style: const TextStyle(fontSize: 13)),
           ),
-          for (final model in _codexModels)
+          for (final model in codexModels)
             DropdownMenuItem<String?>(
               value: model,
               child: Text(model, style: const TextStyle(fontSize: 13)),
