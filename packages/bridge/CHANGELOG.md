@@ -2,6 +2,11 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.11.1] - 2026-03-07
+
+### Fixed
+- Fall back to macOS Keychain for Claude OAuth credentials when `~/.claude/.credentials.json` does not exist (e.g. login performed on older Claude Code version that stored creds in Keychain)
+
 ## [1.11.0] - 2026-03-06
 
 ### Added
