@@ -182,6 +182,15 @@ export class BridgeWebSocketServer {
     );
   }
 
+  /** Build a user-friendly error for disallowed project paths. */
+  private buildPathNotAllowedError(projectPath: string): ServerMessage {
+    return {
+      type: "error",
+      message: `⚠ Project path not allowed\n\n"${projectPath}" is not in the allowed directories.\n\nFix: Update BRIDGE_ALLOWED_DIRS on the Bridge server to include this path.`,
+      errorCode: "path_not_allowed",
+    };
+  }
+
   close(): void {
     console.log("[ws] Shutting down...");
     this.sessionManager.destroyAll();
@@ -245,7 +254,7 @@ export class BridgeWebSocketServer {
     switch (msg.type) {
       case "start": {
         if (!this.isPathAllowed(msg.projectPath)) {
-          this.send(ws, { type: "error", message: `Project path not allowed: ${msg.projectPath}` });
+          this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
         try {
@@ -994,7 +1003,7 @@ export class BridgeWebSocketServer {
 
       case "resume_session": {
         if (!this.isPathAllowed(msg.projectPath)) {
-          this.send(ws, { type: "error", message: `Project path not allowed: ${msg.projectPath}` });
+          this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
         const provider = msg.provider ?? "claude";
@@ -1190,7 +1199,7 @@ export class BridgeWebSocketServer {
 
       case "list_files": {
         if (!this.isPathAllowed(msg.projectPath)) {
-          this.send(ws, { type: "error", message: `Project path not allowed: ${msg.projectPath}` });
+          this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
         execFile("git", ["ls-files"], { cwd: msg.projectPath, maxBuffer: 10 * 1024 * 1024 }, (err, stdout) => {
@@ -1268,7 +1277,7 @@ export class BridgeWebSocketServer {
 
       case "get_diff": {
         if (!this.isPathAllowed(msg.projectPath)) {
-          this.send(ws, { type: "error", message: `Project path not allowed: ${msg.projectPath}` });
+          this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
         this.collectGitDiff(msg.projectPath, ({ diff, error }) => {
@@ -1329,7 +1338,7 @@ export class BridgeWebSocketServer {
 
       case "list_worktrees": {
         if (!this.isPathAllowed(msg.projectPath)) {
-          this.send(ws, { type: "error", message: `Project path not allowed: ${msg.projectPath}` });
+          this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
         try {
@@ -1344,7 +1353,7 @@ export class BridgeWebSocketServer {
 
       case "remove_worktree": {
         if (!this.isPathAllowed(msg.projectPath)) {
-          this.send(ws, { type: "error", message: `Project path not allowed: ${msg.projectPath}` });
+          this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
         try {

@@ -7,7 +7,71 @@ import {
   extractTokenUsage,
   isFileEditToolName,
   sdkMessageToServerMessage,
+  buildAuthError,
 } from "./sdk-process.js";
+
+// ---- buildAuthError ----
+
+describe("buildAuthError", () => {
+  it("returns errorCode 'auth_login_required' for no_credentials", () => {
+    const result = buildAuthError("no_credentials");
+    expect(result.authenticated).toBe(false);
+    expect(result.errorCode).toBe("auth_login_required");
+  });
+
+  it("returns errorCode 'auth_login_required' for no_access_token", () => {
+    const result = buildAuthError("no_access_token");
+    expect(result.authenticated).toBe(false);
+    expect(result.errorCode).toBe("auth_login_required");
+  });
+
+  it("returns errorCode 'auth_token_expired' for token_expired", () => {
+    const result = buildAuthError("token_expired");
+    expect(result.authenticated).toBe(false);
+    expect(result.errorCode).toBe("auth_token_expired");
+  });
+
+  it("returns errorCode 'auth_api_error' for general failure", () => {
+    const result = buildAuthError("general", "some API error");
+    expect(result.authenticated).toBe(false);
+    expect(result.errorCode).toBe("auth_api_error");
+  });
+
+  it("includes remedy instruction with 'claude auth login' for no_credentials", () => {
+    const result = buildAuthError("no_credentials");
+    expect(result.message).toContain("claude auth login");
+  });
+
+  it("includes remedy instruction with 'claude auth login' for token_expired", () => {
+    const result = buildAuthError("token_expired");
+    expect(result.message).toContain("claude auth login");
+  });
+
+  it("includes remedy instruction with 'claude auth login' for general failure", () => {
+    const result = buildAuthError("general", "401 Unauthorized");
+    expect(result.message).toContain("claude auth login");
+  });
+
+  it("includes the detail in message for general failure", () => {
+    const result = buildAuthError("general", "401 Unauthorized");
+    expect(result.message).toContain("401 Unauthorized");
+  });
+
+  it("message is self-explanatory (contains problem description) for no_credentials", () => {
+    const result = buildAuthError("no_credentials");
+    expect(result.message).toContain("not logged in");
+  });
+
+  it("message is self-explanatory (contains problem description) for token_expired", () => {
+    const result = buildAuthError("token_expired");
+    expect(result.message).toContain("expired");
+  });
+
+  it("message mentions where to run the fix (Bridge machine)", () => {
+    const result = buildAuthError("no_credentials");
+    expect(result.message).toContain("Bridge");
+  });
+});
 
 // ---- ACCEPT_EDITS_AUTO_APPROVE ----
 

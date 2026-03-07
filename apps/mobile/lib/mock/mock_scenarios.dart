@@ -466,6 +466,16 @@ final _todoWrite = MockScenario(
                     'status': 'pending',
                     'activeForm': 'Executing tests',
                   },
+                  {
+                    'content': 'E2E verification',
+                    'status': 'pending',
+                    'activeForm': 'Running E2E verification',
+                  },
+                  {
+                    'content': 'Self review',
+                    'status': 'pending',
+                    'activeForm': 'Running self review',
+                  },
                 ],
               },
             ),
@@ -520,6 +530,16 @@ final _todoWrite = MockScenario(
                     'content': 'Execute tests',
                     'status': 'pending',
                     'activeForm': 'Executing tests',
+                  },
+                  {
+                    'content': 'E2E verification',
+                    'status': 'pending',
+                    'activeForm': 'Running E2E verification',
+                  },
+                  {
+                    'content': 'Self review',
+                    'status': 'pending',
+                    'activeForm': 'Running self review',
                   },
                 ],
               },

@@ -368,7 +368,10 @@ sealed class ServerMessage {
         toolCalls: json['toolCalls'] as int?,
         fileEdits: json['fileEdits'] as int?,
       ),
-      'error' => ErrorMessage(message: json['message'] as String),
+      'error' => ErrorMessage(
+        message: json['message'] as String,
+        errorCode: json['errorCode'] as String?,
+      ),
       'status' => StatusMessage(
         status: ProcessStatus.fromString(json['status'] as String),
       ),
@@ -676,7 +679,8 @@ class ResultMessage implements ServerMessage {
 
 class ErrorMessage implements ServerMessage {
   final String message;
-  const ErrorMessage({required this.message});
+  final String? errorCode;
+  const ErrorMessage({required this.message, this.errorCode});
 }
 
 class StatusMessage implements ServerMessage {

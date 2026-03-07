@@ -122,12 +122,61 @@ export function buildSessionRule(toolName: string, input: Record<string, unknown
   return toolName;
 }
 
+// ---- Auth error helpers (exported for testing) ----
+
+export type AuthErrorCode = "auth_login_required" | "auth_token_expired" | "auth_api_error";
+
+export interface AuthCheckResult {
+  authenticated: boolean;
+  message?: string;
+  errorCode?: AuthErrorCode;
+}
+
+const AUTH_REMEDY = "Fix: Run this command in the terminal on the machine running Bridge:\n  claude auth login";
+
+/**
+ * Build a user-friendly auth error result.
+ * The `message` field is designed to be helpful even without errorCode parsing
+ * (i.e. for older app versions that only display the raw message text).
+ */
+export function buildAuthError(
+  reason: "no_credentials" | "no_access_token" | "token_expired" | "general",
+  detail?: string,
+): AuthCheckResult {
+  switch (reason) {
+    case "no_credentials":
+      return {
+        authenticated: false,
+        errorCode: "auth_login_required",
+        message: `⚠ Claude Code authentication required\n\nClaude is not logged in on this machine.\nCredentials file not found (~/.claude/.credentials.json).\n\n${AUTH_REMEDY}`,
+      };
+    case "no_access_token":
+      return {
+        authenticated: false,
+        errorCode: "auth_login_required",
+        message: `⚠ Claude Code authentication required\n\nCredentials file exists but contains no access token.\n\n${AUTH_REMEDY}`,
+      };
+    case "token_expired":
+      return {
+        authenticated: false,
+        errorCode: "auth_token_expired",
+        message: `⚠ Claude Code session expired\n\nYour login session has expired and could not be refreshed automatically.\n\n${AUTH_REMEDY}`,
+      };
+    case "general":
+      return {
+        authenticated: false,
+        errorCode: "auth_api_error",
+        message: `⚠ Claude Code authentication failed\n\n${detail ?? "Unknown error"}\n\n${AUTH_REMEDY}`,
+      };
+  }
+}
+
 /**
  * Check if Claude CLI is authenticated and ensure the access token is valid.
  * If the token is expired, automatically refreshes it using the refresh token.
  * Returns authenticated=false with a message when login is required.
  */
-async function checkClaudeAuth(): Promise<{ authenticated: boolean; message?: string }> {
+async function checkClaudeAuth(): Promise<AuthCheckResult> {
   // Skip auth check when using API key directly
   if (process.env.ANTHROPIC_API_KEY) {
     return { authenticated: true };
@@ -135,10 +184,7 @@ async function checkClaudeAuth(): Promise<{ authenticated: boolean; message?: st
   try {
     const creds = await getClaudeOAuthCredentials();
     if (!creds.accessToken) {
-      return {
-        authenticated: false,
-        message: "Claude credentials found but no access token. Please run: claude auth login",
-      };
+      return buildAuthError("no_access_token");
     }
     // If token is not expired, we're good
     if (!isTokenExpired(creds.expiresAt)) {
@@ -147,10 +193,7 @@ async function checkClaudeAuth(): Promise<{ authenticated: boolean; message?: st
     // Token is expired — attempt refresh before starting the SDK
     console.log("[sdk-process] Access token expired, attempting refresh...");
     if (!creds.refreshToken) {
-      return {
-        authenticated: false,
-        message: "Claude access token expired and no refresh token available. Please run: claude auth login",
-      };
+      return buildAuthError("token_expired");
     }
     await getValidClaudeAccessToken();
     console.log("[sdk-process] Access token refreshed successfully");
@@ -159,15 +202,9 @@ async function checkClaudeAuth(): Promise<{ authenticated: boolean; message?: st
     const detail = err instanceof Error ? err.message : String(err);
     // Distinguish between missing credentials and refresh failure
     if (detail.includes("not found")) {
-      return {
-        authenticated: false,
-        message: "Claude credentials not found (~/.claude/.credentials.json). Please run: claude auth login",
-      };
+      return buildAuthError("no_credentials");
     }
-    return {
-      authenticated: false,
-      message: `Claude auth failed: ${detail}`,
-    };
+    return buildAuthError("general", detail);
   }
 }
 
@@ -460,6 +497,7 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
           this.emitMessage({
             type: "error",
             message: authCheck.message ?? "Claude is not authenticated. Please run: claude auth login",
+            ...(authCheck.errorCode ? { errorCode: authCheck.errorCode } : {}),
           });
           this.setStatus("idle");
           this.emit("exit", 1);

@@ -186,7 +186,7 @@ export type ServerMessage =
       toolCalls?: number;
       fileEdits?: number;
     }
-  | { type: "error"; message: string }
+  | { type: "error"; message: string; errorCode?: string }
   | { type: "status"; status: ProcessStatus }
   | { type: "history"; messages: ServerMessage[] }
   | { type: "permission_request"; toolUseId: string; toolName: string; input: Record<string, unknown> }

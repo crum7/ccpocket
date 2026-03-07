@@ -380,7 +380,8 @@ class Msg {
   HistoryMessage historyWithPlanApproval(String toolUseId) =>
       makeHistoryWithPlanApproval(toolUseId);
 
-  ErrorMessage error(String message) => ErrorMessage(message: message);
+  ErrorMessage error(String message, {String? errorCode}) =>
+      ErrorMessage(message: message, errorCode: errorCode);
 
   StreamDeltaMessage streamDelta(String text) => StreamDeltaMessage(text: text);
 

@@ -1,13 +1,63 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../theme/app_spacing.dart';
 import '../../theme/app_theme.dart';
 
+/// Maximum number of non-in_progress items shown in collapsed state.
+const _maxCollapsedItems = 4;
+
 /// Widget to display TodoWrite tool output as a checklist UI.
-class TodoWriteWidget extends StatelessWidget {
+///
+/// When there are more than [_maxCollapsedItems] non-in_progress tasks,
+/// the list is truncated with a "... and X more" indicator that can be
+/// tapped to expand. The expanded state is persisted via [PageStorage]
+/// so it survives scrolling off-screen.
+class TodoWriteWidget extends StatefulWidget {
   final Map<String, dynamic> input;
 
   const TodoWriteWidget({super.key, required this.input});
+
+  @override
+  State<TodoWriteWidget> createState() => _TodoWriteWidgetState();
+}
+
+class _TodoWriteWidgetState extends State<TodoWriteWidget> {
+  bool _expanded = false;
+  bool _restoredFromStorage = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_restoredFromStorage) return;
+    _restoredFromStorage = true;
+
+    final saved = PageStorage.maybeOf(
+      context,
+    )?.readState(context, identifier: _storageKey);
+    if (saved is bool) {
+      _expanded = saved;
+    }
+  }
+
+  String get _storageKey {
+    final encoded = const JsonEncoder().convert(widget.input);
+    return 'todo_write:${encoded.hashCode}';
+  }
+
+  void _persistExpansion() {
+    PageStorage.maybeOf(
+      context,
+    )?.writeState(context, _expanded, identifier: _storageKey);
+  }
+
+  void _toggleExpanded() {
+    setState(() => _expanded = !_expanded);
+    _persistExpansion();
+    HapticFeedback.selectionClick();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +72,13 @@ class TodoWriteWidget extends StatelessWidget {
     final inProgressItem = todos
         .where((t) => t.status == 'in_progress')
         .firstOrNull;
+
+    final otherTodos = todos.where((t) => t.status != 'in_progress').toList();
+    final hasOverflow = otherTodos.length > _maxCollapsedItems;
+    final visibleOthers = _expanded
+        ? otherTodos
+        : otherTodos.take(_maxCollapsedItems).toList();
+    final hiddenCount = otherTodos.length - _maxCollapsedItems;
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -88,22 +145,23 @@ class TodoWriteWidget extends StatelessWidget {
               ),
           ],
 
-          // Other tasks (collapsible style - show only first few)
-          ...todos
-              .where((t) => t.status != 'in_progress')
-              .take(4)
-              .map((item) => _TodoItemTile(item: item)),
+          // Other tasks
+          ...visibleOthers.map((item) => _TodoItemTile(item: item)),
 
-          // "and X more" indicator
-          if (todos.where((t) => t.status != 'in_progress').length > 4)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-              child: Text(
-                '... and ${todos.where((t) => t.status != 'in_progress').length - 4} more',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: appColors.subtleText,
-                  fontStyle: FontStyle.italic,
+          // Expand / collapse control
+          if (hasOverflow)
+            GestureDetector(
+              onTap: _toggleExpanded,
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                child: Text(
+                  _expanded ? 'Show less' : '... and $hiddenCount more',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: appColors.subtleText,
+                    fontStyle: FontStyle.italic,
+                  ),
                 ),
               ),
             ),
@@ -115,7 +173,7 @@ class TodoWriteWidget extends StatelessWidget {
   }
 
   List<_TodoItem> _parseTodos() {
-    final todosRaw = input['todos'];
+    final todosRaw = widget.input['todos'];
     if (todosRaw is! List) return [];
 
     return todosRaw
