@@ -391,6 +391,34 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     bridge.close();
   });
 
+  it("includes permissionMode in codex session_created on start", async () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+
+    (bridge as any).handleClientMessage(
+      {
+        type: "start",
+        projectPath: "/tmp/project-codex",
+        provider: "codex",
+        permissionMode: "bypassPermissions",
+      },
+      ws,
+    );
+    await Promise.resolve();
+
+    const sends = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+    const created = sends.find((m: any) => m.type === "system" && m.subtype === "session_created");
+    expect(created).toMatchObject({
+      provider: "codex",
+      permissionMode: "bypassPermissions",
+    });
+
+    bridge.close();
+  });
+
   it("returns error when set_permission_mode is sent without active session", () => {
     const bridge = new BridgeWebSocketServer({ server: httpServer });
     const ws = {

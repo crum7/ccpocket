@@ -80,6 +80,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
   late String? _worktreePath;
   late bool _isPending;
   SandboxMode? _sandboxMode;
+  PermissionMode? _permissionMode;
   StreamSubscription<ServerMessage>? _pendingSub;
   StreamSubscription<ServerMessage>? _sandboxRestartSub;
 
@@ -92,6 +93,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     _worktreePath = widget.worktreePath;
     _isPending = widget.isPending;
     _sandboxMode = sandboxModeFromRaw(widget.initialSandboxMode);
+    _permissionMode = permissionModeFromRaw(widget.initialPermissionMode);
 
     if (_isPending) {
       _listenForSessionCreated();
@@ -157,6 +159,8 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       _worktreePath = msg.worktreePath ?? _worktreePath;
       _gitBranch = msg.worktreeBranch ?? _gitBranch;
       _sandboxMode = sandboxModeFromRaw(msg.sandboxMode) ?? _sandboxMode;
+      _permissionMode =
+          permissionModeFromRaw(msg.permissionMode) ?? _permissionMode;
     });
   }
 
@@ -174,6 +178,8 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       _gitBranch = msg.worktreeBranch ?? _gitBranch;
       _worktreePath = msg.worktreePath ?? _worktreePath;
       _sandboxMode = sandboxModeFromRaw(msg.sandboxMode) ?? _sandboxMode;
+      _permissionMode =
+          permissionModeFromRaw(msg.permissionMode) ?? _permissionMode;
       _isPending = false;
     });
     _pendingSub?.cancel();
@@ -213,7 +219,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       gitBranch: _gitBranch,
       worktreePath: _worktreePath,
       sandboxMode: _sandboxMode,
-      permissionMode: permissionModeFromRaw(widget.initialPermissionMode),
+      permissionMode: _permissionMode,
     );
   }
 }
