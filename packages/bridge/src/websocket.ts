@@ -1615,6 +1615,7 @@ export class BridgeWebSocketServer {
                 provider: newSession?.provider ?? "claude",
                 projectPath: newSession?.projectPath ?? "",
                 ...(rewindPermMode ? { permissionMode: rewindPermMode } : {}),
+                sourceSessionId: msg.sessionId,
               });
               this.sendSessionList(ws);
             });
@@ -1640,6 +1641,7 @@ export class BridgeWebSocketServer {
                   provider: newSession?.provider ?? "claude",
                   projectPath: newSession?.projectPath ?? "",
                   ...(rewindPermMode2 ? { permissionMode: rewindPermMode2 } : {}),
+                  sourceSessionId: msg.sessionId,
                 });
                 this.sendSessionList(ws);
               });

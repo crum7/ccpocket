@@ -136,9 +136,10 @@ class _SessionListScreenState extends State<SessionListScreen>
     _messageSub = bridge.messages.listen((msg) {
       if (msg is SystemMessage && msg.subtype == 'session_created') {
         bridge.requestSessionList();
-        // Clear-context recreation is handled inside the active chat screen.
+        // Clear-context recreation and session restarts (permission mode /
+        // sandbox mode / rewind) are handled inside the active chat screen.
         // Navigating from the hidden session list stacks a second chat route.
-        if (msg.clearContext) {
+        if (msg.clearContext || msg.sourceSessionId != null) {
           return;
         }
         if (msg.sessionId != null) {
@@ -873,8 +874,8 @@ class _SessionListScreenState extends State<SessionListScreen>
       resumeProjectPath,
       permissionMode: isCodex
           ? (session.codexApprovalPolicy == 'never'
-              ? 'bypassPermissions'
-              : 'acceptEdits')
+                ? 'bypassPermissions'
+                : 'acceptEdits')
           : permissionMode,
       effort: !isCodex ? effort : null,
       maxTurns: !isCodex ? claudeDefaults?.claudeMaxTurns : null,

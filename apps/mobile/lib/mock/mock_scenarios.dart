@@ -1249,10 +1249,7 @@ final _codexMcpApproval = MockScenario(
                         'label': 'Deny',
                         'description': 'Reject this tool call.',
                       },
-                      {
-                        'label': 'Cancel',
-                        'description': 'Cancel and go back.',
-                      },
+                      {'label': 'Cancel', 'description': 'Cancel and go back.'},
                     ],
                     'multiSelect': false,
                   },
@@ -1285,14 +1282,8 @@ final _codexMcpApproval = MockScenario(
                   'description':
                       'Allow all calls to this tool for this session.',
                 },
-                {
-                  'label': 'Deny',
-                  'description': 'Reject this tool call.',
-                },
-                {
-                  'label': 'Cancel',
-                  'description': 'Cancel and go back.',
-                },
+                {'label': 'Deny', 'description': 'Reject this tool call.'},
+                {'label': 'Cancel', 'description': 'Cancel and go back.'},
               ],
               'multiSelect': false,
             },
@@ -1392,7 +1383,8 @@ final _codexWebSearch = MockScenario(
           role: 'assistant',
           content: [
             const TextContent(
-              text: 'Let me search for the latest Flutter testing best practices.',
+              text:
+                  'Let me search for the latest Flutter testing best practices.',
             ),
             const ToolUseContent(
               id: 'tool-codex-ws-1',
@@ -1502,10 +1494,7 @@ final _codexFullConversation = MockScenario(
       message: const PermissionRequestMessage(
         toolUseId: 'tool-codex-full-bash-1',
         toolName: 'Bash',
-        input: {
-          'command': 'ls -la && npm test',
-          'cwd': '/Users/demo/project',
-        },
+        input: {'command': 'ls -la && npm test', 'cwd': '/Users/demo/project'},
       ),
     ),
     MockStep(

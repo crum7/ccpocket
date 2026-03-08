@@ -81,8 +81,14 @@ class MockBridgeService extends BridgeService {
   @override
   void requestSessionList() {}
 
+  int requestSessionHistoryCallCount = 0;
+  String? lastRequestedSessionId;
+
   @override
-  void requestSessionHistory(String sessionId) {}
+  void requestSessionHistory(String sessionId) {
+    requestSessionHistoryCallCount++;
+    lastRequestedSessionId = sessionId;
+  }
 
   @override
   void dispose() {

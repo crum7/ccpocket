@@ -80,7 +80,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
   late bool _isPending;
   PermissionMode? _permissionMode;
   StreamSubscription<ServerMessage>? _pendingSub;
-  StreamSubscription<ServerMessage>? _clearContextSub;
+  StreamSubscription<ServerMessage>? _sessionSwitchSub;
 
   @override
   void initState() {
@@ -94,7 +94,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     if (_isPending) {
       _listenForSessionCreated();
     }
-    _listenForClearContext();
+    _listenForSessionSwitch();
   }
 
   void _listenForSessionCreated() {
@@ -139,29 +139,19 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     }
   }
 
-  /// Listen for clear context session switches (Accept & Clear plan approval).
+  /// Listen for session switches (clear context, rewind, etc.).
   /// When the bridge destroys the old session and creates a new one with
-  /// clearContext: true, we switch to the new session so old messages disappear.
-  void _listenForClearContext() {
+  /// sourceSessionId pointing to this session, we switch seamlessly.
+  void _listenForSessionSwitch() {
     final bridge = context.read<BridgeService>();
-    _clearContextSub = bridge.messages.listen((msg) {
+    _sessionSwitchSub = bridge.messages.listen((msg) {
       if (msg is SystemMessage &&
           msg.subtype == 'session_created' &&
-          msg.clearContext &&
+          msg.sourceSessionId == _sessionId &&
           msg.sessionId != null &&
           msg.sessionId != _sessionId &&
           !_isPending &&
           mounted) {
-        // Ignore clear-context session recreation from other sessions.
-        if (msg.sourceSessionId != null && msg.sourceSessionId != _sessionId) {
-          return;
-        }
-        // Filter by projectPath to avoid picking up another project's event
-        if (widget.projectPath != null &&
-            msg.projectPath != null &&
-            msg.projectPath != widget.projectPath) {
-          return;
-        }
         _switchSession(msg);
       }
     });
@@ -202,7 +192,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
   void dispose() {
     widget.pendingSessionCreated?.removeListener(_onPendingSessionCreated);
     _pendingSub?.cancel();
-    _clearContextSub?.cancel();
+    _sessionSwitchSub?.cancel();
     super.dispose();
   }
 

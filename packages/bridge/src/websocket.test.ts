@@ -115,6 +115,49 @@ vi.mock("./session.js", () => ({
     }
 
     destroyAll() {}
+
+    async rewindFiles(_id: string, _targetUuid: string, _dryRun?: boolean) {
+      return { canRewind: true, filesChanged: ["test.ts"], insertions: 1, deletions: 0 };
+    }
+
+    rewindConversation(
+      id: string,
+      _targetUuid: string,
+      onReady: (newSessionId: string) => void,
+    ) {
+      const session = this.sessions.get(id);
+      if (!session) throw new Error(`Session ${id} not found`);
+      this.sessions.delete(id);
+      const newId = `s-${++this.seq}`;
+      const process = {
+        isWaitingForInput: true,
+        setPermissionMode: vi.fn(async () => {}),
+        setApprovalPolicy: vi.fn(),
+        setCollaborationMode: vi.fn(),
+        sendInput: vi.fn(() => false),
+        sendInputWithImage: vi.fn(),
+        sendInputWithImages: vi.fn(() => false),
+        approve: vi.fn(),
+        approveAlways: vi.fn(),
+        reject: vi.fn(),
+        answer: vi.fn(),
+        interrupt: vi.fn(),
+        getPendingPermission: vi.fn(() => undefined),
+      };
+      this.sessions.set(newId, {
+        id: newId,
+        projectPath: session.projectPath,
+        startOptions: session.startOptions,
+        claudeSessionId: session.claudeSessionId,
+        history: [],
+        status: "idle",
+        provider: session.provider,
+        createdAt: new Date(),
+        lastActivityAt: new Date(),
+        process,
+      });
+      onReady(newId);
+    }
   },
 }));
 
@@ -836,6 +879,75 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
       reason: "Process is busy",
     });
     expect(session.process.sendInput).not.toHaveBeenCalled();
+
+    bridge.close();
+  });
+
+  it("includes sourceSessionId in rewind conversation session_created", async () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = { readyState: OPEN_STATE, send: vi.fn() } as any;
+
+    // Create a session first
+    (bridge as any).handleClientMessage(
+      { type: "start", projectPath: "/tmp/rewind-test", provider: "claude" },
+      ws,
+    );
+    await Promise.resolve();
+
+    const sends = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+    const created = sends.find((m: any) => m.type === "system" && m.subtype === "session_created");
+    const sessionId = created.sessionId as string;
+
+    ws.send.mockClear();
+
+    // Send rewind (conversation mode)
+    (bridge as any).handleClientMessage(
+      { type: "rewind", sessionId, targetUuid: "user-msg-1", mode: "conversation" },
+      ws,
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const rewindSends = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+    const rewindCreated = rewindSends.find(
+      (m: any) => m.type === "system" && m.subtype === "session_created",
+    );
+    expect(rewindCreated).toBeDefined();
+    expect(rewindCreated.sourceSessionId).toBe(sessionId);
+
+    bridge.close();
+  });
+
+  it("includes sourceSessionId in rewind both session_created", async () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = { readyState: OPEN_STATE, send: vi.fn() } as any;
+
+    (bridge as any).handleClientMessage(
+      { type: "start", projectPath: "/tmp/rewind-both-test", provider: "claude" },
+      ws,
+    );
+    await Promise.resolve();
+
+    const sends = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+    const created = sends.find((m: any) => m.type === "system" && m.subtype === "session_created");
+    const sessionId = created.sessionId as string;
+
+    ws.send.mockClear();
+
+    // Send rewind (both mode)
+    (bridge as any).handleClientMessage(
+      { type: "rewind", sessionId, targetUuid: "user-msg-1", mode: "both" },
+      ws,
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const rewindSends = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+    const rewindCreated = rewindSends.find(
+      (m: any) => m.type === "system" && m.subtype === "session_created",
+    );
+    expect(rewindCreated).toBeDefined();
+    expect(rewindCreated.sourceSessionId).toBe(sessionId);
 
     bridge.close();
   });

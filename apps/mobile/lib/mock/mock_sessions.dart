@@ -674,10 +674,7 @@ SessionInfo mockSessionCodexFileChangeApproval() => SessionInfo(
           'file': 'lib/config.dart',
           'description': 'Update API endpoint configuration',
         },
-        {
-          'file': 'lib/constants.dart',
-          'description': 'Add new feature flags',
-        },
+        {'file': 'lib/constants.dart', 'description': 'Add new feature flags'},
       ],
       'reason': 'Updating configuration for new API version',
     },
@@ -720,14 +717,8 @@ SessionInfo mockSessionCodexMcpApproval() => SessionInfo(
               'label': 'Approve this Session',
               'description': 'Allow all calls to this tool for this session.',
             },
-            {
-              'label': 'Deny',
-              'description': 'Reject this tool call.',
-            },
-            {
-              'label': 'Cancel',
-              'description': 'Cancel and go back.',
-            },
+            {'label': 'Deny', 'description': 'Reject this tool call.'},
+            {'label': 'Cancel', 'description': 'Cancel and go back.'},
           ],
           'multiSelect': false,
         },
