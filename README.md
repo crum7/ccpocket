@@ -1,37 +1,73 @@
-# ccpocket
+# CC Pocket
 
-Mobile client for Claude Code and Codex. Remote control coding AI on your mac from your phone via a WebSocket bridge server.
+CC Pocket lets you monitor and control Claude Code and Codex running on your Mac from your phone. Check progress, answer questions, approve tools, and review diffs from anywhere.
 
 [日本語版 README](README.ja.md)
 
 <p align="center">
-  <img src="docs/images/screenshots.png" alt="ccpocket screenshots" width="800">
+  <img src="docs/images/screenshots.png" alt="CC Pocket screenshots" width="800">
 </p>
 
-## Features
+CC Pocket is not affiliated with, endorsed by, or associated with Anthropic or OpenAI.
 
-- **Start Sessions from Your Phone** — Launch new coding sessions directly from mobile — no desktop needed
-- **Batch Approval** — View all pending approvals across sessions and handle them at a glance
-- **Mobile-Optimized UI** — Answer questions, approve tools, and respond to agents with a UI built for touch
-- **Rich Prompts** — Write with Markdown formatting, bullet lists with auto-complete, and attach images from clipboard or gallery
-- **Session Organization** — Name your sessions and organize by project for easy navigation
-- **Diff Viewer** — Review every code change with syntax-highlighted diffs in one place
-- **Real-Time Streaming** — Watch your agent think and code live with streaming responses
-- **Push Notifications** — Get notified when your agent needs approval or completes a task
-- **Machine Management** — Register multiple machines, monitor status, remote start/stop via SSH
-- **Flexible Connections** — Saved machines, QR code, mDNS auto-discovery, manual input
+## Who It's For
 
-## Prerequisites
+CC Pocket is for people who already rely on coding agents and want an easier way to stay in the loop when they are away from the keyboard.
 
-- [Node.js](https://nodejs.org/) v18+
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) and/or [Codex CLI](https://github.com/openai/codex)
+- **Solo developers running long agent sessions** on a Mac mini, laptop, or dev box
+- **Indie hackers and founders** who want to keep shipping while commuting, walking, or away from their desk
+- **AI-native engineers** juggling multiple sessions and frequent approval requests
+- **Self-hosters** who want their code to stay on their own machine instead of a hosted IDE
+
+If your workflow is "start an agent, let it run, step in only when needed," CC Pocket is built for that.
+
+## Why People Use It
+
+- **Start or resume sessions from your phone** once your Bridge Server is reachable
+- **Handle approvals quickly** with a touch-first UI instead of a terminal prompt
+- **Watch streaming output live** including plans, tool activity, and agent responses
+- **Review diffs more easily** with syntax-highlighted code changes and image diff support
+- **Write better prompts** with Markdown, auto-completing bullet lists, and image attachments
+- **Track multiple sessions** with project grouping, search, and approval badges
+- **Get notified when action is needed** with push notifications for approvals and task completion
+- **Connect however you prefer** with saved machines, QR codes, mDNS discovery, or manual URLs
+- **Manage a remote Mac over SSH** for start, stop, and update flows when using launchd
+
+## What CC Pocket Can and Can't Do
+
+To set expectations clearly:
+
+| Capability | Supported |
+|------------|-----------|
+| Start a brand-new Claude Code or Codex session from CC Pocket | `Yes` |
+| Reopen and resume a past session from session history stored on your Mac | `Yes` |
+| Attach to an already-active session that was started directly on your Mac and keep controlling it live from CC Pocket | `No` |
+
+If you start a session on your Mac outside CC Pocket, you can resume it later from saved history, but CC Pocket does not take over that live session in progress.
+
+## How It Works
+
+1. Install and run the Bridge Server on the machine where Claude Code or Codex CLI is installed.
+2. Connect the mobile app to that Bridge Server.
+3. Start sessions, answer agent questions, approve tools, and review changes from your phone.
+
+Your coding session stays on your own machine and flows through your own Bridge Server.
 
 ## Quick Start
 
-### 1. Start the Bridge Server
+### 1. Install a CLI Provider
+
+Install at least one of these on the host machine:
+
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+- [Codex CLI](https://github.com/openai/codex)
+
+You also need [Node.js](https://nodejs.org/) 18+.
+
+### 2. Start the Bridge Server
 
 ```bash
-# Run directly with npx (no install needed)
+# Run directly with npx
 npx @ccpocket/bridge@latest
 
 # Or install globally
@@ -39,126 +75,129 @@ npm install -g @ccpocket/bridge
 ccpocket-bridge
 ```
 
-A QR code will appear in your terminal. The server listens on `ws://0.0.0.0:8765` by default.
+By default, the Bridge Server listens on `ws://0.0.0.0:8765` and prints a QR code you can scan from the app.
 
-### 2. Install the Mobile App
+Optional health check:
+
+```bash
+npx @ccpocket/bridge@latest doctor
+# or
+ccpocket-bridge doctor
+```
+
+### 3. Install the Mobile App
 
 <div align="center">
 <a href="https://apps.apple.com/us/app/cc-pocket-dev-agent-remote/id6759188790"><img height="40" alt="Download on the App Store" src="docs/images/app-store-badge.svg" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=com.k9i.ccpocket"><img height="40" alt="Get it on Google Play" src="docs/images/google-play-badge-en.svg" /></a>
 </div>
 
-### 3. Connect
+### 4. Connect
 
-| Method | Description |
-|--------|-------------|
-| **Saved Machines** (recommended) | One-tap connect to registered machines with auto-status and pinning |
-| **QR Code** | Scan the QR code shown in terminal. URL and API key are auto-filled |
-| **mDNS Auto-Discovery** | Automatically detects Bridge Servers on the same network (`_ccpocket._tcp`) |
-| **Manual Input** | Enter URL directly (`ws://192.168.1.5:8765` or `192.168.1.5:8765`) |
+| Method | Best for |
+|--------|----------|
+| **Saved Machines** | Regular use with reconnects, status checks, and favorites |
+| **QR Code** | Fastest first-time setup |
+| **mDNS Auto-Discovery** | Same-network discovery without typing IPs |
+| **Manual Input** | Tailscale, remote hosts, or custom ports |
 
-Deep link: `ccpocket://connect?url=ws://IP:PORT&token=API_KEY`
+Examples:
 
-### 4. Session Operations
+- `ws://192.168.1.5:8765`
+- `ws://100.x.y.z:8765` over Tailscale
+- `ccpocket://connect?url=ws://IP:PORT&token=API_KEY`
 
-**New Session**: Tap "+" to select a project and set the permission mode.
+### 5. Start a Session
 
-| Permission Mode | Description |
-|----------------|-------------|
-| Accept Edits | Auto-approve file edits, confirm others (default) |
-| Plan Only | All actions require approval |
-| Bypass All / Don't Ask | Auto-approve everything |
-| Delegate | Allow delegation to sub-agents |
+In the app, choose a project and permission mode, then start a Claude Code or Codex session.
 
-Optionally enable **Worktree** to isolate development in a separate git worktree branch.
+| Permission Mode | Behavior |
+|----------------|----------|
+| `Default` | Standard interactive mode |
+| `Accept Edits` | Auto-approve file edits, ask for everything else |
+| `Plan` | Stay in planning mode until you approve execution |
+| `Bypass All` | Auto-approve everything |
 
-**Resume**: Tap a past session from "Recent Sessions" on the home screen. Filter by project or search.
+You can also enable **Worktree** to isolate a session in its own git worktree.
 
-**Tool Approval**: Approval requests appear based on the permission mode. Review the tool name and input, then choose Approve or Reject.
+## Ideal Use Cases
 
-## Machine Management & SSH Remote Control
+- **An always-on Mac mini** running the agent while you monitor from your phone
+- **A lightweight review loop on the go** where the agent codes and you approve commands or answer questions as needed
+- **Parallel sessions across projects** with one mobile inbox for pending approvals
+- **Remote personal infrastructure** over Tailscale instead of exposing ports publicly
 
-Register machines from "Add Machine" on the connection screen.
+## Remote Access and Machine Management
 
-| Field | Description |
-|-------|-------------|
-| Name | Display name (defaults to host:port) |
-| Host | IP address or hostname |
-| Port | Bridge Server port (default: 8765) |
-| API Key | Bridge Server API key (optional) |
-| SSH | Enable SSH remote control (set username, port, auth method) |
+### Tailscale
 
-With SSH enabled, the following actions are available from the machine card menu:
+Tailscale is the easiest way to reach your Bridge Server outside your home or office network.
 
-| Action | Description |
-|--------|-------------|
-| **Start** | Start Bridge Server via `launchctl start` |
-| **Stop Server** | Stop Bridge Server via `launchctl stop` |
-| **Update Bridge** | Run `git pull` → build → restart service |
+1. Install [Tailscale](https://tailscale.com/) on your host machine and phone.
+2. Join the same tailnet.
+3. Connect to `ws://<host-tailscale-ip>:8765` from the app.
 
-> **Prerequisite**: The remote machine must be macOS (launchd) with the service registered via `npm run setup`.
+### Saved Machines and SSH
 
-## Remote Access (Tailscale)
+You can register machines in the app with host, port, API key, and optional SSH credentials.
 
-Install [Tailscale](https://tailscale.com/) on both your Mac and iPhone, join the same network, and connect from anywhere. Enter `ws://<Mac Tailscale IP>:8765` as the Server URL in the app.
+When SSH is enabled, CC Pocket can trigger these remote actions from the machine card:
 
-### launchd Persistence
+- `Start`
+- `Stop Server`
+- `Update Bridge`
 
-Run the Bridge Server as a launchd service for SSH-based Start/Stop:
+This flow is intended for **macOS hosts using launchd**.
+
+### launchd Setup on macOS
+
+If you want the Bridge Server to run as a managed background service, use the built-in setup command:
 
 ```bash
-npm run setup                                    # Auto setup
-npm run setup -- --port 9000 --api-key YOUR_KEY  # Custom port & API key
-npm run setup -- --uninstall                     # Uninstall
+npx @ccpocket/bridge@latest setup
+npx @ccpocket/bridge@latest setup --port 9000 --api-key YOUR_KEY
+npx @ccpocket/bridge@latest setup --uninstall
+
+# global install variant
+ccpocket-bridge setup
 ```
 
-## macOS Host Configuration (Always-on Mac)
+## Platform Notes
 
-When running Bridge Server on an always-on Mac (e.g., Mac mini), additional configuration is needed for the screenshot feature.
+- **Bridge Server**: works anywhere Node.js and your CLI provider work
+- **SSH start/stop/update from the app**: macOS host with `launchd` setup
+- **Window listing and screenshot capture**: macOS-only host feature
+- **Tailscale**: optional, but strongly recommended for remote access
 
-### Screen Recording Permission (Required)
+If you want a clean always-on setup, a Mac mini is the best-supported host environment right now.
 
-Grant **Screen Recording** permission to the terminal app running Bridge Server. Without it, `screencapture` silently returns a black image.
+## Host Configuration for Screenshot Capture
 
-> System Settings → Privacy & Security → Screen Recording → Add your terminal app
+If you want to use screenshot capture on macOS, grant **Screen Recording** permission to the terminal app that runs the Bridge Server.
 
-Restart the terminal app after changing permissions.
+Without it, `screencapture` can return black images.
 
-### Keep Display On & Disable Auto-Lock (Recommended)
+Path:
 
-When the display sleeps or locks, window IDs become invalid and capture fails. macOS prevents access to window buffers while locked.
+`System Settings -> Privacy & Security -> Screen Recording`
+
+For reliable window capture on an always-on host, it also helps to disable display sleep and auto-lock.
 
 ```bash
-# Disable display and system sleep
 sudo pmset -a displaysleep 0 sleep 0
 ```
 
-| Setting | Location | Value |
-|---------|----------|-------|
-| Auto-Lock | System Settings → Lock Screen | **Never** |
-| Screen Saver | System Settings → Screen Saver | **Never** |
-
-Manual lock (Ctrl+Cmd+Q) still works. Enable FileVault if physical security is needed.
-
----
-
 ## Development
 
-### Architecture
+### Repository Layout
 
+```text
+ccpocket/
+├── packages/bridge/    # Bridge Server (TypeScript, WebSocket)
+├── apps/mobile/        # Flutter mobile app
+└── package.json        # npm workspaces root
 ```
-┌─────────────┐     WebSocket      ┌────────────────┐     stdio      ┌──────────────┐
-│  Flutter App │ ◄──────────────► │  Bridge Server  │ ◄────────────► │  Claude CLI   │
-│  (iOS/Android)│                   │  (TypeScript)   │                │              │
-└─────────────┘                    └────────────────┘                └──────────────┘
-```
 
-| Layer | Technology |
-|-------|-----------|
-| Mobile App | Flutter / Dart |
-| Bridge Server | TypeScript / Node.js / ws |
-| Package Management | npm workspaces |
-
-### Build from Source
+### Build From Source
 
 ```bash
 git clone https://github.com/K9i-0/ccpocket.git
@@ -167,18 +206,18 @@ npm install
 cd apps/mobile && flutter pub get && cd ../..
 ```
 
-### Development Commands
+### Common Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run bridge` | Start Bridge Server (dev mode) |
-| `npm run bridge:build` | Build Bridge Server |
-| `npm run dev` | Start Bridge + Flutter together |
-| `npm run dev -- <device>` | Start with device specified |
-| `npm run setup` | Register launchd service |
+| `npm run bridge` | Start Bridge Server in dev mode |
+| `npm run bridge:build` | Build the Bridge Server |
+| `npm run dev` | Restart Bridge and launch the Flutter app |
+| `npm run dev -- <device-id>` | Same as above, with a specific device |
+| `npm run setup` | Register the Bridge Server as a launchd service |
 | `npm run test:bridge` | Run Bridge Server tests |
 | `cd apps/mobile && flutter test` | Run Flutter tests |
-| `cd apps/mobile && dart analyze` | Dart static analysis |
+| `cd apps/mobile && dart analyze` | Run Dart static analysis |
 
 ### Environment Variables
 
@@ -186,7 +225,10 @@ cd apps/mobile && flutter pub get && cd ../..
 |----------|---------|-------------|
 | `BRIDGE_PORT` | `8765` | WebSocket port |
 | `BRIDGE_HOST` | `0.0.0.0` | Bind address |
-| `BRIDGE_API_KEY` | (none) | API key authentication (enabled when set) |
+| `BRIDGE_API_KEY` | unset | Enables API key authentication |
+| `BRIDGE_ALLOWED_DIRS` | `$HOME` | Allowed project directories, comma-separated |
+| `DIFF_IMAGE_AUTO_DISPLAY_KB` | `1024` | Auto-display threshold for image diffs |
+| `DIFF_IMAGE_MAX_SIZE_MB` | `5` | Max image size for diff previews |
 
 ## License
 
