@@ -28,8 +28,6 @@ export async function startServer() {
 
   if (API_KEY) {
     console.log("[bridge] API key authentication enabled");
-  } else {
-    console.log("[bridge] WARNING: No BRIDGE_API_KEY set - authentication disabled");
   }
 
   console.log(`[bridge] Allowed dirs: ${ALLOWED_DIRS.join(", ")}`);
