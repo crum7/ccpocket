@@ -1,37 +1,73 @@
-# ccpocket
+# CC Pocket
 
-Claude Code / Codex対応モバイルクライアント。mac上のClaude Code / Codexを、スマホからリモート操作できます。
+CC Pocket は、Claude Code / Codex を自分のMacで動かしながら、スマホから操作・確認できるアプリです。進捗確認、質問への回答、ツール承認、差分レビューを外出先からでも行えます。
 
 [English README](README.md)
 
 <p align="center">
-  <img src="docs/images/screenshots-ja.png" alt="ccpocket screenshots" width="800">
+  <img src="docs/images/screenshots-ja.png" alt="CC Pocket screenshots" width="800">
 </p>
 
-## 主な機能
+CC Pocket は Anthropic / OpenAI とは無関係であり、承認・提携・公式提供を受けたものではありません。
 
-- **スマホからセッション開始** — デスクトップ不要。モバイルから直接コーディングセッションを起動
-- **まとめて承認** — 複数セッションの承認リクエストを一覧で確認し、一括で対応
-- **モバイル最適化UI** — タッチ操作に最適化されたUIで、質問への回答やツール承認を素早く処理
-- **リッチなプロンプト** — Markdown記法・箇条書きの自動補完・クリップボードや写真からの画像添付に対応
-- **セッション整理** — セッションに名前を付け、プロジェクトごとに整理して素早くアクセス
-- **差分ビューア** — コード変更をシンタックスハイライト付きのdiffで一覧レビュー
-- **リアルタイムストリーミング** — エージェントの思考とコーディングをライブで確認
-- **プッシュ通知** — 承認リクエストやタスク完了を即座に通知
-- **マシン管理** — 複数マシンの登録・ステータス監視・SSH経由のリモート起動/停止
-- **柔軟な接続** — 保存済みマシン・QRコード・mDNS自動発見・手動入力
+## こんな人向け
 
-## 前提条件
+CC Pocket は、すでにコーディングエージェントを実用的に使っていて、席を離れている間もセッションを追いたい人向けのアプリです。
 
-- [Node.js](https://nodejs.org/) v18以上
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) および/または [Codex CLI](https://github.com/openai/codex)
+- **長時間のエージェント実行を回す個人開発者**
+- **移動中や外出中でも開発を止めたくないインディーハッカーや創業者**
+- **複数セッションと承認依頼を捌きたい AI ネイティブな開発者**
+- **コードをホスト型 IDE ではなく自分のマシンに置いておきたいセルフホスター**
+
+「エージェントを走らせて、必要なときだけ介入したい」という使い方に向いています。
+
+## 何が便利か
+
+- **スマホからセッション開始・再開** ができる
+- **承認依頼を素早く処理** できる
+- **ストリーミング出力をリアルタイムで確認** できる
+- **シンタックスハイライト付きで差分レビュー** できる
+- **Markdown や画像添付で質の高いプロンプト** を送れる
+- **複数セッションをプロジェクト単位で整理** できる
+- **承認待ちや完了をプッシュ通知** で受け取れる
+- **保存済みマシン、QR、mDNS、手入力** で接続できる
+- **launchd + SSH でリモートの Mac を管理** できる
+
+## CC Pocket でできること / できないこと
+
+期待値のズレを防ぐため、ここは明確にしておきます。
+
+| 項目 | 対応 |
+|------|------|
+| CC Pocket から新規の Claude Code / Codex セッションを開始する | `できる` |
+| 自分の Mac に保存されているセッション履歴から過去のセッションを復元して再開する | `できる` |
+| Mac 上で直接開始されたアクティブなセッションに、途中から CC Pocket がライブ接続してそのまま引き継ぐ | `できない` |
+
+Mac 側で CC Pocket を介さずに開始したセッションでも、履歴として保存された後に再開することはできます。ただし、その時点で進行中のライブセッションに途中参加することはできません。
+
+## 仕組み
+
+1. Claude Code または Codex CLI が入ったマシンで Bridge Server を起動します。
+2. モバイルアプリからその Bridge Server に接続します。
+3. スマホからセッション開始、質問への回答、ツール承認、差分レビューを行います。
+
+コーディングセッション自体は、あなた自身のマシン上で、あなた自身の Bridge Server を通じて動きます。
 
 ## クイックスタート
 
-### 1. Bridge Serverを起動
+### 1. CLI を用意
+
+ホストマシンに以下のいずれかをインストールしてください。
+
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
+- [Codex CLI](https://github.com/openai/codex)
+
+加えて [Node.js](https://nodejs.org/) 18 以上が必要です。
+
+### 2. Bridge Server を起動
 
 ```bash
-# npxで即実行 (インストール不要)
+# npx でそのまま実行
 npx @ccpocket/bridge@latest
 
 # またはグローバルインストール
@@ -39,125 +75,127 @@ npm install -g @ccpocket/bridge
 ccpocket-bridge
 ```
 
-デフォルトで `ws://0.0.0.0:8765` で起動します。起動時にQRコードがターミナルに表示されます。
+デフォルトでは `ws://0.0.0.0:8765` で待ち受け、アプリで読み取れる QR コードがターミナルに表示されます。
 
-### 2. アプリをインストール
+任意でヘルスチェックも実行できます。
+
+```bash
+npx @ccpocket/bridge@latest doctor
+# または
+ccpocket-bridge doctor
+```
+
+### 3. アプリをインストール
 
 <div align="center">
 <a href="https://apps.apple.com/us/app/cc-pocket-dev-agent-remote/id6759188790"><img height="40" alt="App Storeからダウンロード" src="docs/images/app-store-badge.svg" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=com.k9i.ccpocket"><img height="40" alt="Google Play で手に入れよう" src="docs/images/google-play-badge-ja.svg" /></a>
 </div>
 
-### 3. 接続
+### 4. 接続
 
-| 方法 | 説明 |
-|------|------|
-| **保存済みマシン** (推奨) | 登録済みマシンにワンタップで接続。ステータス自動表示・ピン留め対応 |
-| **QRコード** | ターミナルに表示されるQRをスキャン。URLとAPIキーが自動入力される |
-| **mDNS自動発見** | 同一ネットワーク上のBridge Serverを自動検出 (サービスタイプ: `_ccpocket._tcp`) |
-| **手動入力** | URLを直接入力 (`ws://192.168.1.5:8765` または `192.168.1.5:8765`) |
+| 方法 | 向いているケース |
+|------|------------------|
+| **保存済みマシン** | 普段使い、再接続、状態確認、お気に入り管理 |
+| **QRコード** | 初回セットアップを最短で済ませたいとき |
+| **mDNS自動発見** | 同一ネットワーク上で IP 入力を避けたいとき |
+| **手動入力** | Tailscale、リモート環境、カスタムポート |
 
-ディープリンク: `ccpocket://connect?url=ws://IP:PORT&token=API_KEY`
+例:
 
-### 4. セッション操作
+- `ws://192.168.1.5:8765`
+- `ws://100.x.y.z:8765` over Tailscale
+- `ccpocket://connect?url=ws://IP:PORT&token=API_KEY`
 
-**新規セッション**: 「+」ボタンからプロジェクトを選択し、パーミッションモードを設定して開始。
+### 5. セッションを開始
 
-| パーミッションモード | 説明 |
-|---------------------|------|
-| Accept Edits | ファイル編集は自動承認、その他は確認 (デフォルト) |
-| Plan Only | すべて承認が必要 |
-| Bypass All / Don't Ask | すべて自動承認 |
-| Delegate | サブエージェントへの委任を許可 |
+アプリでプロジェクトと permission mode を選び、Claude Code または Codex のセッションを開始します。
 
-オプションで **Worktree** を有効にすると、git worktreeでブランチを分離して開発できます。
+| Permission Mode | 挙動 |
+|----------------|------|
+| `Default` | 標準の対話モード |
+| `Accept Edits` | ファイル編集は自動承認し、それ以外は確認 |
+| `Plan` | 実行前にプラン承認を挟む |
+| `Bypass All` | すべて自動承認 |
 
-**Resume**: ホーム画面の「Recent Sessions」から過去セッションをタップして再開。プロジェクトフィルタや検索で絞り込み可能。
+必要なら **Worktree** を有効にして、セッションごとに独立した git worktree を使えます。
 
-**ツール承認**: パーミッションモードに応じて承認リクエストが表示されます。ツール名と入力内容を確認し、Approve / Reject を選択してください。
+## 典型的な使い方
 
-## マシン管理とSSHリモート操作
+- **常時稼働の Mac mini** 上でエージェントを動かし、スマホから様子を見る
+- **移動中の軽いレビュー運用** として、必要なときだけ返答や承認をする
+- **複数プロジェクトの並列セッション** をスマホ側でまとめて追う
+- **Tailscale 経由の個人インフラ** で外出先から安全に接続する
 
-接続画面の「Add Machine」からマシンを登録します。
+## リモートアクセスとマシン管理
 
-| 項目 | 説明 |
-|------|------|
-| Name | 表示名 (省略時はhost:port) |
-| Host | IPアドレスまたはホスト名 |
-| Port | Bridge Serverのポート (デフォルト: 8765) |
-| API Key | Bridge ServerのAPIキー (任意) |
-| SSH | SSHリモート操作の有効化 (ユーザー名・ポート・認証方式を設定) |
+### Tailscale
 
-SSHを有効にすると、マシンカードのメニューから以下の操作が可能になります。
+外出先から Bridge Server に繋ぐなら、Tailscale が最も手軽です。
 
-| 操作 | 説明 |
-|------|------|
-| **Start** | `launchctl start` でBridge Serverを起動 |
-| **Stop Server** | `launchctl stop` でBridge Serverを停止 |
-| **Update Bridge** | `git pull` → ビルド → サービス再起動を一括実行 |
+1. ホストマシンとスマホの両方に [Tailscale](https://tailscale.com/) を入れる
+2. 同じ tailnet に参加する
+3. アプリから `ws://<host-tailscale-ip>:8765` に接続する
 
-> **前提**: リモートマシンはmacOS (launchd対応) で、`npm run setup` によりlaunchdサービスが登録済みであること。
+### 保存済みマシンと SSH
 
-## リモートアクセス (Tailscale)
+アプリには、host / port / API key / 任意の SSH 認証情報を持つマシンを登録できます。
 
-Mac・iPhoneに[Tailscale](https://tailscale.com/)をインストールし同じネットワークに参加すると、外出先からも接続できます。アプリのServer URLに `ws://<MacのTailscale IP>:8765` を入力してください。
+SSH を有効にすると、マシンカードから以下の操作ができます。
 
-### launchd永続化
+- `Start`
+- `Stop Server`
+- `Update Bridge`
 
-Bridge Serverをlaunchdで常駐させると、SSH経由のStart/Stopが可能になります。
+この運用は **launchd を使う macOS ホスト** を前提にしています。
+
+### macOS の launchd セットアップ
+
+Bridge Server を管理しやすいバックグラウンドサービスとして扱いたい場合は、組み込みの setup コマンドを使います。
 
 ```bash
-npm run setup                                    # 自動セットアップ
-npm run setup -- --port 9000 --api-key YOUR_KEY  # ポート・APIキー指定
-npm run setup -- --uninstall                     # アンインストール
+npx @ccpocket/bridge@latest setup
+npx @ccpocket/bridge@latest setup --port 9000 --api-key YOUR_KEY
+npx @ccpocket/bridge@latest setup --uninstall
+
+# グローバルインストール時
+ccpocket-bridge setup
 ```
 
-## macOSホスト設定 (常時稼働Mac向け)
+## プラットフォーム補足
 
-Bridge Serverを常時稼働のMac (Mac mini等) で運用する場合、スクリーンショット機能のために追加設定が必要です。
+- **Bridge Server**: Node.js と CLI provider が動く環境なら利用可能
+- **アプリからの SSH start/stop/update**: `launchd` 設定済みの macOS ホスト向け
+- **ウィンドウ一覧とスクリーンショット取得**: macOS ホスト専用
+- **Tailscale**: 必須ではないが、リモート接続には強く推奨
 
-### 画面収録権限 (必須)
+常時稼働マシンとしては、現状では Mac mini が最も相性の良い構成です。
 
-Bridge Serverを起動するターミナルアプリに**画面収録**権限を付与してください。権限がない場合、`screencapture`はエラーなく真っ黒な画像を返します。
+## スクリーンショット機能のためのホスト設定
 
-> システム設定 → プライバシーとセキュリティ → 画面収録 → ターミナルアプリを追加
+macOS でスクリーンショット機能を使う場合は、Bridge Server を起動するターミナルアプリに **画面収録** 権限を付与してください。
 
-権限変更後はターミナルアプリの再起動が必要です。
+権限がないと、`screencapture` が黒い画像を返すことがあります。
 
-### ディスプレイ常時ON・自動ロック無効化 (推奨)
+場所:
 
-ディスプレイがスリープまたはロックされると、ウィンドウIDが無効化されキャプチャが失敗します。
-macOSではロック中のウィンドウバッファへのアクセスが不可能なため、ホスト側の設定で回避します。
+`システム設定 -> プライバシーとセキュリティ -> 画面収録`
+
+常時稼働ホストで安定してウィンドウキャプチャを使うなら、ディスプレイのスリープと自動ロックも無効化しておくのがおすすめです。
 
 ```bash
-# ディスプレイ・システムのスリープを無効化
 sudo pmset -a displaysleep 0 sleep 0
 ```
 
-| 設定 | 場所 | 値 |
-|------|------|-----|
-| 自動ロック | システム設定 → ロック画面 | **しない** |
-| スクリーンセーバ | システム設定 → スクリーンセーバ | **開始しない** |
+## 開発
 
-手動ロック (Ctrl+Cmd+Q) は引き続き使用可能。物理セキュリティが必要な場合はFileVaultの有効化を推奨。
+### リポジトリ構成
 
----
-
-## 開発者向け
-
-### アーキテクチャ
-
+```text
+ccpocket/
+├── packages/bridge/    # Bridge Server (TypeScript, WebSocket)
+├── apps/mobile/        # Flutter mobile app
+└── package.json        # npm workspaces root
 ```
-┌─────────────┐     WebSocket      ┌────────────────┐     stdio      ┌──────────────┐
-│  Flutter App │ ◄──────────────► │  Bridge Server  │ ◄────────────► │  Claude CLI   │
-│  (iOS/Android)│                   │  (TypeScript)   │                │              │
-└─────────────┘                    └────────────────┘                └──────────────┘
-```
-
-| 層 | 技術 |
-|---|---|
-| Mobile App | Flutter / Dart |
-| Bridge Server | TypeScript / Node.js / ws |
-| パッケージ管理 | npm workspaces |
 
 ### ソースからビルド
 
@@ -168,26 +206,29 @@ npm install
 cd apps/mobile && flutter pub get && cd ../..
 ```
 
-### 開発コマンド
+### よく使うコマンド
 
 | コマンド | 説明 |
 |---------|------|
-| `npm run bridge` | Bridge Server起動 (開発モード) |
-| `npm run bridge:build` | Bridge Serverビルド |
-| `npm run dev` | Bridge + Flutter一括起動 |
-| `npm run dev -- <device>` | デバイス指定付き一括起動 |
-| `npm run setup` | launchdサービス登録 |
-| `npm run test:bridge` | Bridge Serverテスト |
-| `cd apps/mobile && flutter test` | Flutterテスト |
-| `cd apps/mobile && dart analyze` | Dart静的解析 |
+| `npm run bridge` | Bridge Server を開発モードで起動 |
+| `npm run bridge:build` | Bridge Server をビルド |
+| `npm run dev` | Bridge を再起動し、Flutter アプリも起動 |
+| `npm run dev -- <device-id>` | デバイス指定付きで同上 |
+| `npm run setup` | Bridge Server を launchd サービスとして登録 |
+| `npm run test:bridge` | Bridge Server のテスト実行 |
+| `cd apps/mobile && flutter test` | Flutter テスト実行 |
+| `cd apps/mobile && dart analyze` | Dart 静的解析 |
 
 ### 環境変数
 
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
-| `BRIDGE_PORT` | `8765` | WebSocketポート |
+| `BRIDGE_PORT` | `8765` | WebSocket ポート |
 | `BRIDGE_HOST` | `0.0.0.0` | バインドアドレス |
-| `BRIDGE_API_KEY` | (なし) | APIキー認証 (設定時に有効化) |
+| `BRIDGE_API_KEY` | 未設定 | API key 認証を有効化 |
+| `BRIDGE_ALLOWED_DIRS` | `$HOME` | 許可するプロジェクトディレクトリ。カンマ区切り |
+| `DIFF_IMAGE_AUTO_DISPLAY_KB` | `1024` | 画像 diff の自動表示しきい値 |
+| `DIFF_IMAGE_MAX_SIZE_MB` | `5` | 画像 diff プレビューの最大サイズ |
 
 ## ライセンス
 
