@@ -2,6 +2,11 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.13.2] - 2026-03-11
+
+### Fixed
+- Remove misleading WARNING log when BRIDGE_API_KEY is not set — API key authentication is optional (Tailscale handles security)
+
 ## [1.13.1] - 2026-03-08
 
 ### Fixed
