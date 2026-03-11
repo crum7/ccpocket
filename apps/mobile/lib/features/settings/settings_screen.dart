@@ -14,7 +14,7 @@ import '../../models/machine.dart';
 import 'state/settings_cubit.dart';
 import 'state/settings_state.dart';
 import 'widgets/app_locale_bottom_sheet.dart';
-import 'widgets/claude_auth_section.dart';
+
 import 'widgets/speech_locale_bottom_sheet.dart';
 import 'widgets/theme_bottom_sheet.dart';
 import 'widgets/backup_section.dart';
@@ -67,12 +67,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 8),
-
-              ClaudeAuthSection(
-                bridgeService: bridge,
-                activeMachineName: machine?.displayName,
               ),
               const SizedBox(height: 8),
 

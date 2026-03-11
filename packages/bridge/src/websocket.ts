@@ -24,7 +24,7 @@ import type { FirebaseAuthClient } from "./firebase-auth.js";
 import { type PushLocale, normalizePushLocale, t } from "./push-i18n.js";
 import { fetchAllUsage } from "./usage.js";
 import type { PromptHistoryBackupStore } from "./prompt-history-backup.js";
-import { ClaudeAuthLoginManager } from "./claude-auth-login.js";
+
 
 // ---- Available model lists (delivered to clients via session_list) ----
 
@@ -94,7 +94,7 @@ export class BridgeWebSocketServer {
   private worktreeStore: WorktreeStore;
   private pushRelay: PushRelayClient;
   private promptHistoryBackup: PromptHistoryBackupStore | null;
-  private claudeAuthLogin: ClaudeAuthLoginManager;
+
   private recentSessionsRequestId = 0;
   private debugEvents = new Map<string, DebugTraceEvent[]>();
   private notifiedPermissionToolUses = new Map<string, Set<string>>();
@@ -115,7 +115,7 @@ export class BridgeWebSocketServer {
     this.worktreeStore = new WorktreeStore();
     this.pushRelay = new PushRelayClient({ firebaseAuth });
     this.promptHistoryBackup = promptHistoryBackup ?? null;
-    this.claudeAuthLogin = new ClaudeAuthLoginManager();
+
     this.archiveStore = new ArchiveStore();
     void this.debugTraceStore.init().catch((err) => {
       console.error("[ws] Failed to initialize debug trace store:", err);
@@ -132,12 +132,6 @@ export class BridgeWebSocketServer {
       console.log("[ws] Push relay enabled (Firebase Anonymous Auth)");
     }
 
-    this.claudeAuthLogin.on("update", (snapshot) => {
-      this.broadcast({
-        type: "claude_auth_status",
-        ...snapshot,
-      });
-    });
 
     this.wss = new WebSocketServer({ server });
 
@@ -1143,64 +1137,6 @@ export class BridgeWebSocketServer {
           this.send(ws, { type: "usage_result", providers } as Record<string, unknown>);
         }).catch((err) => {
           this.send(ws, { type: "error", message: `Failed to fetch usage: ${err}` });
-        });
-        break;
-      }
-
-      case "get_claude_auth_status": {
-        this.claudeAuthLogin.getStatus().then((snapshot) => {
-          this.send(ws, {
-            type: "claude_auth_status",
-            ...snapshot,
-          });
-        }).catch((err) => {
-          this.send(ws, {
-            type: "claude_auth_status",
-            authenticated: false,
-            source: "none",
-            loginInProgress: false,
-            state: "error",
-            message: err instanceof Error ? err.message : String(err),
-            errorCode: "auth_api_error",
-          });
-        });
-        break;
-      }
-
-      case "start_claude_auth_login": {
-        this.claudeAuthLogin.start().then((snapshot) => {
-          this.send(ws, {
-            type: "claude_auth_status",
-            ...snapshot,
-          });
-        }).catch((err) => {
-          this.send(ws, {
-            type: "claude_auth_status",
-            authenticated: false,
-            source: "none",
-            loginInProgress: false,
-            state: "error",
-            message: err instanceof Error ? err.message : String(err),
-            errorCode: "auth_api_error",
-          });
-        });
-        break;
-      }
-
-      case "submit_claude_auth_code": {
-        const snapshot = this.claudeAuthLogin.submitCode(msg.code);
-        this.send(ws, {
-          type: "claude_auth_status",
-          ...snapshot,
-        });
-        break;
-      }
-
-      case "cancel_claude_auth_login": {
-        const snapshot = this.claudeAuthLogin.cancel();
-        this.send(ws, {
-          type: "claude_auth_status",
-          ...snapshot,
         });
         break;
       }

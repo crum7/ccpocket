@@ -184,7 +184,6 @@ class ServerMessageWidget extends StatelessWidget {
               ),
       final ResultMessage msg => ResultChip(message: msg),
       final ErrorMessage msg => ErrorBubble(message: msg),
-      ClaudeAuthStatusMessage() => const SizedBox.shrink(),
       final StatusMessage msg => StatusChip(message: msg),
       HistoryMessage() => const SizedBox.shrink(),
       final PermissionRequestMessage msg =>

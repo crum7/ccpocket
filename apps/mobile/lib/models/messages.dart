@@ -381,16 +381,6 @@ sealed class ServerMessage {
         message: json['message'] as String,
         errorCode: json['errorCode'] as String?,
       ),
-      'claude_auth_status' => ClaudeAuthStatusMessage(
-        authenticated: json['authenticated'] as bool? ?? false,
-        source: json['source'] as String?,
-        loginInProgress: json['loginInProgress'] as bool? ?? false,
-        state: json['state'] as String? ?? 'idle',
-        message: json['message'] as String?,
-        errorCode: json['errorCode'] as String?,
-        loginUrl: json['loginUrl'] as String?,
-        prompt: json['prompt'] as String?,
-      ),
       'status' => StatusMessage(
         status: ProcessStatus.fromString(json['status'] as String),
       ),
@@ -749,28 +739,6 @@ class ErrorMessage implements ServerMessage {
   final String message;
   final String? errorCode;
   const ErrorMessage({required this.message, this.errorCode});
-}
-
-class ClaudeAuthStatusMessage implements ServerMessage {
-  final bool authenticated;
-  final String? source;
-  final bool loginInProgress;
-  final String state;
-  final String? message;
-  final String? errorCode;
-  final String? loginUrl;
-  final String? prompt;
-
-  const ClaudeAuthStatusMessage({
-    required this.authenticated,
-    required this.loginInProgress,
-    required this.state,
-    this.source,
-    this.message,
-    this.errorCode,
-    this.loginUrl,
-    this.prompt,
-  });
 }
 
 class StatusMessage implements ServerMessage {
@@ -1960,18 +1928,6 @@ class ClientMessage {
       ClientMessage._({'type': 'list_windows'});
 
   factory ClientMessage.getUsage() => ClientMessage._({'type': 'get_usage'});
-
-  factory ClientMessage.getClaudeAuthStatus() =>
-      ClientMessage._({'type': 'get_claude_auth_status'});
-
-  factory ClientMessage.startClaudeAuthLogin() =>
-      ClientMessage._({'type': 'start_claude_auth_login'});
-
-  factory ClientMessage.submitClaudeAuthCode(String code) =>
-      ClientMessage._({'type': 'submit_claude_auth_code', 'code': code});
-
-  factory ClientMessage.cancelClaudeAuthLogin() =>
-      ClientMessage._({'type': 'cancel_claude_auth_login'});
 
   factory ClientMessage.listRecordings() =>
       ClientMessage._({'type': 'list_recordings'});

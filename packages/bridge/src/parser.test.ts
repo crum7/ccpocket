@@ -202,34 +202,6 @@ describe("parseClientMessage", () => {
     expect(msg).toEqual({ type: "list_sessions" });
   });
 
-  it("parses get_claude_auth_status message", () => {
-    const msg = parseClientMessage('{"type":"get_claude_auth_status"}');
-    expect(msg).toEqual({ type: "get_claude_auth_status" });
-  });
-
-  it("parses start_claude_auth_login message", () => {
-    const msg = parseClientMessage('{"type":"start_claude_auth_login"}');
-    expect(msg).toEqual({ type: "start_claude_auth_login" });
-  });
-
-  it("parses submit_claude_auth_code message", () => {
-    const msg = parseClientMessage(
-      '{"type":"submit_claude_auth_code","code":"ABC-123"}',
-    );
-    expect(msg).toEqual({ type: "submit_claude_auth_code", code: "ABC-123" });
-  });
-
-  it("rejects submit_claude_auth_code without code", () => {
-    expect(
-      parseClientMessage('{"type":"submit_claude_auth_code"}'),
-    ).toBeNull();
-  });
-
-  it("parses cancel_claude_auth_login message", () => {
-    const msg = parseClientMessage('{"type":"cancel_claude_auth_login"}');
-    expect(msg).toEqual({ type: "cancel_claude_auth_login" });
-  });
-
   it("parses stop_session message", () => {
     const msg = parseClientMessage('{"type":"stop_session","sessionId":"s1"}');
     expect(msg).toEqual({ type: "stop_session", sessionId: "s1" });

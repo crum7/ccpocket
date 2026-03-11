@@ -115,10 +115,6 @@ export type ClientMessage =
   | { type: "take_screenshot"; mode: "fullscreen" | "window"; windowId?: number; projectPath: string; sessionId?: string }
   | { type: "get_debug_bundle"; sessionId: string; traceLimit?: number; includeDiff?: boolean }
   | { type: "get_usage" }
-  | { type: "get_claude_auth_status" }
-  | { type: "start_claude_auth_login" }
-  | { type: "submit_claude_auth_code"; code: string }
-  | { type: "cancel_claude_auth_login" }
   | { type: "list_recordings" }
   | { type: "get_recording"; sessionId: string }
   | { type: "get_message_images"; claudeSessionId: string; messageUuid: string }
@@ -202,25 +198,6 @@ export type ServerMessage =
       fileEdits?: number;
     }
   | { type: "error"; message: string; errorCode?: string }
-  | {
-      type: "claude_auth_status";
-      authenticated: boolean;
-      source?: "api_key" | "oauth" | "none";
-      loginInProgress: boolean;
-      state:
-        | "idle"
-        | "starting"
-        | "waiting_browser"
-        | "waiting_code"
-        | "authorizing"
-        | "success"
-        | "error"
-        | "cancelled";
-      message?: string;
-      errorCode?: string;
-      loginUrl?: string;
-      prompt?: string;
-    }
   | { type: "status"; status: ProcessStatus }
   | { type: "history"; messages: ServerMessage[] }
   | { type: "permission_request"; toolUseId: string; toolName: string; input: Record<string, unknown> }
@@ -462,15 +439,6 @@ export function parseClientMessage(data: string): ClientMessage | null {
         if (msg.includeDiff !== undefined && typeof msg.includeDiff !== "boolean") return null;
         break;
       case "get_usage":
-        break;
-      case "get_claude_auth_status":
-        break;
-      case "start_claude_auth_login":
-        break;
-      case "submit_claude_auth_code":
-        if (typeof msg.code !== "string" || msg.code.trim().length === 0) return null;
-        break;
-      case "cancel_claude_auth_login":
         break;
       case "list_recordings":
         break;
