@@ -1473,10 +1473,7 @@ class _MockNewSession20ProjectsWrapperState
         (path: '/Users/dev/projects/next-blog', name: 'next-blog'),
         (path: '/Users/dev/projects/flutter-weather', name: 'flutter-weather'),
         (path: '/Users/dev/projects/go-api-server', name: 'go-api-server'),
-        (
-          path: '/Users/dev/projects/react-dashboard',
-          name: 'react-dashboard',
-        ),
+        (path: '/Users/dev/projects/react-dashboard', name: 'react-dashboard'),
         (
           path: '/Users/dev/projects/python-ml-pipeline',
           name: 'python-ml-pipeline',
@@ -1486,14 +1483,8 @@ class _MockNewSession20ProjectsWrapperState
         (path: '/Users/dev/projects/vue-storefront', name: 'vue-storefront'),
         (path: '/Users/dev/projects/rails-saas', name: 'rails-saas'),
         (path: '/Users/dev/projects/django-cms', name: 'django-cms'),
-        (
-          path: '/Users/dev/projects/express-graphql',
-          name: 'express-graphql',
-        ),
-        (
-          path: '/Users/dev/projects/svelte-kit-blog',
-          name: 'svelte-kit-blog',
-        ),
+        (path: '/Users/dev/projects/express-graphql', name: 'express-graphql'),
+        (path: '/Users/dev/projects/svelte-kit-blog', name: 'svelte-kit-blog'),
         (path: '/Users/dev/projects/tauri-desktop', name: 'tauri-desktop'),
         (path: '/Users/dev/projects/deno-fresh-app', name: 'deno-fresh-app'),
         (path: '/Users/dev/projects/elixir-phoenix', name: 'elixir-phoenix'),

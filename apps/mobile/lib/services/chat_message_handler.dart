@@ -114,8 +114,19 @@ class ChatMessageHandler {
         return _handlePastHistory(messages, claudeSessionId: claudeSessionId);
       case HistoryMessage(:final messages):
         return _handleHistory(messages);
-      case SystemMessage(:final subtype, :final slashCommands, :final skills, :final skillMetadata):
-        return _handleSystem(msg, subtype, slashCommands, skills, skillMetadata);
+      case SystemMessage(
+        :final subtype,
+        :final slashCommands,
+        :final skills,
+        :final skillMetadata,
+      ):
+        return _handleSystem(
+          msg,
+          subtype,
+          slashCommands,
+          skills,
+          skillMetadata,
+        );
       case PermissionRequestMessage(
         :final toolUseId,
         :final toolName,
@@ -396,7 +407,11 @@ class ChatMessageHandler {
                 m.subtype == 'supported_commands' ||
                 m.subtype == 'session_created')) {
           if (m.slashCommands.isNotEmpty) {
-            commands = _buildCommandList(m.slashCommands, m.skills, m.skillMetadata);
+            commands = _buildCommandList(
+              m.slashCommands,
+              m.skills,
+              m.skillMetadata,
+            );
           }
           // Extract claudeSessionId for image loading etc.
           // Prefer full Claude CLI UUID over Bridge's 8-char ID.
@@ -573,11 +588,7 @@ class ChatMessageHandler {
           ? SlashCommandCategory.builtin
           : SlashCommandCategory.project;
       final meta = metaMap[name];
-      return buildSlashCommand(
-        name,
-        category: category,
-        skillMeta: meta,
-      );
+      return buildSlashCommand(name, category: category, skillMeta: meta);
     }).toList();
   }
 }

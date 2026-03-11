@@ -135,7 +135,7 @@ enum ClaudeEffort {
   const ClaudeEffort(this.value, this.label);
 }
 
-// ---- Codex sandbox mode ----
+// ---- Sandbox mode (Claude & Codex) ----
 
 enum SandboxMode {
   on('on', 'Sandbox On'),
@@ -336,7 +336,9 @@ sealed class ServerMessage {
             const [],
         skillMetadata:
             (json['skillMetadata'] as List?)
-                ?.map((e) => CodexSkillMetadata.fromJson(e as Map<String, dynamic>))
+                ?.map(
+                  (e) => CodexSkillMetadata.fromJson(e as Map<String, dynamic>),
+                )
                 .toList() ??
             const [],
         worktreePath: json['worktreePath'] as String?,
@@ -646,10 +648,7 @@ class CodexSkillMetadata {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'name': name,
-    'path': path,
-  };
+  Map<String, dynamic> toJson() => {'name': name, 'path': path};
 
   /// Best human-readable label for UI display.
   String get label => displayName ?? name;

@@ -38,10 +38,7 @@ class CodexSkillInfo {
     this.defaultPrompt,
   });
 
-  Map<String, String> toJson() => {
-    'name': name,
-    'path': path,
-  };
+  Map<String, String> toJson() => {'name': name, 'path': path};
 }
 
 // ---- Known command metadata ----

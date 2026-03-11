@@ -190,8 +190,7 @@ void main() {
           expect(
             cubit.isUnseen('new-session-123'),
             isFalse,
-            reason:
-                'Session created by the user should not appear as unseen',
+            reason: 'Session created by the user should not appear as unseen',
           );
 
           await cubit.close();
@@ -230,8 +229,7 @@ void main() {
           expect(
             cubit.isUnseen('s1'),
             isFalse,
-            reason:
-                '+1 day buffer covers activity within same user session',
+            reason: '+1 day buffer covers activity within same user session',
           );
 
           await cubit.close();
