@@ -1114,4 +1114,10 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get tooltipClearDiff => 'Diff選択を解除';
+
+  @override
+  String get showMore => 'もっと見る';
+
+  @override
+  String get showLess => '閉じる';
 }

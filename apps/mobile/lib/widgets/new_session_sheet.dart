@@ -180,8 +180,11 @@ Future<NewSessionParams?> showNewSessionSheet({
   );
 }
 
-/// Maximum number of recent projects shown in the bottom sheet.
-const _maxRecentProjects = 5;
+/// Number of recent projects shown by default (collapsed).
+const _defaultRecentProjects = 5;
+
+/// Maximum number of recent projects shown when expanded.
+const _maxRecentProjects = 20;
 
 class _NewSessionSheetContent extends StatefulWidget {
   final List<({String path, String name})> recentProjects;
@@ -267,16 +270,17 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   bool _networkAccessEnabled = true;
   WebSearchMode? _webSearchMode;
 
+  // Project list expansion
+  bool _isProjectListExpanded = false;
+
   // Inline validation errors
   String? _maxTurnsError;
   String? _maxBudgetError;
 
   bool get _hasPath => _pathController.text.trim().isNotEmpty;
 
-  /// Merge projectHistory (Bridge-managed, preferred) with recentProjects (session fallback).
-  /// projectHistory paths are shown first; recentProjects paths not already covered are appended.
-  /// Capped at [_maxRecentProjects].
-  List<({String path, String name})> get _effectiveProjects {
+  /// All merged projects (up to [_maxRecentProjects]).
+  List<({String path, String name})> get _allMergedProjects {
     List<({String path, String name})> merged;
     if (_liveProjectHistory.isEmpty) {
       merged = _liveRecentProjects;
@@ -301,6 +305,20 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     }
     return merged;
   }
+
+  /// Merge projectHistory (Bridge-managed, preferred) with recentProjects (session fallback).
+  /// projectHistory paths are shown first; recentProjects paths not already covered are appended.
+  /// Returns collapsed ([_defaultRecentProjects]) or expanded ([_maxRecentProjects]) list.
+  List<({String path, String name})> get _effectiveProjects {
+    final all = _allMergedProjects;
+    if (!_isProjectListExpanded && all.length > _defaultRecentProjects) {
+      return all.sublist(0, _defaultRecentProjects);
+    }
+    return all;
+  }
+
+  /// Whether the project list has more items than the default collapsed count.
+  bool get _canExpandProjects => _allMergedProjects.length > _defaultRecentProjects;
 
   @override
   void initState() {
@@ -608,6 +626,13 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
               selectedPath: _pathController.text,
               onProjectSelected: _onProjectSelected,
               onProjectRemoved: _onProjectRemoved,
+              canExpand: _canExpandProjects,
+              isExpanded: _isProjectListExpanded,
+              onToggleExpand: () {
+                setState(() {
+                  _isProjectListExpanded = !_isProjectListExpanded;
+                });
+              },
             ),
             _SheetDivider(appColors: appColors),
           ],
@@ -885,6 +910,9 @@ class _RecentProjectsSection extends StatelessWidget {
   final String selectedPath;
   final ValueChanged<String> onProjectSelected;
   final Future<void> Function(String path)? onProjectRemoved;
+  final bool canExpand;
+  final bool isExpanded;
+  final VoidCallback? onToggleExpand;
 
   const _RecentProjectsSection({
     required this.appColors,
@@ -892,6 +920,9 @@ class _RecentProjectsSection extends StatelessWidget {
     required this.selectedPath,
     required this.onProjectSelected,
     this.onProjectRemoved,
+    this.canExpand = false,
+    this.isExpanded = false,
+    this.onToggleExpand,
   });
 
   @override
@@ -943,6 +974,28 @@ class _RecentProjectsSection extends StatelessWidget {
               appColors: appColors,
               isSelected: selectedPath == project.path,
               onTap: () => onProjectSelected(project.path),
+            ),
+          ),
+        if (canExpand)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextButton.icon(
+              onPressed: onToggleExpand,
+              icon: Icon(
+                isExpanded
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
+                size: 18,
+              ),
+              label: Text(
+                isExpanded ? l.showLess : l.showMore,
+                style: const TextStyle(fontSize: 13),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: const Size(0, 36),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ),
           ),
       ],

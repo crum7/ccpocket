@@ -510,5 +510,8 @@
   "tooltipStopRecording": "録音を停止",
   "tooltipSendMessage": "メッセージを送信",
   "tooltipRemoveImage": "画像を削除",
-  "tooltipClearDiff": "Diff選択を解除"
+  "tooltipClearDiff": "Diff選択を解除",
+
+  "showMore": "もっと見る",
+  "showLess": "閉じる"
 }

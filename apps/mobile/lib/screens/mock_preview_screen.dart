@@ -94,6 +94,15 @@ class _ScenariosTab extends StatelessWidget {
   void _launchScenario(BuildContext context, MockScenario scenario) {
     if (scenario.section == MockScenarioSection.storeScreenshot) {
       _launchStoreScenario(context, scenario);
+    } else if (scenario == sessionListNewSession20Projects) {
+      final draftService = context.read<DraftService>();
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              _MockNewSession20ProjectsWrapper(draftService: draftService),
+        ),
+      );
     } else if (scenario.section == MockScenarioSection.sessionList) {
       Navigator.push(
         context,
@@ -1400,6 +1409,105 @@ class _StoreNewSessionWrapperState extends State<_StoreNewSessionWrapper> {
               icon: const Icon(Icons.add),
               label: const Text('New'),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Mock: New Session with 20 projects (for expandable history testing)
+// =============================================================================
+
+class _MockNewSession20ProjectsWrapper extends StatefulWidget {
+  final DraftService draftService;
+  const _MockNewSession20ProjectsWrapper({required this.draftService});
+
+  @override
+  State<_MockNewSession20ProjectsWrapper> createState() =>
+      _MockNewSession20ProjectsWrapperState();
+}
+
+class _MockNewSession20ProjectsWrapperState
+    extends State<_MockNewSession20ProjectsWrapper> {
+  late final MockBridgeService _mockBridge;
+  late final SessionListCubit _sessionListCubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _mockBridge = MockBridgeService();
+    _sessionListCubit = SessionListCubit(bridge: _mockBridge);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showNewSessionSheet();
+    });
+  }
+
+  void _showNewSessionSheet() {
+    if (!mounted) return;
+    showNewSessionSheet(
+      context: context,
+      recentProjects: const [
+        (path: '/Users/dev/projects/shopify-app', name: 'shopify-app'),
+        (path: '/Users/dev/projects/rust-cli', name: 'rust-cli'),
+        (path: '/Users/dev/projects/my-portfolio', name: 'my-portfolio'),
+        (path: '/Users/dev/projects/next-blog', name: 'next-blog'),
+        (path: '/Users/dev/projects/flutter-weather', name: 'flutter-weather'),
+        (path: '/Users/dev/projects/go-api-server', name: 'go-api-server'),
+        (
+          path: '/Users/dev/projects/react-dashboard',
+          name: 'react-dashboard',
+        ),
+        (
+          path: '/Users/dev/projects/python-ml-pipeline',
+          name: 'python-ml-pipeline',
+        ),
+        (path: '/Users/dev/projects/swift-ios-app', name: 'swift-ios-app'),
+        (path: '/Users/dev/projects/kotlin-android', name: 'kotlin-android'),
+        (path: '/Users/dev/projects/vue-storefront', name: 'vue-storefront'),
+        (path: '/Users/dev/projects/rails-saas', name: 'rails-saas'),
+        (path: '/Users/dev/projects/django-cms', name: 'django-cms'),
+        (
+          path: '/Users/dev/projects/express-graphql',
+          name: 'express-graphql',
+        ),
+        (
+          path: '/Users/dev/projects/svelte-kit-blog',
+          name: 'svelte-kit-blog',
+        ),
+        (path: '/Users/dev/projects/tauri-desktop', name: 'tauri-desktop'),
+        (path: '/Users/dev/projects/deno-fresh-app', name: 'deno-fresh-app'),
+        (path: '/Users/dev/projects/elixir-phoenix', name: 'elixir-phoenix'),
+        (path: '/Users/dev/projects/cpp-game-engine', name: 'cpp-game-engine'),
+        (path: '/Users/dev/projects/zig-compiler', name: 'zig-compiler'),
+      ],
+      bridge: _mockBridge,
+    );
+  }
+
+  @override
+  void dispose() {
+    _sessionListCubit.close();
+    _mockBridge.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RepositoryProvider<DraftService>.value(
+      value: widget.draftService,
+      child: BlocProvider.value(
+        value: _sessionListCubit,
+        child: Scaffold(
+          appBar: AppBar(title: const Text('New Session (20 Projects)')),
+          body: const Center(
+            child: Text('New session sheet opens automatically'),
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: _showNewSessionSheet,
+            icon: const Icon(Icons.add),
+            label: const Text('Open Sheet'),
           ),
         ),
       ),

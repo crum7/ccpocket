@@ -2179,6 +2179,18 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'Diff選択を解除'**
   String get tooltipClearDiff;
+
+  /// No description provided for @showMore.
+  ///
+  /// In ja, this message translates to:
+  /// **'もっと見る'**
+  String get showMore;
+
+  /// No description provided for @showLess.
+  ///
+  /// In ja, this message translates to:
+  /// **'閉じる'**
+  String get showLess;
 }
 
 class _AppLocalizationsDelegate

@@ -435,5 +435,8 @@
   "tooltipStopRecording": "Stop recording",
   "tooltipSendMessage": "Send message",
   "tooltipRemoveImage": "Remove image",
-  "tooltipClearDiff": "Clear diff selection"
+  "tooltipClearDiff": "Clear diff selection",
+
+  "showMore": "Show more",
+  "showLess": "Show less"
 }

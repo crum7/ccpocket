@@ -83,6 +83,7 @@ final List<MockScenario> mockScenarios = [
   _sessionListCodexBashApproval,
   _sessionListCodexFileChangeApproval,
   _sessionListCodexMcpApproval,
+  sessionListNewSession20Projects,
   // Store screenshot scenarios
   ...storeScreenshotScenarios,
 ];
@@ -1926,5 +1927,16 @@ const _sessionListCodexMcpApproval = MockScenario(
   description: 'Codex MCP tool approval (ApprovalBar) in session list',
   section: MockScenarioSection.sessionList,
   provider: MockScenarioProvider.codex,
+  steps: [],
+);
+
+// ---------------------------------------------------------------------------
+// SL-10. New Session (20 Projects)
+// ---------------------------------------------------------------------------
+const sessionListNewSession20Projects = MockScenario(
+  name: 'New Session (20 Projects)',
+  icon: Icons.folder_copy_outlined,
+  description: 'New session sheet with 20 projects to test expandable history',
+  section: MockScenarioSection.sessionList,
   steps: [],
 );
