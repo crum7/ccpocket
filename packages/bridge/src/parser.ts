@@ -68,7 +68,7 @@ export type ClientMessage =
       worktreeBranch?: string;
       existingWorktreePath?: string;
     }
-  | { type: "input"; text: string; sessionId?: string; images?: Array<{base64: string; mimeType: string}>; imageId?: string; imageBase64?: string; mimeType?: string }
+  | { type: "input"; text: string; sessionId?: string; images?: Array<{base64: string; mimeType: string}>; imageId?: string; imageBase64?: string; mimeType?: string; skill?: { name: string; path: string } }
   | { type: "push_register"; token: string; platform: "ios" | "android" | "web"; locale?: string; privacyMode?: boolean }
   | { type: "push_unregister"; token: string }
   | { type: "set_permission_mode"; mode: PermissionMode; sessionId?: string }
@@ -166,6 +166,17 @@ export type ServerMessage =
       projectPath?: string;
       slashCommands?: string[];
       skills?: string[];
+      skillMetadata?: Array<{
+        name: string;
+        path: string;
+        description: string;
+        shortDescription?: string;
+        enabled: boolean;
+        scope: string;
+        displayName?: string;
+        defaultPrompt?: string;
+        brandColor?: string;
+      }>;
       worktreePath?: string;
       worktreeBranch?: string;
       permissionMode?: PermissionMode;

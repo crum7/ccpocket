@@ -114,8 +114,8 @@ class ChatMessageHandler {
         return _handlePastHistory(messages, claudeSessionId: claudeSessionId);
       case HistoryMessage(:final messages):
         return _handleHistory(messages);
-      case SystemMessage(:final subtype, :final slashCommands, :final skills):
-        return _handleSystem(msg, subtype, slashCommands, skills);
+      case SystemMessage(:final subtype, :final slashCommands, :final skills, :final skillMetadata):
+        return _handleSystem(msg, subtype, slashCommands, skills, skillMetadata);
       case PermissionRequestMessage(
         :final toolUseId,
         :final toolName,
@@ -396,7 +396,7 @@ class ChatMessageHandler {
                 m.subtype == 'supported_commands' ||
                 m.subtype == 'session_created')) {
           if (m.slashCommands.isNotEmpty) {
-            commands = _buildCommandList(m.slashCommands, m.skills);
+            commands = _buildCommandList(m.slashCommands, m.skills, m.skillMetadata);
           }
           // Extract claudeSessionId for image loading etc.
           // Prefer full Claude CLI UUID over Bridge's 8-char ID.
@@ -468,6 +468,7 @@ class ChatMessageHandler {
     String subtype,
     List<String> slashCommands,
     List<String> skills,
+    List<CodexSkillMetadata> skillMetadata,
   ) {
     List<SlashCommand>? commands;
     PermissionMode? permissionMode;
@@ -476,7 +477,7 @@ class ChatMessageHandler {
             subtype == 'session_created' ||
             subtype == 'supported_commands') &&
         slashCommands.isNotEmpty) {
-      commands = _buildCommandList(slashCommands, skills);
+      commands = _buildCommandList(slashCommands, skills, skillMetadata);
     }
     if (msg is SystemMessage && msg.permissionMode != null) {
       permissionMode = PermissionMode.values.cast<PermissionMode?>().firstWhere(
@@ -556,16 +557,27 @@ class ChatMessageHandler {
   static List<SlashCommand> _buildCommandList(
     List<String> commands,
     List<String> skills,
+    List<CodexSkillMetadata> skillMetadata,
   ) {
     final skillSet = skills.toSet();
     final knownNames = knownCommands.keys.toSet();
+    // Build a lookup map from skill name to full metadata
+    final metaMap = <String, CodexSkillMetadata>{};
+    for (final meta in skillMetadata) {
+      metaMap[meta.name] = meta;
+    }
     return commands.map((name) {
       final category = skillSet.contains(name)
           ? SlashCommandCategory.skill
           : knownNames.contains(name)
           ? SlashCommandCategory.builtin
           : SlashCommandCategory.project;
-      return buildSlashCommand(name, category: category);
+      final meta = metaMap[name];
+      return buildSlashCommand(
+        name,
+        category: category,
+        skillMeta: meta,
+      );
     }).toList();
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../models/messages.dart' show CodexSkillMetadata;
 import '../theme/app_theme.dart';
 
 // ---- Model ----
@@ -13,12 +14,34 @@ class SlashCommand {
   final IconData icon;
   final SlashCommandCategory category;
 
+  /// Codex skill metadata (null for non-skill commands).
+  final CodexSkillInfo? skillInfo;
+
   const SlashCommand({
     required this.command,
     required this.description,
     required this.icon,
     this.category = SlashCommandCategory.builtin,
+    this.skillInfo,
   });
+}
+
+/// Lightweight skill info attached to a [SlashCommand] for Codex skill input.
+class CodexSkillInfo {
+  final String name;
+  final String path;
+  final String? defaultPrompt;
+
+  const CodexSkillInfo({
+    required this.name,
+    required this.path,
+    this.defaultPrompt,
+  });
+
+  Map<String, String> toJson() => {
+    'name': name,
+    'path': path,
+  };
 }
 
 // ---- Known command metadata ----
@@ -69,13 +92,24 @@ const knownCommands = <String, ({String description, IconData icon})>{
 SlashCommand buildSlashCommand(
   String name, {
   SlashCommandCategory category = SlashCommandCategory.builtin,
+  CodexSkillMetadata? skillMeta,
 }) {
   final known = knownCommands[name];
+  // Prefer rich metadata from Codex skills/list when available
+  final description = skillMeta?.summary ?? known?.description ?? name;
+  final icon = known?.icon ?? Icons.terminal;
   return SlashCommand(
     command: '/$name',
-    description: known?.description ?? name,
-    icon: known?.icon ?? Icons.terminal,
+    description: description,
+    icon: icon,
     category: category,
+    skillInfo: skillMeta != null
+        ? CodexSkillInfo(
+            name: skillMeta.name,
+            path: skillMeta.path,
+            defaultPrompt: skillMeta.defaultPrompt,
+          )
+        : null,
   );
 }
 

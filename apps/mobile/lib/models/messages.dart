@@ -334,6 +334,11 @@ sealed class ServerMessage {
         skills:
             (json['skills'] as List?)?.map((e) => e as String).toList() ??
             const [],
+        skillMetadata:
+            (json['skillMetadata'] as List?)
+                ?.map((e) => CodexSkillMetadata.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            const [],
         worktreePath: json['worktreePath'] as String?,
         worktreeBranch: json['worktreeBranch'] as String?,
         clearContext: json['clearContext'] as bool? ?? false,
@@ -603,6 +608,56 @@ sealed class ServerMessage {
   }
 }
 
+/// Metadata for a Codex skill, returned by the `skills/list` RPC.
+class CodexSkillMetadata {
+  final String name;
+  final String path;
+  final String description;
+  final String? shortDescription;
+  final bool enabled;
+  final String scope;
+  final String? displayName;
+  final String? defaultPrompt;
+  final String? brandColor;
+
+  const CodexSkillMetadata({
+    required this.name,
+    required this.path,
+    required this.description,
+    this.shortDescription,
+    this.enabled = true,
+    this.scope = 'user',
+    this.displayName,
+    this.defaultPrompt,
+    this.brandColor,
+  });
+
+  factory CodexSkillMetadata.fromJson(Map<String, dynamic> json) {
+    return CodexSkillMetadata(
+      name: json['name'] as String? ?? '',
+      path: json['path'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      shortDescription: json['shortDescription'] as String?,
+      enabled: json['enabled'] as bool? ?? true,
+      scope: json['scope'] as String? ?? 'user',
+      displayName: json['displayName'] as String?,
+      defaultPrompt: json['defaultPrompt'] as String?,
+      brandColor: json['brandColor'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'path': path,
+  };
+
+  /// Best human-readable label for UI display.
+  String get label => displayName ?? name;
+
+  /// Best short description for UI display.
+  String get summary => shortDescription ?? description;
+}
+
 class SystemMessage implements ServerMessage {
   final String subtype;
   final String? sessionId;
@@ -617,6 +672,7 @@ class SystemMessage implements ServerMessage {
   final String? sandboxMode;
   final List<String> slashCommands;
   final List<String> skills;
+  final List<CodexSkillMetadata> skillMetadata;
   final String? worktreePath;
   final String? worktreeBranch;
   final bool clearContext;
@@ -632,6 +688,7 @@ class SystemMessage implements ServerMessage {
     this.sandboxMode,
     this.slashCommands = const [],
     this.skills = const [],
+    this.skillMetadata = const [],
     this.worktreePath,
     this.worktreeBranch,
     this.clearContext = false,
@@ -1643,12 +1700,14 @@ class ClientMessage {
     String text, {
     String? sessionId,
     List<Map<String, String>>? images,
+    Map<String, String>? skill,
   }) {
     return ClientMessage._(<String, dynamic>{
       'type': 'input',
       'text': text,
       'sessionId': ?sessionId,
       if (images != null && images.isNotEmpty) 'images': images,
+      if (skill != null) 'skill': skill,
     });
   }
 

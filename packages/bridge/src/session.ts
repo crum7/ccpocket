@@ -93,7 +93,7 @@ export class SessionManager {
   private worktreeStore: WorktreeStore | null;
 
   /** Cache slash commands per project path for early loading on subsequent sessions. */
-  private commandCache = new Map<string, { slashCommands: string[]; skills: string[] }>();
+  private commandCache = new Map<string, { slashCommands: string[]; skills: string[]; skillMetadata?: Array<Record<string, unknown>> }>();
 
   constructor(
     onMessage: (sessionId: string, msg: ServerMessage) => void,
@@ -197,6 +197,7 @@ export class SessionManager {
             this.commandCache.set(projectPath, {
               slashCommands: msg.slashCommands,
               skills: msg.skills ?? this.commandCache.get(projectPath)?.skills ?? [],
+              skillMetadata: (msg.skillMetadata as Array<Record<string, unknown>> | undefined) ?? this.commandCache.get(projectPath)?.skillMetadata,
             });
           }
 
@@ -499,7 +500,7 @@ export class SessionManager {
     return "";
   }
 
-  getCachedCommands(projectPath: string): { slashCommands: string[]; skills: string[] } | undefined {
+  getCachedCommands(projectPath: string): { slashCommands: string[]; skills: string[]; skillMetadata?: Array<Record<string, unknown>> } | undefined {
     return this.commandCache.get(projectPath);
   }
 

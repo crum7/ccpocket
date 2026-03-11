@@ -320,7 +320,7 @@ export class BridgeWebSocketServer {
               ...(provider === "claude" && msg.permissionMode ? { permissionMode: msg.permissionMode } : {}),
               ...(provider === "codex" && msg.permissionMode ? { permissionMode: msg.permissionMode } : {}),
               ...(provider === "codex" && msg.sandboxMode ? { sandboxMode: msg.sandboxMode } : {}),
-              ...(cached ? { slashCommands: cached.slashCommands, skills: cached.skills } : {}),
+              ...(cached ? { slashCommands: cached.slashCommands, skills: cached.skills, ...(cached.skillMetadata ? { skillMetadata: cached.skillMetadata } : {}) } : {}),
               ...(createdSession?.worktreePath ? {
                 worktreePath: createdSession.worktreePath,
                 worktreeBranch: createdSession.worktreeBranch,
@@ -433,6 +433,8 @@ export class BridgeWebSocketServer {
               console.error(`[ws] Failed to load image: ${err}`);
               codexProc.sendInput(text);
             });
+          } else if (msg.skill) {
+            codexProc.sendInputWithSkill(text, msg.skill);
           } else {
             codexProc.sendInput(text);
           }
@@ -1002,6 +1004,7 @@ export class BridgeWebSocketServer {
               sessionId: msg.sessionId,
               slashCommands: cached.slashCommands,
               skills: cached.skills,
+              ...(cached.skillMetadata ? { skillMetadata: cached.skillMetadata } : {}),
             });
           }
         } else {
@@ -1314,7 +1317,7 @@ export class BridgeWebSocketServer {
               provider: "claude",
               projectPath: msg.projectPath,
               ...(msg.permissionMode ? { permissionMode: msg.permissionMode } : {}),
-              ...(cached ? { slashCommands: cached.slashCommands, skills: cached.skills } : {}),
+              ...(cached ? { slashCommands: cached.slashCommands, skills: cached.skills, ...(cached.skillMetadata ? { skillMetadata: cached.skillMetadata } : {}) } : {}),
               ...(createdSession?.worktreePath ? {
                 worktreePath: createdSession.worktreePath,
                 worktreeBranch: createdSession.worktreeBranch,

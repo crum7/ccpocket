@@ -470,8 +470,30 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
           .toList();
     }
 
+    // Check if the text starts with a Codex skill command (e.g. "/skillname ...")
+    // and attach skill metadata so Bridge sends a proper SkillUserInput.
+    Map<String, String>? skillPayload;
+    final trimmed = text.trim();
+    if (trimmed.startsWith('/')) {
+      final spaceIdx = trimmed.indexOf(' ');
+      final cmdName = spaceIdx > 0
+          ? trimmed.substring(1, spaceIdx)
+          : trimmed.substring(1);
+      for (final cmd in state.slashCommands) {
+        if (cmd.skillInfo != null && cmd.command == '/$cmdName') {
+          skillPayload = cmd.skillInfo!.toJson();
+          break;
+        }
+      }
+    }
+
     _bridge.send(
-      ClientMessage.input(text, sessionId: sessionId, images: imagePayloads),
+      ClientMessage.input(
+        text,
+        sessionId: sessionId,
+        images: imagePayloads,
+        skill: skillPayload,
+      ),
     );
   }
 
