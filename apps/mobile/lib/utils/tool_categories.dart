@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
@@ -64,8 +66,62 @@ Color getToolCategoryColor(ToolCategory category, AppColors appColors) {
   };
 }
 
+/// Return the full, human-readable input text for a tool (no truncation).
+///
+/// Used in the expanded/preview card body so the user can see the complete
+/// command, file path, search pattern, etc.
+String getToolFullInput(ToolCategory category, Map<String, dynamic> input) {
+  return switch (category) {
+    ToolCategory.bash => _bashFullInput(input),
+    ToolCategory.search => _searchFullInput(input),
+    ToolCategory.read || ToolCategory.write => _fileFullInput(input),
+    ToolCategory.other => _otherFullInput(input),
+  };
+}
+
 // ---------------------------------------------------------------------------
-// Private helpers
+// Private helpers — full input (untruncated)
+// ---------------------------------------------------------------------------
+
+String _bashFullInput(Map<String, dynamic> input) {
+  final cmd = input['command']?.toString();
+  if (cmd != null && cmd.isNotEmpty) return cmd;
+  return _jsonFallback(input);
+}
+
+String _searchFullInput(Map<String, dynamic> input) {
+  final parts = <String>[];
+  final pattern = input['pattern'] ?? input['query'] ?? input['url'];
+  if (pattern != null) parts.add(pattern.toString());
+  if (input['path'] != null) parts.add('path: ${input['path']}');
+  if (input['glob'] != null) parts.add('glob: ${input['glob']}');
+  if (input['type'] != null) parts.add('type: ${input['type']}');
+  if (parts.isEmpty) return _jsonFallback(input);
+  return parts.join('\n');
+}
+
+String _fileFullInput(Map<String, dynamic> input) {
+  final raw = input['file_path'] ?? input['path'] ?? input['notebook_path'];
+  if (raw != null) return raw.toString();
+  return _jsonFallback(input);
+}
+
+String _otherFullInput(Map<String, dynamic> input) {
+  if (input.isEmpty) return '{}';
+  final parts = <String>[];
+  for (final entry in input.entries) {
+    final value = entry.value?.toString() ?? '';
+    parts.add('${entry.key}: $value');
+  }
+  return parts.join('\n');
+}
+
+String _jsonFallback(Map<String, dynamic> input) {
+  return const JsonEncoder.withIndent('  ').convert(input);
+}
+
+// ---------------------------------------------------------------------------
+// Private helpers — summary (truncated)
 // ---------------------------------------------------------------------------
 
 String _fileSummary(Map<String, dynamic> input) {

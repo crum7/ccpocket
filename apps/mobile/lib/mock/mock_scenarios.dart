@@ -47,6 +47,7 @@ class MockScenario {
 
 final List<MockScenario> mockScenarios = [
   // Chat session scenarios — Claude
+  _longToolCommands,
   _approvalFlow,
   _multipleApprovalFlow,
   _askUserQuestion,
@@ -89,6 +90,186 @@ final List<MockScenario> mockScenarios = [
   // Standalone viewers
   imageDiffScenario,
 ];
+
+// ---------------------------------------------------------------------------
+// 0. Long Tool Commands (expandable preview)
+// ---------------------------------------------------------------------------
+final _longToolCommands = MockScenario(
+  name: 'Long Tool Commands',
+  icon: Icons.unfold_more,
+  description: 'Long commands with expandable preview (... more lines)',
+  steps: [
+    MockStep(
+      delay: const Duration(milliseconds: 300),
+      message: const StatusMessage(status: ProcessStatus.running),
+    ),
+    // Long Bash command (single line)
+    MockStep(
+      delay: const Duration(milliseconds: 600),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-long-1',
+          role: 'assistant',
+          content: [
+            const TextContent(
+              text: 'Let me stage all the changed files for commit.',
+            ),
+            const ToolUseContent(
+              id: 'tool-long-bash-1',
+              name: 'Bash',
+              input: {
+                'command':
+                    'git add README.md README.ja.md apps/mobile/fastlane/metadata/en-US/description.txt apps/mobile/fastlane/metadata/ja/description.txt apps/mobile/fastlane/metadata/android/en-US/full_description.txt apps/mobile/fastlane/metadata/android/ja-JP/full_description.txt',
+              },
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 1000),
+      message: const ToolResultMessage(
+        toolUseId: 'tool-long-bash-1',
+        toolName: 'Bash',
+        content: '',
+      ),
+    ),
+    // Long Bash command (multiline piped)
+    MockStep(
+      delay: const Duration(milliseconds: 1200),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-long-2',
+          role: 'assistant',
+          content: [
+            const TextContent(
+              text:
+                  'Now let me search for all Dart files that reference ToolUseTile.',
+            ),
+            const ToolUseContent(
+              id: 'tool-long-bash-2',
+              name: 'Bash',
+              input: {
+                'command':
+                    'find /Users/k9i-mini/Workspace/ccpocket \\\n'
+                    '  -name "*.dart" \\\n'
+                    '  -not -path "*/build/*" \\\n'
+                    '  -not -path "*/.dart_tool/*" \\\n'
+                    '  -not -path "*/generated/*" \\\n'
+                    '  | xargs grep -l "ToolUseTile" \\\n'
+                    '  | sort \\\n'
+                    '  | head -20',
+              },
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 1800),
+      message: const ToolResultMessage(
+        toolUseId: 'tool-long-bash-2',
+        toolName: 'Bash',
+        content:
+            '/Users/k9i-mini/Workspace/ccpocket/apps/mobile/lib/widgets/bubbles/assistant_bubble.dart\n'
+            '/Users/k9i-mini/Workspace/ccpocket/apps/mobile/test/tool_use_tile_test.dart\n'
+            '/Users/k9i-mini/Workspace/ccpocket/apps/mobile/lib/mock/mock_scenarios.dart',
+      ),
+    ),
+    // Grep with multiple parameters
+    MockStep(
+      delay: const Duration(milliseconds: 2000),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-long-3',
+          role: 'assistant',
+          content: [
+            const TextContent(text: 'Let me search for the expansion pattern.'),
+            const ToolUseContent(
+              id: 'tool-long-grep',
+              name: 'Grep',
+              input: {
+                'pattern': r'enum\s+Tool(Use|Result)Expansion\s*\{',
+                'path': '/Users/k9i-mini/Workspace/ccpocket/apps/mobile/lib',
+                'glob': '**/*.dart',
+                'type': 'dart',
+              },
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 2400),
+      message: const ToolResultMessage(
+        toolUseId: 'tool-long-grep',
+        toolName: 'Grep',
+        content:
+            'lib/widgets/bubbles/assistant_bubble.dart:275:enum ToolUseExpansion { collapsed, preview, expanded }\n'
+            'lib/widgets/bubbles/tool_result_bubble.dart:15:enum ToolResultExpansion { collapsed, preview, expanded }',
+      ),
+    ),
+    // Short Read for contrast
+    MockStep(
+      delay: const Duration(milliseconds: 2600),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-long-4',
+          role: 'assistant',
+          content: [
+            const TextContent(text: 'Let me check the file.'),
+            const ToolUseContent(
+              id: 'tool-long-read',
+              name: 'Read',
+              input: {'file_path': 'lib/main.dart'},
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 2800),
+      message: const ToolResultMessage(
+        toolUseId: 'tool-long-read',
+        toolName: 'Read',
+        content: 'void main() {\n  runApp(const MyApp());\n}',
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 3200),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-long-5',
+          role: 'assistant',
+          content: [
+            const TextContent(
+              text:
+                  'Found the expansion enums. Both ToolUseTile and ToolResultBubble '
+                  'now support three-state expansion: collapsed, preview, and expanded.',
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 3400),
+      message: const ResultMessage(
+        subtype: 'success',
+        cost: 0.0234,
+        duration: 5.1,
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 3500),
+      message: const StatusMessage(status: ProcessStatus.idle),
+    ),
+  ],
+);
 
 // ---------------------------------------------------------------------------
 // 1. Approval Flow

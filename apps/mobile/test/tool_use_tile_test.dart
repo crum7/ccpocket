@@ -95,47 +95,161 @@ void main() {
     });
   });
 
-  group('ToolUseTile - expansion', () {
-    testWidgets('tap expands to card, tap again collapses', (tester) async {
+  group('ToolUseTile - 3-state expansion (non-edit tools)', () {
+    testWidgets(
+      'tap cycles collapsed → preview → expanded → collapsed for Bash',
+      (tester) async {
+        const longCmd =
+            'find /Users/project -name "*.dart" -not -path "*/build/*" '
+            '-not -path "*/.dart_tool/*" | xargs grep -l "ToolUseTile" '
+            '| sort | head -20';
+
+        await tester.pumpWidget(
+          _wrap(const ToolUseTile(name: 'Bash', input: {'command': longCmd})),
+        );
+
+        // --- collapsed ---
+        expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+
+        // Tap → preview
+        await tester.tap(find.byType(InkWell).first);
+        await tester.pumpAndSettle();
+
+        // preview: card with expand_more, full input text visible
+        expect(find.byIcon(Icons.expand_more), findsOneWidget);
+        expect(find.byIcon(Icons.chevron_right), findsNothing);
+        // Full command should be visible (not truncated at 60 chars)
+        expect(find.textContaining('xargs grep'), findsOneWidget);
+
+        // Card background should exist
+        final cardFinder = find.byWidgetPredicate((w) {
+          if (w is Container && w.decoration is BoxDecoration) {
+            final deco = w.decoration as BoxDecoration;
+            return deco.borderRadius != null &&
+                deco.color != null &&
+                deco.border != null;
+          }
+          return false;
+        });
+        expect(cardFinder, findsOneWidget);
+
+        // Tap → expanded
+        await tester.tap(find.byType(InkWell).first);
+        await tester.pumpAndSettle();
+
+        // expanded: expand_less icon, SelectableText with full content
+        expect(find.byIcon(Icons.expand_less), findsOneWidget);
+        expect(find.byType(SelectableText), findsOneWidget);
+
+        // Tap header area → collapsed (tap tool name to avoid SelectableText)
+        await tester.tap(find.text('Bash'));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+        expect(find.byIcon(Icons.expand_less), findsNothing);
+        expect(find.byIcon(Icons.expand_more), findsNothing);
+      },
+    );
+
+    testWidgets('preview shows "... N more lines" for multiline commands', (
+      tester,
+    ) async {
+      // Create a command with more than 5 lines
+      final lines = List.generate(10, (i) => 'echo "line $i"');
+      final longCmd = lines.join('\n');
+
+      await tester.pumpWidget(
+        _wrap(ToolUseTile(name: 'Bash', input: {'command': longCmd})),
+      );
+
+      // Tap → preview
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
+
+      // Should show "... 5 more lines"
+      expect(find.textContaining('5 more lines'), findsOneWidget);
+    });
+
+    testWidgets('short command in preview shows no "more lines" indicator', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(const ToolUseTile(name: 'Bash', input: {'command': 'ls -la'})),
+      );
+
+      // Tap → preview
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
+
+      // No "more lines" text
+      expect(find.textContaining('more lines'), findsNothing);
+    });
+
+    testWidgets('Read tool also uses 3-state expansion', (tester) async {
       await tester.pumpWidget(
         _wrap(
           const ToolUseTile(
             name: 'Read',
-            input: {'file_path': 'lib/main.dart'},
+            input: {
+              'file_path':
+                  '/Users/project/apps/mobile/lib/widgets/bubbles/assistant_bubble.dart',
+            },
           ),
         ),
       );
 
-      // Initially collapsed
+      // collapsed
       expect(find.byIcon(Icons.chevron_right), findsOneWidget);
 
-      // Tap to expand
+      // Tap → preview (shows full path)
       await tester.tap(find.byType(InkWell).first);
       await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.expand_more), findsOneWidget);
+      expect(find.textContaining('assistant_bubble.dart'), findsWidgets);
 
-      // Expanded: expand_less icon, card background, JSON content visible
+      // Tap → expanded
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
       expect(find.byIcon(Icons.expand_less), findsOneWidget);
-      expect(find.byIcon(Icons.chevron_right), findsNothing);
-      expect(find.textContaining('"file_path"'), findsOneWidget);
 
-      // Card background should exist
-      final cardFinder = find.byWidgetPredicate((w) {
-        if (w is Container && w.decoration is BoxDecoration) {
-          final deco = w.decoration as BoxDecoration;
-          return deco.borderRadius != null &&
-              deco.color != null &&
-              deco.border != null;
-        }
-        return false;
-      });
-      expect(cardFinder, findsOneWidget);
+      // Tap header area → collapsed (tap tool name to avoid SelectableText)
+      await tester.tap(find.text('Read'));
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+    });
+  });
 
-      // Tap to collapse
+  group('ToolUseTile - Edit tools keep 2-state expansion', () {
+    testWidgets('Edit tool toggles between collapsed and expanded', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          const ToolUseTile(
+            name: 'Edit',
+            input: {
+              'file_path': 'lib/main.dart',
+              'old_string': 'hello',
+              'new_string': 'world',
+            },
+          ),
+        ),
+      );
+
+      // Edit tools default to expanded
+      expect(find.byIcon(Icons.expand_less), findsOneWidget);
+
+      // Tap → collapsed
       await tester.tap(find.byType(InkWell).first);
       await tester.pumpAndSettle();
-
       expect(find.byIcon(Icons.chevron_right), findsOneWidget);
-      expect(find.byIcon(Icons.expand_less), findsNothing);
+
+      // Tap → expanded (skip preview, go straight to expanded)
+      await tester.tap(find.byType(InkWell).first);
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.expand_less), findsOneWidget);
+      // No expand_more (preview) state for edit tools
+      expect(find.byIcon(Icons.expand_more), findsNothing);
     });
   });
 

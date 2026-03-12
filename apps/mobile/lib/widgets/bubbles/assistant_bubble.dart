@@ -272,8 +272,12 @@ class ToolUseTile extends StatefulWidget {
   State<ToolUseTile> createState() => _ToolUseTileState();
 }
 
+/// Three-level expansion state for tool use content (non-edit tools).
+/// Edit tools use only [collapsed] and [expanded].
+enum ToolUseExpansion { collapsed, preview, expanded }
+
 class _ToolUseTileState extends State<ToolUseTile> {
-  late bool _expanded;
+  late ToolUseExpansion _expansion;
   bool _restoredFromStorage = false;
 
   late final ToolCategory _category = categorizeToolName(widget.name);
@@ -282,10 +286,12 @@ class _ToolUseTileState extends State<ToolUseTile> {
     widget.input,
   );
 
+  bool get _isEditTool => _editDiff != null;
+
   @override
   void initState() {
     super.initState();
-    _expanded = _defaultExpanded;
+    _expansion = _defaultExpansion;
   }
 
   @override
@@ -297,11 +303,22 @@ class _ToolUseTileState extends State<ToolUseTile> {
     final saved = PageStorage.maybeOf(
       context,
     )?.readState(context, identifier: _storageKey);
+    // Backwards-compat: legacy bool values
     if (saved is bool) {
-      _expanded = saved;
+      _expansion = saved
+          ? ToolUseExpansion.expanded
+          : ToolUseExpansion.collapsed;
       return;
     }
-    _expanded = _defaultExpanded;
+    if (saved is String) {
+      for (final value in ToolUseExpansion.values) {
+        if (value.name == saved) {
+          _expansion = value;
+          return;
+        }
+      }
+    }
+    _expansion = _defaultExpansion;
   }
 
   String _inputSummary() {
@@ -319,34 +336,47 @@ class _ToolUseTileState extends State<ToolUseTile> {
     );
   }
 
+  void _cycleExpansion() {
+    setState(() {
+      if (_isEditTool) {
+        // Edit tools: 2-state toggle (collapsed ↔ expanded)
+        _expansion = _expansion == ToolUseExpansion.collapsed
+            ? ToolUseExpansion.expanded
+            : ToolUseExpansion.collapsed;
+      } else {
+        // Non-edit tools: 3-state cycle
+        _expansion = switch (_expansion) {
+          ToolUseExpansion.collapsed => ToolUseExpansion.preview,
+          ToolUseExpansion.preview => ToolUseExpansion.expanded,
+          ToolUseExpansion.expanded => ToolUseExpansion.collapsed,
+        };
+      }
+    });
+    _persistExpandedState();
+    HapticFeedback.selectionClick();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_expanded) {
-      return _ToolUseCard(
+    if (_expansion == ToolUseExpansion.collapsed) {
+      return _ToolUseCollapsed(
         name: widget.name,
-        input: widget.input,
         category: _category,
         inputSummary: _inputSummary(),
-        editDiff: _editDiff,
-        onTap: () {
-          setState(() => _expanded = false);
-          _persistExpandedState();
-          HapticFeedback.selectionClick();
-        },
+        onTap: _cycleExpansion,
         onLongPress: _copyContent,
-        onOpenDiffScreen: _openDiffScreen,
       );
     }
-    return _ToolUseCollapsed(
+    return _ToolUseCard(
       name: widget.name,
+      input: widget.input,
       category: _category,
       inputSummary: _inputSummary(),
-      onTap: () {
-        setState(() => _expanded = true);
-        _persistExpandedState();
-        HapticFeedback.selectionClick();
-      },
+      editDiff: _editDiff,
+      expansion: _expansion,
+      onTap: _cycleExpansion,
       onLongPress: _copyContent,
+      onOpenDiffScreen: _openDiffScreen,
     );
   }
 
@@ -364,17 +394,19 @@ class _ToolUseTileState extends State<ToolUseTile> {
     return 'tool_use_fallback:${widget.name}:${encoded.hashCode}';
   }
 
-  bool get _defaultExpanded =>
-      widget.name == 'Edit' ||
-      widget.name == 'FileEdit' ||
-      widget.name == 'MultiEdit' ||
-      widget.name == 'Write' ||
-      widget.name == 'NotebookEdit';
+  ToolUseExpansion get _defaultExpansion =>
+      (widget.name == 'Edit' ||
+          widget.name == 'FileEdit' ||
+          widget.name == 'MultiEdit' ||
+          widget.name == 'Write' ||
+          widget.name == 'NotebookEdit')
+      ? ToolUseExpansion.expanded
+      : ToolUseExpansion.collapsed;
 
   void _persistExpandedState() {
     PageStorage.maybeOf(
       context,
-    )?.writeState(context, _expanded, identifier: _storageKey);
+    )?.writeState(context, _expansion.name, identifier: _storageKey);
   }
 }
 
@@ -448,9 +480,12 @@ class _ToolUseCard extends StatelessWidget {
   final ToolCategory category;
   final String inputSummary;
   final DiffFile? editDiff;
+  final ToolUseExpansion expansion;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback onOpenDiffScreen;
+
+  static const _previewLines = 5;
 
   const _ToolUseCard({
     required this.name,
@@ -458,6 +493,7 @@ class _ToolUseCard extends StatelessWidget {
     required this.category,
     required this.inputSummary,
     required this.editDiff,
+    required this.expansion,
     required this.onTap,
     required this.onLongPress,
     required this.onOpenDiffScreen,
@@ -467,6 +503,9 @@ class _ToolUseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).extension<AppColors>()!;
     final diffFile = editDiff;
+    final chevronIcon = expansion == ToolUseExpansion.expanded
+        ? Icons.expand_less
+        : Icons.expand_more;
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -517,11 +556,7 @@ class _ToolUseCard extends StatelessWidget {
                     _DiffStatsMini(diffFile: diffFile, appColors: appColors),
                     const SizedBox(width: 4),
                   ],
-                  Icon(
-                    Icons.expand_less,
-                    size: 16,
-                    color: appColors.subtleText,
-                  ),
+                  Icon(chevronIcon, size: 16, color: appColors.subtleText),
                 ],
               ),
               const SizedBox(height: 6),
@@ -531,11 +566,62 @@ class _ToolUseCard extends StatelessWidget {
                   onTapFullDiff: onOpenDiffScreen,
                 )
               else
-                _JsonPreview(input: input, appColors: appColors),
+                _buildInputBody(appColors),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildInputBody(AppColors appColors) {
+    final fullText = getToolFullInput(category, input);
+    final lines = fullText.split('\n');
+    final hasMore = lines.length > _previewLines;
+
+    if (expansion == ToolUseExpansion.expanded) {
+      return SelectableText(
+        fullText,
+        style: TextStyle(
+          fontSize: 11,
+          fontFamily: 'monospace',
+          color: appColors.toolResultTextExpanded,
+          height: 1.4,
+        ),
+      );
+    }
+
+    // preview
+    final previewText = hasMore
+        ? lines.take(_previewLines).join('\n')
+        : fullText;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          previewText,
+          style: TextStyle(
+            fontSize: 11,
+            fontFamily: 'monospace',
+            color: appColors.toolResultText,
+            height: 1.4,
+          ),
+          maxLines: _previewLines,
+          overflow: TextOverflow.ellipsis,
+        ),
+        if (hasMore)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              '... ${lines.length - _previewLines} more lines',
+              style: TextStyle(
+                fontSize: 10,
+                fontStyle: FontStyle.italic,
+                color: appColors.subtleText,
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -573,30 +659,6 @@ class _DiffStatsMini extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-}
-
-/// Fallback JSON preview for non-edit tools.
-class _JsonPreview extends StatelessWidget {
-  final Map<String, dynamic> input;
-  final AppColors appColors;
-
-  const _JsonPreview({required this.input, required this.appColors});
-
-  @override
-  Widget build(BuildContext context) {
-    final inputStr = const JsonEncoder.withIndent('  ').convert(input);
-    final preview = inputStr.length > 200
-        ? '${inputStr.substring(0, 200)}...'
-        : inputStr;
-    return Text(
-      preview,
-      style: TextStyle(
-        fontSize: 11,
-        fontFamily: 'monospace',
-        color: appColors.subtleText,
-      ),
     );
   }
 }
