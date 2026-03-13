@@ -89,6 +89,7 @@ final List<MockScenario> mockScenarios = [
   ...storeScreenshotScenarios,
   // Standalone viewers
   imageDiffScenario,
+  storeDiffLineNumberScenario,
 ];
 
 // ---------------------------------------------------------------------------

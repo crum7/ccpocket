@@ -61,6 +61,15 @@ final storeDiffScenario = MockScenario(
   section: MockScenarioSection.storeScreenshot,
 );
 
+/// Line-number width test: files with 1-digit to 5-digit line numbers.
+final storeDiffLineNumberScenario = MockScenario(
+  name: 'Diff Line Numbers',
+  icon: Icons.format_list_numbered,
+  description: 'Diff with 1~5 digit line numbers',
+  steps: [],
+  section: MockScenarioSection.chat,
+);
+
 /// 07: Session list with New Session bottom sheet open
 final storeNewSessionScenario = MockScenario(
   name: 'New Session',
@@ -690,3 +699,80 @@ index 0000000..b2c4e5a
 +  });
 +}
 ''';
+
+// =============================================================================
+// Mock Diff — Line Number Width Test (1-digit to 5-digit)
+// =============================================================================
+
+/// Diff with files at various line-number scales to verify dynamic gutter width.
+const lineNumberTestDiff = '''diff --git a/config.yaml b/config.yaml
+index aaa..bbb 100644
+--- a/config.yaml
++++ b/config.yaml
+@@ -2,4 +2,5 @@
+ name: my-app
+ version: 1.0.0
+-debug: true
++debug: false
++verbose: true
+ port: 8080
+diff --git a/lib/utils/logger.dart b/lib/utils/logger.dart
+index ccc..ddd 100644
+--- a/lib/utils/logger.dart
++++ b/lib/utils/logger.dart
+@@ -42,7 +42,9 @@ class Logger {
+   void info(String message) {
+     if (_level <= LogLevel.info) {
+-      _output('[INFO] \$message');
++      final timestamp = DateTime.now().toIso8601String();
++      _output('[\$timestamp] [INFO] \$message');
++      _history.add(message);
+     }
+   }
+
+diff --git a/lib/services/database.dart b/lib/services/database.dart
+index eee..fff 100644
+--- a/lib/services/database.dart
++++ b/lib/services/database.dart
+@@ -348,8 +348,12 @@ class DatabaseService {
+   Future<List<Map<String, dynamic>>> query(
+     String table, {
+     String? where,
+-    List<dynamic>? whereArgs,
++    List<Object?>? whereArgs,
++    String? orderBy,
++    int? limit,
+   }) async {
+-    return _db.query(table, where: where, whereArgs: whereArgs);
++    return _db.query(
++      table, where: where, whereArgs: whereArgs,
++      orderBy: orderBy, limit: limit,
++    );
+   }
+
+diff --git a/lib/core/engine.dart b/lib/core/engine.dart
+index ggg..hhh 100644
+--- a/lib/core/engine.dart
++++ b/lib/core/engine.dart
+@@ -1024,6 +1024,10 @@ class RenderEngine {
+     final batch = _prepareBatch(objects);
+     _submitToGPU(batch);
++    if (batch.hasTransparency) {
++      _sortByDepth(batch);
++      _blendPass(batch);
++    }
+     _frameCount++;
+   }
+
+diff --git a/generated/translations_en.dart b/generated/translations_en.dart
+index iii..jjj 100644
+--- a/generated/translations_en.dart
++++ b/generated/translations_en.dart
+@@ -10482,7 +10482,8 @@ class TranslationsEn {
+   static const settingsTitle = 'Settings';
+   static const settingsTheme = 'Theme';
+-  static const settingsLanguage = 'Language';
++  static const settingsLanguage = 'Display Language';
++  static const settingsRegion = 'Region';
+   static const settingsAbout = 'About';
+ ''';

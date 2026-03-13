@@ -102,6 +102,15 @@ class _ScenariosTab extends StatelessWidget {
       );
       return;
     }
+    if (scenario == storeDiffLineNumberScenario) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const _StoreLineNumberDiffWrapper(),
+        ),
+      );
+      return;
+    }
     if (scenario.section == MockScenarioSection.storeScreenshot) {
       _launchStoreScenario(context, scenario);
     } else if (scenario == sessionListNewSession20Projects) {
@@ -1321,6 +1330,46 @@ class _StoreDiffWrapperState extends State<_StoreDiffWrapper> {
     return RepositoryProvider<BridgeService>.value(
       value: _mockBridge,
       child: DiffScreen(initialDiff: storeMockDiff, title: 'shopify-app'),
+    );
+  }
+}
+
+// =============================================================================
+// Store Screenshot: Line Number Diff Wrapper
+// =============================================================================
+
+class _StoreLineNumberDiffWrapper extends StatefulWidget {
+  const _StoreLineNumberDiffWrapper();
+
+  @override
+  State<_StoreLineNumberDiffWrapper> createState() =>
+      _StoreLineNumberDiffWrapperState();
+}
+
+class _StoreLineNumberDiffWrapperState
+    extends State<_StoreLineNumberDiffWrapper> {
+  late final MockBridgeService _mockBridge;
+
+  @override
+  void initState() {
+    super.initState();
+    _mockBridge = MockBridgeService();
+  }
+
+  @override
+  void dispose() {
+    _mockBridge.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RepositoryProvider<BridgeService>.value(
+      value: _mockBridge,
+      child: DiffScreen(
+        initialDiff: lineNumberTestDiff,
+        title: 'line-number-test',
+      ),
     );
   }
 }
