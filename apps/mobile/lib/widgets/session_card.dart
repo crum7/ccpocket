@@ -17,7 +17,6 @@ const _buttonHeight = 44.0;
 class RunningSessionCard extends StatefulWidget {
   final SessionInfo session;
   final VoidCallback onTap;
-  final VoidCallback onStop;
   final VoidCallback? onLongPress;
   final void Function(
     String toolUseId, {
@@ -34,7 +33,6 @@ class RunningSessionCard extends StatefulWidget {
     super.key,
     required this.session,
     required this.onTap,
-    required this.onStop,
     this.onLongPress,
     this.onApprove,
     this.onApproveAlways,
@@ -150,7 +148,7 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
             // Status bar with gradient
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
@@ -163,59 +161,38 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
               ),
               child: Row(
                 children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        _StatusDot(
-                          color: statusColor,
-                          animate: visualStatus.animate,
-                          glow: isReadyUnseen,
-                          inPlanMode:
-                              visualStatus.showPlanBadge &&
-                              visualStatus.animate,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          visualStatus.label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isReadyUnseen
-                                ? FontWeight.w800
-                                : FontWeight.w600,
-                            color: statusColor,
-                          ),
-                        ),
-                        if (visualStatus.detail != null) ...[
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              visualStatus.detail!,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: statusColor.withValues(alpha: 0.82),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ],
+                  _StatusDot(
+                    color: statusColor,
+                    animate: visualStatus.animate,
+                    glow: isReadyUnseen,
+                    inPlanMode:
+                        visualStatus.showPlanBadge && visualStatus.animate,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    visualStatus.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isReadyUnseen
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: statusColor,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: IconButton(
-                      iconSize: 16,
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      icon: const Icon(Icons.stop_circle_outlined),
-                      onPressed: widget.onStop,
-                      tooltip: 'Stop session',
-                      color: Theme.of(context).colorScheme.error,
+                  if (visualStatus.detail != null) ...[
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        visualStatus.detail!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: statusColor.withValues(alpha: 0.82),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

@@ -317,7 +317,6 @@ class _HomeContentState extends State<HomeContent> {
                   permissionMode: session.permissionMode,
                   sandboxMode: session.codexSandboxMode,
                 ),
-                onStop: () => widget.onStopSession(session.id),
                 onApprove:
                     (
                       toolUseId, {

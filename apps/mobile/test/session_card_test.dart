@@ -109,7 +109,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -132,7 +132,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -151,7 +151,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -159,8 +159,8 @@ void main() {
       expect(find.text('Working'), findsOneWidget);
       // Project name as badge
       expect(find.text('my-app'), findsOneWidget);
-      // Stop button
-      expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+      // Stop button removed (swipe-to-stop only)
+      expect(find.byIcon(Icons.stop_circle_outlined), findsNothing);
     });
 
     testWidgets('shows Working status when session is in plan mode', (
@@ -177,7 +177,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -203,7 +203,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -229,7 +229,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -251,7 +251,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -271,7 +271,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -290,7 +290,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -318,7 +318,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -367,7 +367,6 @@ void main() {
           RunningSessionCard(
             session: session,
             onTap: () {},
-            onStop: () {},
             onAnswer: (_, result) => answered = result,
           ),
         ),
@@ -418,7 +417,7 @@ void main() {
 
       await tester.pumpWidget(
         _wrap(
-          RunningSessionCard(session: session, onTap: () {}, onStop: () {}),
+          RunningSessionCard(session: session, onTap: () {}),
         ),
       );
 
@@ -486,7 +485,6 @@ void main() {
           RunningSessionCard(
             session: session,
             onTap: () {},
-            onStop: () {},
             onAnswer: (_, result) => answered = result,
           ),
         ),
@@ -551,7 +549,6 @@ void main() {
           RunningSessionCard(
             session: session,
             onTap: () {},
-            onStop: () {},
             onAnswer: (_, result) => answered = result,
           ),
         ),

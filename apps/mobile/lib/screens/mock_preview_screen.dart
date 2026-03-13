@@ -814,7 +814,6 @@ class _MockSessionListWrapperState extends State<_MockSessionListWrapper> {
                       }
                       _addLog('Tap: ${session.id}');
                     },
-                    onStop: () => _addLog('Stop: ${session.id}'),
                     onApprove:
                         (
                           toolUseId, {
