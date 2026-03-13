@@ -856,11 +856,26 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
       .then((result) => {
         if (this.stopped || !result) return;
         const slashCommands = result.map((cmd) => cmd.name);
-        console.log(`[sdk-process] supportedCommands() returned ${slashCommands.length} commands`);
+        // Build skill metadata from description field returned by the SDK.
+        // This provides human-readable descriptions for custom skills
+        // that are not in the client's hardcoded knownCommands map.
+        const skillMetadata = result
+          .filter((cmd) => cmd.description && cmd.description !== cmd.name)
+          .map((cmd) => ({
+            name: cmd.name,
+            path: "",
+            description: cmd.description,
+            shortDescription: cmd.description,
+            enabled: true,
+            scope: "project" as const,
+          }));
+        const skills = skillMetadata.map((m) => m.name);
+        console.log(`[sdk-process] supportedCommands() returned ${slashCommands.length} commands (${skills.length} with descriptions)`);
         this.emitMessage({
           type: "system",
           subtype: "supported_commands",
           slashCommands,
+          ...(skills.length > 0 ? { skills, skillMetadata } : {}),
         });
       })
       .catch((err) => {
