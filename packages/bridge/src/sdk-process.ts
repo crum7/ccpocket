@@ -179,7 +179,7 @@ export function buildAuthError(
  */
 async function checkClaudeAuth(): Promise<AuthCheckResult> {
   // Skip auth check when using API key directly
-  if (process.env.ANTHROPIC_API_KEY) {
+  if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
     return { authenticated: true };
   }
   try {

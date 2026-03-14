@@ -299,6 +299,14 @@ export async function getClaudeAuthStatus(): Promise<ClaudeAuthStatus> {
     };
   }
 
+  if (process.env.ANTHROPIC_AUTH_TOKEN) {
+    return {
+      authenticated: true,
+      source: "api_key",
+      message: "Authenticated with ANTHROPIC_AUTH_TOKEN.",
+    };
+  }
+
   try {
     const creds = await getClaudeOAuthCredentials();
     if (!creds.accessToken) {
