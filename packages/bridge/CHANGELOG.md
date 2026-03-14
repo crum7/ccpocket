@@ -2,6 +2,11 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.19.0] - 2026-03-14
+
+### Added
+- Add `claude-opus-4-6[1m]` (1M context) to available Claude model list
+
 ## [1.18.0] - 2026-03-13
 
 ### Added
