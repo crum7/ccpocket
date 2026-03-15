@@ -117,19 +117,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: cs.outlineVariant,
                     ),
                     // Voice Input
-                    ListTile(
-                      leading: Icon(Icons.record_voice_over, color: cs.primary),
-                      title: Text(l.voiceInput),
-                      subtitle: Text(
-                        getSpeechLocaleLabel(state.speechLocaleId),
+                    if (!state.hideVoiceInput) ...[
+                      ListTile(
+                        leading: Icon(
+                          Icons.record_voice_over,
+                          color: cs.primary,
+                        ),
+                        title: Text(l.voiceInput),
+                        subtitle: Text(
+                          getSpeechLocaleLabel(state.speechLocaleId),
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () => showSpeechLocaleBottomSheet(
+                          context: context,
+                          current: state.speechLocaleId,
+                          onChanged: (id) => context
+                              .read<SettingsCubit>()
+                              .setSpeechLocaleId(id),
+                        ),
                       ),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () => showSpeechLocaleBottomSheet(
-                        context: context,
-                        current: state.speechLocaleId,
-                        onChanged: (id) =>
-                            context.read<SettingsCubit>().setSpeechLocaleId(id),
+                      Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: cs.outlineVariant,
                       ),
+                    ],
+                    // Hide Voice Input
+                    SwitchListTile(
+                      secondary: Icon(Icons.mic_off, color: cs.primary),
+                      title: Text(l.hideVoiceInput),
+                      subtitle: Text(l.hideVoiceInputSubtitle),
+                      value: state.hideVoiceInput,
+                      onChanged: (value) => context
+                          .read<SettingsCubit>()
+                          .setHideVoiceInput(value),
                     ),
                   ],
                 ),

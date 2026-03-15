@@ -420,6 +420,8 @@
   "pasteFromClipboard": "Paste from Clipboard",
 
   "voiceInputLanguage": "Voice Input Language",
+  "hideVoiceInput": "Hide voice input button",
+  "hideVoiceInputSubtitle": "Useful when using a third-party voice input keyboard",
 
   "archive": "Archive",
   "archiveConfirm": "Archive this session?",

@@ -32,6 +32,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   /// SharedPreferences key for the Shorebird update track.
   /// Also read directly from SharedPreferences in main.dart at startup.
   static const keyShorebirdTrack = 'settings_shorebird_track';
+  static const _keyHideVoiceInput = 'settings_hide_voice_input';
   // Legacy key for migration
   static const _keyIndentSize = 'settings_indent_size';
   // Legacy key for migration
@@ -133,6 +134,7 @@ class SettingsCubit extends Cubit<SettingsState> {
 
     final shorebirdTrack = prefs.getString(keyShorebirdTrack) ?? 'stable';
     final indentSize = prefs.getInt(_keyIndentSize) ?? 2;
+    final hideVoiceInput = prefs.getBool(_keyHideVoiceInput) ?? false;
 
     return SettingsState(
       themeMode:
@@ -147,6 +149,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       fcmPrivacyMachines: fcmPrivacyMachines,
       shorebirdTrack: shorebirdTrack,
       indentSize: indentSize.clamp(1, 4),
+      hideVoiceInput: hideVoiceInput,
     );
   }
 
@@ -210,6 +213,11 @@ class SettingsCubit extends Cubit<SettingsState> {
   void setShorebirdTrack(String track) {
     _prefs.setString(keyShorebirdTrack, track);
     emit(state.copyWith(shorebirdTrack: track));
+  }
+
+  void setHideVoiceInput(bool hide) {
+    _prefs.setBool(_keyHideVoiceInput, hide);
+    emit(state.copyWith(hideVoiceInput: hide));
   }
 
   void setSpeechLocaleId(String localeId) {

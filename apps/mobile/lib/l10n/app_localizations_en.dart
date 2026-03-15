@@ -1073,6 +1073,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceInputLanguage => 'Voice Input Language';
 
   @override
+  String get hideVoiceInput => 'Hide voice input button';
+
+  @override
+  String get hideVoiceInputSubtitle =>
+      'Useful when using a third-party voice input keyboard';
+
+  @override
   String get archive => 'Archive';
 
   @override

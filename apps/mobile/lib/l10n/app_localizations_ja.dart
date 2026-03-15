@@ -1059,6 +1059,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get voiceInputLanguage => '音声入力の言語';
 
   @override
+  String get hideVoiceInput => '音声入力ボタンを非表示';
+
+  @override
+  String get hideVoiceInputSubtitle => 'サードパーティの音声入力キーボードを利用する場合に便利';
+
+  @override
   String get archive => 'アーカイブ';
 
   @override

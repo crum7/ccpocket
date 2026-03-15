@@ -2060,6 +2060,18 @@ abstract class AppLocalizations {
   /// **'音声入力の言語'**
   String get voiceInputLanguage;
 
+  /// No description provided for @hideVoiceInput.
+  ///
+  /// In ja, this message translates to:
+  /// **'音声入力ボタンを非表示'**
+  String get hideVoiceInput;
+
+  /// No description provided for @hideVoiceInputSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'サードパーティの音声入力キーボードを利用する場合に便利'**
+  String get hideVoiceInputSubtitle;
+
   /// No description provided for @archive.
   ///
   /// In ja, this message translates to:

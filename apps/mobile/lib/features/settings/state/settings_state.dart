@@ -54,6 +54,9 @@ abstract class SettingsState with _$SettingsState {
 
     /// Indent size for list formatting (1-4 spaces).
     @Default(2) int indentSize,
+
+    /// Whether to hide the voice input button in the chat input bar.
+    @Default(false) bool hideVoiceInput,
   }) = _SettingsState;
 
   /// Whether push notifications are enabled for the currently connected machine.
