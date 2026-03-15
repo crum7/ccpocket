@@ -2,6 +2,11 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.21.1] - 2026-03-15
+
+### Fixed
+- Read customTitle from JSONL for pipe-created sessions (`claude -p -n`)
+
 ## [1.21.0] - 2026-03-15
 
 ### Added
