@@ -1212,4 +1212,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get terminalAppExperimentalNote =>
       'This feature is experimental. Presets may not work with all apps or configurations. Contributions for new presets are welcome on GitHub!';
+
+  @override
+  String get sectionSpread => 'ENJOYING CC POCKET?';
+
+  @override
+  String get shareApp => 'Share with Friends';
+
+  @override
+  String get shareAppSubtitle => 'Tell your friends & colleagues';
+
+  @override
+  String shareText(String url) {
+    return 'CC Pocket: Claude Code & Codex\nControl your coding agent from your phone 📱\n#ccpocket\n$url';
+  }
+
+  @override
+  String get starOnGithub => 'Star on GitHub';
+
+  @override
+  String get rateOnStore => 'Rate on App Store';
+
+  @override
+  String get rateOnStoreAndroid => 'Rate on Google Play';
 }

@@ -474,5 +474,18 @@
   "openInTerminal": "Open in Terminal",
   "terminalAppNotInstalled": "Could not open terminal app",
   "terminalAppExperimental": "Experimental",
-  "terminalAppExperimentalNote": "This feature is experimental. Presets may not work with all apps or configurations. Contributions for new presets are welcome on GitHub!"
+  "terminalAppExperimentalNote": "This feature is experimental. Presets may not work with all apps or configurations. Contributions for new presets are welcome on GitHub!",
+
+  "sectionSpread": "ENJOYING CC POCKET?",
+  "shareApp": "Share with Friends",
+  "shareAppSubtitle": "Tell your friends & colleagues",
+  "shareText": "CC Pocket: Claude Code & Codex\nControl your coding agent from your phone \ud83d\udcf1\n#ccpocket\n{url}",
+  "@shareText": {
+    "placeholders": {
+      "url": { "type": "String" }
+    }
+  },
+  "starOnGithub": "Star on GitHub",
+  "rateOnStore": "Rate on App Store",
+  "rateOnStoreAndroid": "Rate on Google Play"
 }

@@ -2329,6 +2329,48 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'この機能は実験的です。プリセットはアプリや環境によって動作しない場合があります。新しいプリセットの追加は GitHub で歓迎しています！'**
   String get terminalAppExperimentalNote;
+
+  /// No description provided for @sectionSpread.
+  ///
+  /// In ja, this message translates to:
+  /// **'CC Pocket を広める'**
+  String get sectionSpread;
+
+  /// No description provided for @shareApp.
+  ///
+  /// In ja, this message translates to:
+  /// **'SNSでシェア'**
+  String get shareApp;
+
+  /// No description provided for @shareAppSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'同僚や友人に紹介する'**
+  String get shareAppSubtitle;
+
+  /// No description provided for @shareText.
+  ///
+  /// In ja, this message translates to:
+  /// **'CC Pocket: Claude Code & Codex\nスマホからコーディングエージェントを操作できるアプリ 📱\n#ccpocket\n{url}'**
+  String shareText(String url);
+
+  /// No description provided for @starOnGithub.
+  ///
+  /// In ja, this message translates to:
+  /// **'GitHub にスターする'**
+  String get starOnGithub;
+
+  /// No description provided for @rateOnStore.
+  ///
+  /// In ja, this message translates to:
+  /// **'App Store で評価する'**
+  String get rateOnStore;
+
+  /// No description provided for @rateOnStoreAndroid.
+  ///
+  /// In ja, this message translates to:
+  /// **'Google Play で評価する'**
+  String get rateOnStoreAndroid;
 }
 
 class _AppLocalizationsDelegate

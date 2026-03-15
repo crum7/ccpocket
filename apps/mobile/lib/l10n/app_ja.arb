@@ -549,5 +549,18 @@
   "openInTerminal": "ターミナルで開く",
   "terminalAppNotInstalled": "ターミナルアプリを開けませんでした",
   "terminalAppExperimental": "実験的機能",
-  "terminalAppExperimentalNote": "この機能は実験的です。プリセットはアプリや環境によって動作しない場合があります。新しいプリセットの追加は GitHub で歓迎しています！"
+  "terminalAppExperimentalNote": "この機能は実験的です。プリセットはアプリや環境によって動作しない場合があります。新しいプリセットの追加は GitHub で歓迎しています！",
+
+  "sectionSpread": "CC Pocket を広める",
+  "shareApp": "SNSでシェア",
+  "shareAppSubtitle": "同僚や友人に紹介する",
+  "shareText": "CC Pocket: Claude Code & Codex\nスマホからコーディングエージェントを操作できるアプリ \ud83d\udcf1\n#ccpocket\n{url}",
+  "@shareText": {
+    "placeholders": {
+      "url": { "type": "String" }
+    }
+  },
+  "starOnGithub": "GitHub にスターする",
+  "rateOnStore": "App Store で評価する",
+  "rateOnStoreAndroid": "Google Play で評価する"
 }

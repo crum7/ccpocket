@@ -1196,4 +1196,27 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get terminalAppExperimentalNote =>
       'この機能は実験的です。プリセットはアプリや環境によって動作しない場合があります。新しいプリセットの追加は GitHub で歓迎しています！';
+
+  @override
+  String get sectionSpread => 'CC Pocket を広める';
+
+  @override
+  String get shareApp => 'SNSでシェア';
+
+  @override
+  String get shareAppSubtitle => '同僚や友人に紹介する';
+
+  @override
+  String shareText(String url) {
+    return 'CC Pocket: Claude Code & Codex\nスマホからコーディングエージェントを操作できるアプリ 📱\n#ccpocket\n$url';
+  }
+
+  @override
+  String get starOnGithub => 'GitHub にスターする';
+
+  @override
+  String get rateOnStore => 'App Store で評価する';
+
+  @override
+  String get rateOnStoreAndroid => 'Google Play で評価する';
 }
