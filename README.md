@@ -59,70 +59,40 @@ CC Pocket takes a different approach: **sessions start on your phone and run to 
 - You **can** reopen past sessions from history stored on your Mac
 - You **cannot** attach to a live session that was started directly on your Mac
 
-## How It Works
+## Getting Started
 
-1. Install and run the Bridge Server on the machine where Claude Code or Codex CLI is installed.
-2. Connect the mobile app to that Bridge Server.
-3. Start sessions, answer agent questions, approve tools, and review changes from your phone.
+<p align="center">
+  <img src="docs/images/install-banner.png" alt="CC Pocket — setup in 30 seconds" width="720">
+</p>
 
-Your coding session stays on your own machine and flows through your own Bridge Server.
+### 1. Start the Bridge Server
 
-## Quick Start
-
-### 1. Install a CLI Provider
-
-Install at least one of these on the host machine:
-
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)
-- [Codex CLI](https://github.com/openai/codex)
-
-You also need [Node.js](https://nodejs.org/) 18+.
-
-### 2. Start the Bridge Server
+Install [Node.js](https://nodejs.org/) 18+ and at least one CLI provider ([Claude Code](https://docs.anthropic.com/en/docs/claude-code) or [Codex](https://github.com/openai/codex)) on your host machine, then run:
 
 ```bash
-# Run directly with npx
 npx @ccpocket/bridge@latest
-
-# Or install globally
-npm install -g @ccpocket/bridge
-ccpocket-bridge
 ```
 
-By default, the Bridge Server listens on `ws://0.0.0.0:8765` and prints a QR code you can scan from the app.
+The server prints a QR code you can scan from the app to connect instantly.
 
-Optional health check:
+### 2. Install the Mobile App
 
-```bash
-npx @ccpocket/bridge@latest doctor
-# or
-ccpocket-bridge doctor
-```
-
-### 3. Install the Mobile App
+Scan the QR code in the banner above, or download directly:
 
 <div align="center">
 <a href="https://apps.apple.com/us/app/cc-pocket-dev-agent-remote/id6759188790"><img height="40" alt="Download on the App Store" src="docs/images/app-store-badge.svg" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=com.k9i.ccpocket"><img height="40" alt="Get it on Google Play" src="docs/images/google-play-badge-en.svg" /></a>
 </div>
 
-### 4. Connect
+### 3. Connect and Start Coding
 
-| Method | Best for |
-|--------|----------|
-| **Saved Machines** | Regular use with reconnects, status checks, and favorites |
-| **QR Code** | Fastest first-time setup |
+| Connection Method | Best for |
+|-------------------|----------|
+| **QR Code** | Fastest first-time setup — scan the terminal QR |
+| **Saved Machines** | Regular use with reconnects and status checks |
 | **mDNS Auto-Discovery** | Same-network discovery without typing IPs |
 | **Manual Input** | Tailscale, remote hosts, or custom ports |
 
-Examples:
-
-- `ws://192.168.1.5:8765`
-- `ws://100.x.y.z:8765` over Tailscale
-- `ccpocket://connect?url=ws://IP:PORT&token=API_KEY`
-
-### 5. Start a Session
-
-In the app, choose a project and permission mode, then start a Claude Code or Codex session.
+In the app, choose a project and permission mode, then start a session.
 
 | Permission Mode | Behavior |
 |----------------|----------|

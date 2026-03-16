@@ -15,8 +15,12 @@ class AppConstants {
 
   // ── External links ──
 
-  /// Primary share URL (replace with LP when ready)
-  static const String shareUrl = 'https://github.com/K9i-0/ccpocket';
+  /// Install landing page (redirects to App Store / Play Store on mobile)
+  static const String installUrl =
+      'https://k9i-0.github.io/ccpocket/install';
+
+  /// Primary share URL — uses install page for better mobile conversion
+  static const String shareUrl = installUrl;
 
   /// GitHub repository URL
   static const String githubUrl = 'https://github.com/K9i-0/ccpocket';
