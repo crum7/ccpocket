@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.41.0] - 2026-03-17
+
+### Added
+- Keyboard shortcuts for macOS desktop (Cmd+N: new session, Cmd+K: search, Tab: toggle provider, Cmd+Enter: start/approve, Cmd+Shift+P: permission mode, Tab/Shift+Tab: indent/dedent)
+- Auto-update check via GitHub Releases on macOS
+
 ## [1.40.0] - 2026-03-16
 
 ### Added
