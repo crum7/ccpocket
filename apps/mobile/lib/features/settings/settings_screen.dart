@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../constants/app_constants.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/machine_manager_cubit.dart';
 import '../../router/app_router.dart';
@@ -322,6 +326,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 8),
 
+              // ── Spread ──
+              _SectionHeader(title: l.sectionSpread),
+              Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    // Share on SNS
+                    ListTile(
+                      leading: Icon(Icons.share, color: cs.primary),
+                      title: Text(l.shareApp),
+                      subtitle: Text(l.shareAppSubtitle),
+                      onTap: () => SharePlus.instance.share(
+                        ShareParams(
+                          text: l.shareText(AppConstants.shareUrl),
+                        ),
+                      ),
+                    ),
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: cs.outlineVariant,
+                    ),
+                    // Star on GitHub
+                    ListTile(
+                      leading: Icon(Icons.star_border, color: cs.primary),
+                      title: Text(l.starOnGithub),
+                      trailing: const Icon(Icons.open_in_new, size: 18),
+                      onTap: () => launchUrl(
+                        Uri.parse(AppConstants.githubUrl),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                    ),
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: cs.outlineVariant,
+                    ),
+                    // Rate on Store
+                    ListTile(
+                      leading: Icon(Icons.rate_review_outlined, color: cs.primary),
+                      title: Text(
+                        Platform.isIOS ? l.rateOnStore : l.rateOnStoreAndroid,
+                      ),
+                      trailing: const Icon(Icons.open_in_new, size: 18),
+                      onTap: () => launchUrl(
+                        Uri.parse(
+                          Platform.isIOS
+                              ? AppConstants.appStoreUrl
+                              : AppConstants.playStoreUrl,
+                        ),
+                        mode: LaunchMode.externalApplication,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+
               // ── About ──
               _SectionHeader(title: l.sectionAbout),
               Card(
@@ -342,7 +406,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: Text(l.githubRepository),
                       trailing: const Icon(Icons.open_in_new, size: 18),
                       onTap: () => launchUrl(
-                        Uri.parse('https://github.com/K9i-0/ccpocket'),
+                        Uri.parse(AppConstants.githubUrl),
                         mode: LaunchMode.externalApplication,
                       ),
                     ),
