@@ -15,7 +15,8 @@ jobs:
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_KEY_IDENTIFIER: ${{ secrets.APP_STORE_CONNECT_KEY_IDENTIFIER }}
       APP_STORE_CONNECT_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
-      CERTIFICATE_PRIVATE_KEY: ${{ secrets.CERTIFICATE_PRIVATE_KEY }}
+      MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -28,11 +29,6 @@ jobs:
           flutter-version: ${{ steps.mise.outputs.flutter_version }}
           cache: true
 
-      - name: Install Codemagic CLI Tools
-        run: |
-          pipx install codemagic-cli-tools
-          pipx ensurepath
-
       - run: flutter pub get
         working-directory: apps/mobile
 
@@ -42,23 +38,36 @@ jobs:
       - run: flutter test
         working-directory: apps/mobile
 
-      # --- Code Signing ---
-      - name: Fetch Developer ID signing files
+      # --- Code Signing (p12 direct import) ---
+      - name: Import Developer ID certificate
         run: |
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type MAC_APP_DIRECT \
-            --platform MAC_OS --create
-        env:
-          BUNDLE_ID: com.k9i.ccpocket
+          # Create a temporary keychain
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          KC_PASS="$(openssl rand -base64 32)"
 
-      - name: Setup keychain
-        run: keychain initialize
+          security create-keychain -p "$KC_PASS" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KC_PASS" "$KEYCHAIN_PATH"
 
-      - name: Add certs to keychain
-        run: keychain add-certificates
+          # Decode and import the p12 certificate
+          P12_PATH="$RUNNER_TEMP/certificate.p12"
+          echo "$MACOS_CERTIFICATE_P12" | base64 --decode > "$P12_PATH"
 
-      - name: Set up code signing
-        run: xcode-project use-profiles
+          security import "$P12_PATH" \
+            -k "$KEYCHAIN_PATH" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KC_PASS" "$KEYCHAIN_PATH"
+
+          # Add to search list (prepend so it takes priority)
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+
+          # Verify certificate is available
+          security find-identity -v -p codesigning
+          echo "keychain_path=$KEYCHAIN_PATH" >> "$GITHUB_OUTPUT"
 
       # --- Build ---
       - name: Build macOS app
