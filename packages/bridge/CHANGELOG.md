@@ -2,6 +2,14 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.22.0] - 2026-03-17
+
+### Added
+- HTTP/SOCKS5 proxy support for outgoing fetch requests via `HTTPS_PROXY` env var (#16)
+
+### Fixed
+- Refresh git branch display when opening session or tapping branch chip
+
 ## [1.21.2] - 2026-03-15
 
 ### Changed
