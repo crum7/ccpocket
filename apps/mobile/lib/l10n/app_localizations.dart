@@ -2234,6 +2234,36 @@ abstract class AppLocalizations {
   /// **'閉じる'**
   String get showLess;
 
+  /// No description provided for @authErrorTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Claude Codeの再ログインが必要です'**
+  String get authErrorTitle;
+
+  /// No description provided for @authErrorBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'BridgeマシンでClaude Codeを起動し、再ログインしてください。'**
+  String get authErrorBody;
+
+  /// No description provided for @authErrorPrimaryCommandLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'手順1'**
+  String get authErrorPrimaryCommandLabel;
+
+  /// No description provided for @authErrorSecondaryCommandLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'手順2'**
+  String get authErrorSecondaryCommandLabel;
+
+  /// No description provided for @authErrorAlternativeLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'シェルから実行する場合'**
+  String get authErrorAlternativeLabel;
+
   /// No description provided for @authHelpTitle.
   ///
   /// In ja, this message translates to:
@@ -2243,14 +2273,26 @@ abstract class AppLocalizations {
   /// No description provided for @authHelpFetchError.
   ///
   /// In ja, this message translates to:
-  /// **'ヘルプガイドの取得に失敗しました'**
+  /// **'トラブルシューティングガイドを読み込めませんでした'**
   String get authHelpFetchError;
 
   /// No description provided for @authHelpButton.
   ///
   /// In ja, this message translates to:
-  /// **'ヘルプ'**
+  /// **'手順を見る'**
   String get authHelpButton;
+
+  /// No description provided for @authHelpLanguageJa.
+  ///
+  /// In ja, this message translates to:
+  /// **'日本語'**
+  String get authHelpLanguageJa;
+
+  /// No description provided for @authHelpLanguageEn.
+  ///
+  /// In ja, this message translates to:
+  /// **'English'**
+  String get authHelpLanguageEn;
 
   /// No description provided for @terminalApp.
   ///

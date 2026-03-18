@@ -458,9 +458,16 @@
   "showMore": "Show more",
   "showLess": "Show less",
 
+  "authErrorTitle": "Claude login required",
+  "authErrorBody": "Claude Code needs to sign in again on the Bridge machine.",
+  "authErrorPrimaryCommandLabel": "Step 1",
+  "authErrorSecondaryCommandLabel": "Step 2",
+  "authErrorAlternativeLabel": "Shell alternative",
   "authHelpTitle": "Auth Troubleshooting",
-  "authHelpFetchError": "Failed to load help guide",
-  "authHelpButton": "Help",
+  "authHelpFetchError": "Failed to load the troubleshooting guide",
+  "authHelpButton": "View steps",
+  "authHelpLanguageJa": "日本語",
+  "authHelpLanguageEn": "English",
 
   "terminalApp": "Terminal App",
   "terminalAppSubtitle": "Open projects in an external terminal app",

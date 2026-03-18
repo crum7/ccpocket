@@ -533,9 +533,16 @@
   "showMore": "もっと見る",
   "showLess": "閉じる",
 
+  "authErrorTitle": "Claude Codeの再ログインが必要です",
+  "authErrorBody": "BridgeマシンでClaude Codeを起動し、再ログインしてください。",
+  "authErrorPrimaryCommandLabel": "手順1",
+  "authErrorSecondaryCommandLabel": "手順2",
+  "authErrorAlternativeLabel": "シェルから実行する場合",
   "authHelpTitle": "認証トラブルシューティング",
-  "authHelpFetchError": "ヘルプガイドの取得に失敗しました",
-  "authHelpButton": "ヘルプ",
+  "authHelpFetchError": "トラブルシューティングガイドを読み込めませんでした",
+  "authHelpButton": "手順を見る",
+  "authHelpLanguageJa": "日本語",
+  "authHelpLanguageEn": "English",
 
   "terminalApp": "ターミナルアプリ",
   "terminalAppSubtitle": "外部ターミナルアプリでプロジェクトを開く",

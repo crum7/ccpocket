@@ -1,13 +1,21 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:http/http.dart' as http;
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/markdown_style.dart';
 
-const _authHelpUrl =
-    'https://raw.githubusercontent.com/K9i-0/ccpocket/main/docs/auth-troubleshooting.md';
+enum _AuthHelpLanguage { ja, en }
+
+extension on _AuthHelpLanguage {
+  String get assetPath {
+    return switch (this) {
+      _AuthHelpLanguage.ja => 'assets/docs/auth-troubleshooting.ja.md',
+      _AuthHelpLanguage.en => 'assets/docs/auth-troubleshooting.en.md',
+    };
+  }
+}
 
 @RoutePage()
 class AuthHelpScreen extends StatefulWidget {
@@ -18,46 +26,48 @@ class AuthHelpScreen extends StatefulWidget {
 }
 
 class _AuthHelpScreenState extends State<AuthHelpScreen> {
-  String? _markdown;
+  Map<_AuthHelpLanguage, String>? _markdownByLanguage;
+  _AuthHelpLanguage? _selectedLanguage;
   String? _error;
   bool _loading = true;
 
   @override
-  void initState() {
-    super.initState();
-    _fetch();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_selectedLanguage != null) return;
+    _selectedLanguage = _preferredLanguage(Localizations.localeOf(context));
+    _loadMarkdown();
   }
 
-  Future<void> _fetch() async {
+  _AuthHelpLanguage _preferredLanguage(Locale locale) {
+    return locale.languageCode == 'ja'
+        ? _AuthHelpLanguage.ja
+        : _AuthHelpLanguage.en;
+  }
+
+  Future<void> _loadMarkdown() async {
     setState(() {
       _loading = true;
       _error = null;
     });
 
     try {
-      final response = await http.get(Uri.parse(_authHelpUrl));
-      if (response.statusCode == 200) {
-        if (mounted) {
-          setState(() {
-            _markdown = response.body;
-            _loading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _error = 'HTTP ${response.statusCode}';
-            _loading = false;
-          });
-        }
-      }
+      final ja = await rootBundle.loadString(_AuthHelpLanguage.ja.assetPath);
+      final en = await rootBundle.loadString(_AuthHelpLanguage.en.assetPath);
+      if (!mounted) return;
+      setState(() {
+        _markdownByLanguage = {
+          _AuthHelpLanguage.ja: ja,
+          _AuthHelpLanguage.en: en,
+        };
+        _loading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _loading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
   }
 
@@ -67,51 +77,149 @@ class _AuthHelpScreenState extends State<AuthHelpScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(l.authHelpTitle)),
-      body: _buildBody(context),
+      body: _AuthHelpBody(
+        loading: _loading,
+        error: _error,
+        selectedLanguage: _selectedLanguage ?? _AuthHelpLanguage.en,
+        markdownByLanguage: _markdownByLanguage,
+        onRetry: _loadMarkdown,
+        onLanguageChanged: (_AuthHelpLanguage language) {
+          setState(() {
+            _selectedLanguage = language;
+          });
+        },
+      ),
     );
   }
+}
 
-  Widget _buildBody(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final cs = Theme.of(context).colorScheme;
+class _AuthHelpBody extends StatelessWidget {
+  final bool loading;
+  final String? error;
+  final _AuthHelpLanguage selectedLanguage;
+  final Map<_AuthHelpLanguage, String>? markdownByLanguage;
+  final Future<void> Function() onRetry;
+  final ValueChanged<_AuthHelpLanguage> onLanguageChanged;
 
-    if (_loading) {
+  const _AuthHelpBody({
+    required this.loading,
+    required this.error,
+    required this.selectedLanguage,
+    required this.markdownByLanguage,
+    required this.onRetry,
+    required this.onLanguageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_error != null || _markdown == null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cloud_off, size: 48, color: cs.onSurfaceVariant),
-              const SizedBox(height: 16),
-              Text(
-                l.authHelpFetchError,
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: _fetch,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: Text(l.retry),
-              ),
-            ],
-          ),
-        ),
-      );
+    if (error != null || markdownByLanguage == null) {
+      return _AuthHelpErrorState(onRetry: onRetry);
     }
 
-    return Scrollbar(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: MarkdownBody(
-          data: _markdown!,
-          styleSheet: buildMarkdownStyle(context),
-          onTapLink: handleMarkdownLink,
+    final markdown = markdownByLanguage![selectedLanguage]!;
+
+    return Column(
+      children: [
+        _AuthHelpLanguageSwitcher(
+          selectedLanguage: selectedLanguage,
+          onChanged: onLanguageChanged,
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: Scrollbar(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: MarkdownBody(
+                data: markdown,
+                styleSheet: buildMarkdownStyle(context),
+                onTapLink: handleMarkdownLink,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthHelpLanguageSwitcher extends StatelessWidget {
+  final _AuthHelpLanguage selectedLanguage;
+  final ValueChanged<_AuthHelpLanguage> onChanged;
+
+  const _AuthHelpLanguageSwitcher({
+    required this.selectedLanguage,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SegmentedButton<_AuthHelpLanguage>(
+          key: const ValueKey('auth_help_language_switcher'),
+          segments: [
+            ButtonSegment<_AuthHelpLanguage>(
+              value: _AuthHelpLanguage.ja,
+              label: Text(l.authHelpLanguageJa),
+            ),
+            ButtonSegment<_AuthHelpLanguage>(
+              value: _AuthHelpLanguage.en,
+              label: Text(l.authHelpLanguageEn),
+            ),
+          ],
+          selected: {selectedLanguage},
+          showSelectedIcon: false,
+          onSelectionChanged: (selection) {
+            onChanged(selection.first);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthHelpErrorState extends StatelessWidget {
+  final Future<void> Function() onRetry;
+
+  const _AuthHelpErrorState({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final cs = Theme.of(context).colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.description_outlined,
+              size: 48,
+              color: cs.onSurfaceVariant,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l.authHelpFetchError,
+              style: Theme.of(context).textTheme.bodyLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh, size: 18),
+              label: Text(l.retry),
+            ),
+          ],
         ),
       ),
     );

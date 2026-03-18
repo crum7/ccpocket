@@ -1164,13 +1164,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get showLess => 'Show less';
 
   @override
+  String get authErrorTitle => 'Claude login required';
+
+  @override
+  String get authErrorBody =>
+      'Claude Code needs to sign in again on the Bridge machine.';
+
+  @override
+  String get authErrorPrimaryCommandLabel => 'Step 1';
+
+  @override
+  String get authErrorSecondaryCommandLabel => 'Step 2';
+
+  @override
+  String get authErrorAlternativeLabel => 'Shell alternative';
+
+  @override
   String get authHelpTitle => 'Auth Troubleshooting';
 
   @override
-  String get authHelpFetchError => 'Failed to load help guide';
+  String get authHelpFetchError => 'Failed to load the troubleshooting guide';
 
   @override
-  String get authHelpButton => 'Help';
+  String get authHelpButton => 'View steps';
+
+  @override
+  String get authHelpLanguageJa => '日本語';
+
+  @override
+  String get authHelpLanguageEn => 'English';
 
   @override
   String get terminalApp => 'Terminal App';

@@ -1149,13 +1149,34 @@ class AppLocalizationsJa extends AppLocalizations {
   String get showLess => '閉じる';
 
   @override
+  String get authErrorTitle => 'Claude Codeの再ログインが必要です';
+
+  @override
+  String get authErrorBody => 'BridgeマシンでClaude Codeを起動し、再ログインしてください。';
+
+  @override
+  String get authErrorPrimaryCommandLabel => '手順1';
+
+  @override
+  String get authErrorSecondaryCommandLabel => '手順2';
+
+  @override
+  String get authErrorAlternativeLabel => 'シェルから実行する場合';
+
+  @override
   String get authHelpTitle => '認証トラブルシューティング';
 
   @override
-  String get authHelpFetchError => 'ヘルプガイドの取得に失敗しました';
+  String get authHelpFetchError => 'トラブルシューティングガイドを読み込めませんでした';
 
   @override
-  String get authHelpButton => 'ヘルプ';
+  String get authHelpButton => '手順を見る';
+
+  @override
+  String get authHelpLanguageJa => '日本語';
+
+  @override
+  String get authHelpLanguageEn => 'English';
 
   @override
   String get terminalApp => 'ターミナルアプリ';

@@ -76,6 +76,7 @@ class ErrorBubble extends StatelessWidget {
     final hint = _errorHint(resolvedErrorCode);
     final hasStructured = title != null;
     final isWarn = _isWarning(resolvedErrorCode);
+    final l = AppLocalizations.of(context);
 
     final bubbleColor = isWarn
         ? appColors.warningBubble
@@ -97,7 +98,20 @@ class ErrorBubble extends StatelessWidget {
         border: Border.all(color: borderColor),
       ),
       child: hasStructured
-          ? _buildStructured(context, appColors, title, hint, textColor, isWarn)
+          ? _isClaudeAuthError(resolvedErrorCode)
+                ? _ClaudeAuthErrorCard(
+                    textColor: textColor,
+                    title: l.authErrorTitle,
+                    body: l.authErrorBody,
+                    primaryCommandLabel: l.authErrorPrimaryCommandLabel,
+                    primaryCommand: 'claude',
+                    secondaryCommandLabel: l.authErrorSecondaryCommandLabel,
+                    secondaryCommand: '/login',
+                    alternativeLabel: l.authErrorAlternativeLabel,
+                    alternativeCommand: 'claude auth login',
+                    helpLabel: l.authHelpButton,
+                  )
+                : _buildStructured(context, title, hint, textColor, isWarn)
           : _buildSimple(textColor),
     );
   }
@@ -121,7 +135,6 @@ class ErrorBubble extends StatelessWidget {
   /// Structured layout with title, message body, and remedy hint.
   Widget _buildStructured(
     BuildContext context,
-    AppColors appColors,
     String title,
     String? hint,
     Color textColor,
@@ -160,33 +173,6 @@ class ErrorBubble extends StatelessWidget {
         if (hint != null) ...[
           const SizedBox(height: 8),
           _buildHint(context, textColor, hint),
-        ],
-        if (_isClaudeAuthError(
-          inferStructuredErrorCode(
-            message: message.message,
-            explicitErrorCode: message.errorCode,
-          ),
-        )) ...[
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              OutlinedButton.icon(
-                onPressed: () {
-                  context.router.navigate(const SettingsRoute());
-                },
-                icon: const Icon(Icons.settings_outlined, size: 16),
-                label: const Text('Open Settings'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  context.router.navigate(const AuthHelpRoute());
-                },
-                icon: const Icon(Icons.help_outline, size: 16),
-                label: Text(AppLocalizations.of(context).authHelpButton),
-              ),
-            ],
-          ),
         ],
       ],
     );
@@ -257,6 +243,234 @@ class ErrorBubble extends StatelessWidget {
         size: 14,
         color: textColor,
       ),
+    );
+  }
+}
+
+class _ClaudeAuthErrorCard extends StatelessWidget {
+  final Color textColor;
+  final String title;
+  final String body;
+  final String primaryCommandLabel;
+  final String primaryCommand;
+  final String secondaryCommandLabel;
+  final String secondaryCommand;
+  final String alternativeLabel;
+  final String alternativeCommand;
+  final String helpLabel;
+
+  const _ClaudeAuthErrorCard({
+    required this.textColor,
+    required this.title,
+    required this.body,
+    required this.primaryCommandLabel,
+    required this.primaryCommand,
+    required this.secondaryCommandLabel,
+    required this.secondaryCommand,
+    required this.alternativeLabel,
+    required this.alternativeCommand,
+    required this.helpLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            _AuthIcon(textColor: textColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          body,
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.92),
+            fontSize: 12,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 10),
+        _AuthCommandRow(
+          textColor: textColor,
+          leadingLabel: primaryCommandLabel,
+          command: primaryCommand,
+        ),
+        const SizedBox(height: 6),
+        _AuthCommandRow(
+          textColor: textColor,
+          leadingLabel: secondaryCommandLabel,
+          command: secondaryCommand,
+        ),
+        const SizedBox(height: 10),
+        _AlternativeCommandHint(
+          textColor: textColor,
+          label: alternativeLabel,
+          command: alternativeCommand,
+        ),
+        const SizedBox(height: 10),
+        OutlinedButton.icon(
+          key: const ValueKey('auth_help_button'),
+          onPressed: () {
+            context.router.navigate(const AuthHelpRoute());
+          },
+          icon: const Icon(Icons.help_outline, size: 16),
+          label: Text(helpLabel),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthCommandRow extends StatelessWidget {
+  final Color textColor;
+  final String leadingLabel;
+  final String command;
+
+  const _AuthCommandRow({
+    required this.textColor,
+    required this.leadingLabel,
+    required this.command,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 64,
+          child: Text(
+            leadingLabel,
+            style: TextStyle(
+              color: textColor.withValues(alpha: 0.75),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: _CommandChip(
+            textColor: textColor,
+            command: command,
+            copyValue: command,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AlternativeCommandHint extends StatelessWidget {
+  final Color textColor;
+  final String label;
+  final String command;
+
+  const _AlternativeCommandHint({
+    required this.textColor,
+    required this.label,
+    required this.command,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            color: textColor.withValues(alpha: 0.7),
+            fontSize: 11,
+          ),
+        ),
+        const SizedBox(height: 6),
+        _CommandChip(
+          textColor: textColor,
+          command: command,
+          copyValue: command,
+        ),
+      ],
+    );
+  }
+}
+
+class _CommandChip extends StatelessWidget {
+  final Color textColor;
+  final String command;
+  final String copyValue;
+
+  const _CommandChip({
+    required this.textColor,
+    required this.command,
+    required this.copyValue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Clipboard.setData(ClipboardData(text: copyValue));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Copied "$copyValue"'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+        decoration: BoxDecoration(
+          color: textColor.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                command,
+                style: TextStyle(
+                  color: textColor,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+            Icon(Icons.copy, size: 12, color: textColor.withValues(alpha: 0.5)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AuthIcon extends StatelessWidget {
+  final Color textColor;
+
+  const _AuthIcon({required this.textColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: textColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(Icons.error_outline, size: 14, color: textColor),
     );
   }
 }
