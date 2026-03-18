@@ -11,7 +11,8 @@ final class UsageViewModel: ObservableObject {
     private var refreshTimer: Timer?
 
     func startAutoRefresh() {
-        fetchUsage()
+        // Don't fetch immediately — let onChange(bridgeStatus) trigger the first fetch
+        // once bridge is confirmed running
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.fetchUsage()
@@ -35,7 +36,10 @@ final class UsageViewModel: ObservableObject {
                 providers = response.providers
                 error = nil
             } catch {
-                self.error = "Bridge is not running"
+                // Only show error if we had no previous data
+                if providers.isEmpty {
+                    self.error = "Failed to load usage data"
+                }
             }
             isLoading = false
         }

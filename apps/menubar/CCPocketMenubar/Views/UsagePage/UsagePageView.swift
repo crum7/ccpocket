@@ -6,9 +6,10 @@ struct UsagePageView: View {
 
     var body: some View {
         Group {
-            if bridgeStatus == .stopped {
+            if bridgeStatus != .running {
                 ContentUnavailableView {
-                    Label("Bridge Not Running", systemImage: "antenna.radiowaves.left.and.right.slash")
+                    Label("Bridge Not Running",
+                          systemImage: "antenna.radiowaves.left.and.right.slash")
                 } description: {
                     Text("Start the Bridge Server to view usage data.")
                 }
@@ -33,9 +34,6 @@ struct UsagePageView: View {
                         }
                     }
                     .padding(16)
-                }
-                .refreshable {
-                    viewModel.fetchUsage()
                 }
             }
         }

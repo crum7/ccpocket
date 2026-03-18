@@ -1,1 +1,0 @@
-CCPocketMenubar.debug.dylib

@@ -1,2 +1,0 @@
-Target dependency graph (1 target)
-Target 'CCPocketMenubar' in project 'CCPocketMenubar' (no dependencies)

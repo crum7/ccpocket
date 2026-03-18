@@ -10,7 +10,7 @@ struct HeaderView: View {
                 Circle()
                     .fill(viewModel.bridgeStatus.color)
                     .frame(width: 7, height: 7)
-                    .shadow(color: viewModel.bridgeStatus.color.opacity(0.5), radius: 3)
+                    .shadow(color: viewModel.bridgeStatus.color.opacity(0.6), radius: 4)
 
                 Text(viewModel.bridgeStatus.label)
                     .font(.subheadline.weight(.medium))
@@ -39,6 +39,19 @@ struct HeaderView: View {
             .glassEffect(.regular.interactive(), in: .circle)
             .help(viewModel.bridgeStatus == .running ? "Stop Bridge" : "Start Bridge")
             .disabled(viewModel.bridgeStatus == .checking)
+
+            // Quit button
+            Button {
+                NSApplication.shared.terminate(nil)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 28)
+            }
+            .buttonStyle(.borderless)
+            .glassEffect(.regular.interactive(), in: .circle)
+            .help("Quit CC Pocket")
         }
     }
 }
