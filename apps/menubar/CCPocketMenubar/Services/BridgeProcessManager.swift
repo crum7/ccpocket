@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 /// Manages the Bridge Server process via launchctl.
@@ -60,14 +61,19 @@ final class BridgeProcessManager: Sendable {
         }
     }
 
-    /// Start the Bridge via launchctl.
-    func startService() async throws {
-        try await shell("launchctl start \(serviceLabel)")
+    private var plistPath: String {
+        NSHomeDirectory() + "/Library/LaunchAgents/\(serviceLabel).plist"
     }
 
-    /// Stop the Bridge via launchctl.
+    /// Start the Bridge by loading the launchd service.
+    func startService() async throws {
+        try await shell("launchctl load \(plistPath)")
+    }
+
+    /// Stop the Bridge by unloading the launchd service.
+    /// Using unload (not stop) so KeepAlive doesn't restart the process.
     func stopService() async throws {
-        try await shell("launchctl stop \(serviceLabel)")
+        try await shell("launchctl unload \(plistPath)")
     }
 
     /// Setup (register) the launchd service.
@@ -144,6 +150,27 @@ final class BridgeProcessManager: Sendable {
         default:
             throw ProcessError.nonZeroExit(status: 1, output: "Unknown provider: \(providerName)")
         }
+    }
+
+    // MARK: - Terminal Guide
+
+    /// Open Terminal.app and copy setup commands to the clipboard.
+    /// Commands are copied (not executed) so the user can paste and review them.
+    func openTerminalGuide(title: String, commands: [(comment: String, command: String)]) {
+        // Build clipboard text
+        var lines: [String] = ["# \(title)", ""]
+        for (i, entry) in commands.enumerated() {
+            lines.append("# Step \(i + 1): \(entry.comment)")
+            lines.append(entry.command)
+            lines.append("")
+        }
+
+        // Copy to clipboard
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
+
+        // Open Terminal.app
+        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"))
     }
 
     // MARK: - Version Check

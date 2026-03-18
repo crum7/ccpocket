@@ -34,23 +34,6 @@ struct HeaderView: View {
 
             Spacer()
 
-            // Launch at Login toggle
-            Button {
-                viewModel.launchAtLogin.toggle()
-            } label: {
-                Image(systemName: viewModel.launchAtLogin
-                      ? "sunrise.fill" : "sunrise")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(viewModel.launchAtLogin ? .orange : .secondary)
-                    .frame(width: 28, height: 28)
-                    .contentTransition(.symbolEffect(.replace))
-            }
-            .buttonStyle(.borderless)
-            .glassEffect(.regular.interactive(), in: .circle)
-            .help(viewModel.launchAtLogin
-                  ? "Disable Launch at Login"
-                  : "Enable Launch at Login")
-
             // Start/Stop button
             Button {
                 viewModel.toggleBridge()
@@ -61,7 +44,7 @@ struct HeaderView: View {
             }
             .buttonStyle(.borderless)
             .glassEffect(.regular.interactive(), in: .circle)
-            .help(viewModel.bridgeStatus == .running ? "Stop Bridge" : "Start Bridge")
+            .help(viewModel.bridgeStatus == .running ? String(localized: "Stop Bridge") : String(localized: "Start Bridge"))
             .disabled(viewModel.bridgeStatus == .checking)
 
             // Quit button
@@ -75,7 +58,7 @@ struct HeaderView: View {
             }
             .buttonStyle(.borderless)
             .glassEffect(.regular.interactive(), in: .circle)
-            .help("Quit CC Pocket")
+            .help(String(localized: "Quit CC Pocket"))
         }
     }
 }

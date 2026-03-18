@@ -69,10 +69,16 @@ struct PopoverContentView: View {
                 case .doctor:
                     DoctorPageView(
                         viewModel: doctorVM,
+                        launchAtLogin: $viewModel.launchAtLogin,
                         bridgeUpdateAvailable: viewModel.bridgeUpdateAvailable,
                         onUpdateBridge: { doctorVM.updateBridge() }
                     )
                         .transition(slideTransition)
+                        #if DEBUG
+                        .safeAreaInset(edge: .bottom) {
+                            MockDoctorPicker(doctorVM: doctorVM)
+                        }
+                        #endif
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -122,3 +128,41 @@ struct GlassTabBar: View {
         .glassEffect(.regular, in: .capsule)
     }
 }
+
+// MARK: - Mock Doctor Picker (DEBUG only)
+
+#if DEBUG
+struct MockDoctorPicker: View {
+    @ObservedObject var doctorVM: DoctorViewModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "ant.fill")
+                .font(.caption2)
+                .foregroundStyle(.orange)
+
+            Picker("Mock", selection: mockBinding) {
+                Text("Off").tag(nil as MockDoctorScenario?)
+                ForEach(MockDoctorScenario.allCases, id: \.self) { scenario in
+                    Text(scenario.displayName).tag(scenario as MockDoctorScenario?)
+                }
+            }
+            .pickerStyle(.menu)
+            .controlSize(.small)
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: .rect(cornerRadius: 8))
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
+    }
+
+    private var mockBinding: Binding<MockDoctorScenario?> {
+        Binding(
+            get: { doctorVM.mockScenario },
+            set: { doctorVM.setMockScenario($0) }
+        )
+    }
+}
+#endif

@@ -405,6 +405,102 @@
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "LAN" } }
       }
+    },
+
+    "Let's make sure everything is set up correctly." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "セットアップが正しく完了しているか確認します。" } }
+      }
+    },
+    "Copy All" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべてコピー" } }
+      }
+    },
+    "Open Terminal" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ターミナルを開く" } }
+      }
+    },
+    "Re-check" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "再チェック" } }
+      }
+    },
+    "Copy" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "コピー" } }
+      }
+    },
+    "Terminal" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ターミナル" } }
+      }
+    },
+    "Not authenticated" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "未認証" } }
+      }
+    },
+    "Installed" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "インストール済み" } }
+      }
+    },
+
+    "Install Homebrew" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Homebrewをインストール" } }
+      }
+    },
+    "Install Node.js" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Node.jsをインストール" } }
+      }
+    },
+    "Install Claude Code (either one is OK)" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Claude Codeをインストール（どちらか1つでOK）" } }
+      }
+    },
+    "Install Codex (either one is OK)" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Codexをインストール（どちらか1つでOK）" } }
+      }
+    },
+    "Login to Claude Code" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Claude Codeにログイン" } }
+      }
+    },
+    "Login to Codex" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Codexにログイン" } }
+      }
+    },
+    "Set up Bridge (install + start service)" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Bridgeをセットアップ（インストール+サービス登録）" } }
+      }
+    },
+
+    "Launch at Login" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログイン時に起動" } }
+      }
+    },
+
+    "or" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "または" } }
+      }
+    },
+
+    "Bridge Server" : {
+      "comment" : "Doctor check name",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Bridge Server" } }
+      }
     }
   },
   "version" : "1.0"

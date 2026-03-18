@@ -11,6 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var eventMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        parseMockDoctorArgument()
+        #endif
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem.button {
@@ -39,6 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.level = .statusBar
         panel.isMovableByWindowBackground = false
         panel.hidesOnDeactivate = false
+        panel.acceptsMouseMovedEvents = true
         panel.contentView = contentView
         panel.isReleasedWhenClosed = false
 
@@ -85,6 +90,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             eventMonitor = nil
         }
     }
+
+    // MARK: - Mock Doctor (DEBUG only)
+
+    #if DEBUG
+    private func parseMockDoctorArgument() {
+        let args = CommandLine.arguments
+        guard let flagIndex = args.firstIndex(of: "-mock-doctor"),
+              flagIndex + 1 < args.count,
+              let scenario = MockDoctorScenario(rawValue: args[flagIndex + 1]) else {
+            return
+        }
+
+        // Reset onboarding so the user sees the full first-run experience
+        UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+        appViewModel.hasCompletedOnboarding = false
+
+        // Inject mock scenario — doctorVM is created in PopoverContentView,
+        // so we store it in UserDefaults for the view to pick up
+        UserDefaults.standard.set(scenario.rawValue, forKey: "mockDoctorScenario")
+    }
+    #endif
 
     // MARK: - Menu Bar Icon (Drawn in code)
 

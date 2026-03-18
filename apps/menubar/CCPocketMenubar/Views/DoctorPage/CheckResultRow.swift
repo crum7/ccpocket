@@ -5,6 +5,7 @@ struct CheckResultRow: View {
     let onAction: (() -> Void)?
     var onProviderLogin: ((String) -> Void)?
     var onProviderInstall: ((String) -> Void)?
+    var commands: [(comment: String, command: String)] = []
 
     private var statusColor: Color {
         switch check.status {
@@ -81,20 +82,16 @@ struct CheckResultRow: View {
                 }
             }
 
-            // Remediation
-            if let remediation = check.remediation,
-               check.status == "fail" || check.status == "warn" {
-                HStack {
-                    Text(remediation)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-
-                    if let action = onAction {
-                        Spacer()
-                        Button("Fix", action: action)
-                            .controlSize(.small)
-                            .buttonStyle(.borderedProminent)
-                            .tint(.accentColor)
+            // Command rows with copy buttons
+            if !commands.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(commands.enumerated()), id: \.offset) { _, entry in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.comment)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            CommandRow(command: entry.command)
+                        }
                     }
                 }
                 .padding(.leading, 24)

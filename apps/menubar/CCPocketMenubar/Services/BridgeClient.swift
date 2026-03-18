@@ -13,6 +13,8 @@ final class BridgeClient: Sendable {
         self.port = port
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 5
+        config.urlCache = nil
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
         self.session = URLSession(configuration: config)
     }
 
