@@ -183,8 +183,18 @@ async function checkClaudeAuth(): Promise<AuthCheckResult> {
   }
 
   // When usage is not explicitly enabled, use local-only credential check
-  // (no upstream API calls to Anthropic).
+  // (no upstream API calls to Anthropic).  Token refresh uses standard OAuth
+  // (platform.claude.com), NOT the Anthropic API (api.anthropic.com).
   if (!process.env.BRIDGE_ENABLE_USAGE) {
+    // First try to ensure the token is fresh (refresh if expired).
+    // This only contacts platform.claude.com for OAuth token refresh,
+    // without probing api.anthropic.com.
+    try {
+      await getValidClaudeAccessToken();
+    } catch {
+      // Refresh failed — fall through to local status check which will
+      // surface the appropriate error (missing credentials, expired, etc.).
+    }
     const status = await getClaudeAuthStatus();
     if (status.authenticated) {
       return { authenticated: true };

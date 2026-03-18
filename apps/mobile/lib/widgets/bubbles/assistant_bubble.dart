@@ -63,7 +63,13 @@ class _AssistantBubbleState extends State<AssistantBubble> {
     final hasPlanExit = contents.any(
       (c) => c is ToolUseContent && c.name == 'ExitPlanMode',
     );
-    final inferredErrorCode = inferStructuredErrorCode(message: _allText());
+    final allText = _allText();
+    // Only infer structured errors from short, text-only messages that are
+    // likely actual error messages from the CLI — not long assistant prose
+    // that happens to contain keywords like "oauth" or "credentials".
+    final inferredErrorCode = allText.length <= 500
+        ? inferStructuredErrorCode(message: allText)
+        : null;
     final hasOnlyTextContent =
         contents.isNotEmpty && contents.every((c) => c is TextContent);
 
