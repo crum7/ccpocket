@@ -5,6 +5,8 @@ struct CheckResultRow: View {
     let onAction: (() -> Void)?
     var onProviderLogin: ((String) -> Void)?
     var onProviderInstall: ((String) -> Void)?
+    var onCopyCommands: (() -> Void)?
+    var onOpenTerminal: (() -> Void)?
 
     private var statusColor: Color {
         switch check.status {
@@ -81,20 +83,44 @@ struct CheckResultRow: View {
                 }
             }
 
-            // Remediation
-            if let remediation = check.remediation,
-               check.status == "fail" || check.status == "warn" {
-                HStack {
-                    Text(remediation)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+            // Remediation with terminal guide
+            if check.status == "fail" || check.status == "warn" {
+                VStack(alignment: .leading, spacing: 6) {
+                    if let remediation = check.remediation {
+                        Text(remediation)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
 
-                    if let action = onAction {
-                        Spacer()
-                        Button("Fix", action: action)
-                            .controlSize(.small)
+                    HStack(spacing: 6) {
+                        if let onCopyCommands {
+                            Button {
+                                onCopyCommands()
+                            } label: {
+                                Label("Copy", systemImage: "doc.on.doc")
+                                    .font(.caption2)
+                            }
+                            .controlSize(.mini)
+                            .buttonStyle(.bordered)
+                        }
+
+                        if let onOpenTerminal {
+                            Button {
+                                onOpenTerminal()
+                            } label: {
+                                Label("Terminal", systemImage: "terminal")
+                                    .font(.caption2)
+                            }
+                            .controlSize(.mini)
                             .buttonStyle(.borderedProminent)
-                            .tint(.accentColor)
+                        }
+
+                        if let action = onAction {
+                            Button("Fix", action: action)
+                                .controlSize(.mini)
+                                .buttonStyle(.borderedProminent)
+                                .tint(.accentColor)
+                        }
                     }
                 }
                 .padding(.leading, 24)

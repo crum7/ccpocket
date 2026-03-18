@@ -149,7 +149,13 @@ struct DoctorPageView: View {
                         },
                         onProviderInstall: { providerName in
                             installProvider(providerName)
-                        }
+                        },
+                        onCopyCommands: hasCommands(check) ? {
+                            viewModel.copySetupCommands(for: check)
+                        } : nil,
+                        onOpenTerminal: hasCommands(check) ? {
+                            viewModel.openSetupTerminal(for: check)
+                        } : nil
                     )
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
@@ -157,6 +163,10 @@ struct DoctorPageView: View {
             }
             .background(.white.opacity(0.06), in: .rect(cornerRadius: 12))
         }
+    }
+
+    private func hasCommands(_ check: CheckResult) -> Bool {
+        check.status == "fail" || check.status == "warn"
     }
 
     private func actionFor(_ check: CheckResult) -> (() -> Void)? {

@@ -146,6 +146,40 @@ final class BridgeProcessManager: Sendable {
         }
     }
 
+    // MARK: - Terminal Guide
+
+    /// Open Terminal.app with a new window displaying the given commands as a guide.
+    /// Commands are displayed (not executed) so the user can review and run them.
+    func openTerminalGuide(title: String, commands: [(comment: String, command: String)]) {
+        var lines: [String] = []
+        lines.append("echo ''")
+        lines.append("echo '\\033[1m📋 \(title)\\033[0m'")
+        lines.append("echo ''")
+
+        for (i, entry) in commands.enumerated() {
+            lines.append("echo '\\033[90m# Step \(i + 1): \(entry.comment)\\033[0m'")
+            lines.append("echo '\\033[36m\(entry.command)\\033[0m'")
+            lines.append("echo ''")
+        }
+
+        lines.append("echo '\\033[33m✅ Done? Go back to CC Pocket and click Re-check\\033[0m'")
+        lines.append("echo ''")
+
+        let script = lines.joined(separator: "; ")
+
+        let appleScript = """
+        tell application "Terminal"
+            activate
+            do script "\(script)"
+        end tell
+        """
+
+        var error: NSDictionary?
+        if let scriptObject = NSAppleScript(source: appleScript) {
+            scriptObject.executeAndReturnError(&error)
+        }
+    }
+
     // MARK: - Version Check
 
     /// Get the latest available version of Bridge from npm.
