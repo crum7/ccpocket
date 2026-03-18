@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.43.0] - 2026-03-19
+
+### Added
+- Expandable summary text for long approval commands — tap "more"/"less" to toggle full command display
+- gpt-5.4-mini model option for Codex sessions
+
+### Fixed
+- Unified tool approval button order and color semantics across Claude/Codex
+- Reduced unnecessary rebuilds triggered by Android notification shade
+- Prevented false auth error on long assistant messages
+- Renamed "Experimental" label to "Preview" for App Store review safety
+
 ## [1.42.0] - 2026-03-18
 
 ### Added
