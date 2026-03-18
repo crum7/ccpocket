@@ -97,7 +97,7 @@ struct CheckResultRow: View {
                             Button {
                                 onCopyCommands()
                             } label: {
-                                Label("Copy", systemImage: "doc.on.doc")
+                                Label(String(localized: "Copy"), systemImage: "doc.on.doc")
                                     .font(.caption2)
                             }
                             .controlSize(.mini)
@@ -108,7 +108,7 @@ struct CheckResultRow: View {
                             Button {
                                 onOpenTerminal()
                             } label: {
-                                Label("Terminal", systemImage: "terminal")
+                                Label(String(localized: "Terminal"), systemImage: "terminal")
                                     .font(.caption2)
                             }
                             .controlSize(.mini)

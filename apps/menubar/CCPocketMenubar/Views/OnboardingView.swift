@@ -169,7 +169,7 @@ struct OnboardingView: View {
                             Button {
                                 doctorVM.copySetupCommands()
                             } label: {
-                                Label("Copy All", systemImage: "doc.on.doc")
+                                Label(String(localized: "Copy All"), systemImage: "doc.on.doc")
                                     .font(.caption)
                             }
                             .controlSize(.small)
@@ -178,7 +178,7 @@ struct OnboardingView: View {
                             Button {
                                 doctorVM.openSetupTerminal()
                             } label: {
-                                Label("Open Terminal", systemImage: "terminal")
+                                Label(String(localized: "Open Terminal"), systemImage: "terminal")
                                     .font(.caption)
                             }
                             .controlSize(.small)
@@ -189,7 +189,7 @@ struct OnboardingView: View {
                             Button {
                                 doctorVM.runDoctor()
                             } label: {
-                                Label("Re-check", systemImage: "arrow.clockwise")
+                                Label(String(localized: "Re-check"), systemImage: "arrow.clockwise")
                                     .font(.caption)
                             }
                             .controlSize(.small)
@@ -266,7 +266,7 @@ private struct OnboardingCheckRow: View {
                         Button {
                             doctorVM.copySetupCommands(for: check)
                         } label: {
-                            Label("Copy", systemImage: "doc.on.doc")
+                            Label(String(localized: "Copy"), systemImage: "doc.on.doc")
                                 .font(.caption2)
                         }
                         .controlSize(.mini)
@@ -275,7 +275,7 @@ private struct OnboardingCheckRow: View {
                         Button {
                             doctorVM.openSetupTerminal(for: check)
                         } label: {
-                            Label("Terminal", systemImage: "terminal")
+                            Label(String(localized: "Terminal"), systemImage: "terminal")
                                 .font(.caption2)
                         }
                         .controlSize(.mini)

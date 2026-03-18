@@ -405,6 +405,54 @@
       "localizations" : {
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "LAN" } }
       }
+    },
+
+    "Let's make sure everything is set up correctly." : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "セットアップが正しく完了しているか確認します。" } }
+      }
+    },
+    "Copy All" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべてコピー" } }
+      }
+    },
+    "Open Terminal" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ターミナルを開く" } }
+      }
+    },
+    "Re-check" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "再チェック" } }
+      }
+    },
+    "Copy" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "コピー" } }
+      }
+    },
+    "Terminal" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ターミナル" } }
+      }
+    },
+    "Not authenticated" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "未認証" } }
+      }
+    },
+    "Installed" : {
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "インストール済み" } }
+      }
+    },
+
+    "Bridge Server" : {
+      "comment" : "Doctor check name",
+      "localizations" : {
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Bridge Server" } }
+      }
     }
   },
   "version" : "1.0"

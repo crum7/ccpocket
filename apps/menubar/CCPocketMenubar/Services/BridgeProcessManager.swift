@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 /// Manages the Bridge Server process via launchctl.
@@ -148,36 +149,23 @@ final class BridgeProcessManager: Sendable {
 
     // MARK: - Terminal Guide
 
-    /// Open Terminal.app with a new window displaying the given commands as a guide.
-    /// Commands are displayed (not executed) so the user can review and run them.
+    /// Open Terminal.app and copy setup commands to the clipboard.
+    /// Commands are copied (not executed) so the user can paste and review them.
     func openTerminalGuide(title: String, commands: [(comment: String, command: String)]) {
-        var lines: [String] = []
-        lines.append("echo ''")
-        lines.append("echo '\\033[1m📋 \(title)\\033[0m'")
-        lines.append("echo ''")
-
+        // Build clipboard text
+        var lines: [String] = ["# \(title)", ""]
         for (i, entry) in commands.enumerated() {
-            lines.append("echo '\\033[90m# Step \(i + 1): \(entry.comment)\\033[0m'")
-            lines.append("echo '\\033[36m\(entry.command)\\033[0m'")
-            lines.append("echo ''")
+            lines.append("# Step \(i + 1): \(entry.comment)")
+            lines.append(entry.command)
+            lines.append("")
         }
 
-        lines.append("echo '\\033[33m✅ Done? Go back to CC Pocket and click Re-check\\033[0m'")
-        lines.append("echo ''")
+        // Copy to clipboard
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(lines.joined(separator: "\n"), forType: .string)
 
-        let script = lines.joined(separator: "; ")
-
-        let appleScript = """
-        tell application "Terminal"
-            activate
-            do script "\(script)"
-        end tell
-        """
-
-        var error: NSDictionary?
-        if let scriptObject = NSAppleScript(source: appleScript) {
-            scriptObject.executeAndReturnError(&error)
-        }
+        // Open Terminal.app
+        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"))
     }
 
     // MARK: - Version Check
