@@ -3,15 +3,26 @@
 CC Pocket uses the Claude Code login state stored on your Bridge machine.
 If authentication fails, sign in to Claude Code again on that machine.
 
-## Recommended Fix
+## If You Are Not Near Your Bridge Machine
 
-On the **Bridge machine**:
+With CC Pocket, your Bridge machine may be a Mac mini or another Mac running at home.
+Even in that case, you can log back into Claude Code remotely from your phone.
 
-1. Start Claude Code with `claude`
-2. Run `/login`
-3. Complete the browser sign-in flow
+1. Connect to the Bridge machine from a terminal app
+   - Moshi, Termius, Blink, or any SSH client works
+2. Run `claude`
+3. Run `/login` inside Claude Code
+4. Open the displayed URL on your phone or PC
+5. Complete sign-in in the browser
+6. Paste the result back into the terminal if prompted
 
 CC Pocket will use the updated login on the next request.
+
+## If You Are Near Your Bridge Machine
+
+1. Run `claude` on the Bridge machine
+2. Run `/login`
+3. Complete the browser sign-in flow
 
 ## Shell Alternative
 
@@ -26,13 +37,3 @@ claude auth login
 - Your Claude login expired
 - Claude Code was updated and the old login became invalid
 - Anthropic revoked the saved token
-
-## Headless / SSH Setup
-
-If the Bridge machine is remote:
-
-1. SSH into the machine from a terminal app
-2. Run `claude`
-3. Type `/login`
-4. Open the displayed URL on your phone or PC
-5. Finish sign-in and paste the result back into the terminal

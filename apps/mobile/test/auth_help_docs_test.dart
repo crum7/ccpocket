@@ -9,7 +9,8 @@ void main() {
 
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
-      expect(content, contains('おすすめの対処'));
+      expect(content, contains('手元に Bridge マシンがない場合'));
+      expect(content, contains('ターミナルアプリから Bridge マシンに接続'));
       expect(content, contains('`claude`'));
       expect(content, contains('`/login`'));
     });
@@ -19,7 +20,11 @@ void main() {
 
       expect(file.existsSync(), isTrue);
       final content = file.readAsStringSync();
-      expect(content, contains('Recommended Fix'));
+      expect(content, contains('If You Are Not Near Your Bridge Machine'));
+      expect(
+        content,
+        contains('Connect to the Bridge machine from a terminal app'),
+      );
       expect(content, contains('`claude`'));
       expect(content, contains('`/login`'));
     });
