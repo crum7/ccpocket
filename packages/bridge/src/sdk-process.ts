@@ -11,6 +11,7 @@ import {
   type PermissionMode,
 } from "./parser.js";
 import {
+  getClaudeAuthStatus,
   getValidClaudeAccessToken,
   validateClaudeAccessToken,
 } from "./usage.js";
@@ -180,6 +181,20 @@ async function checkClaudeAuth(): Promise<AuthCheckResult> {
   if (process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN) {
     return { authenticated: true };
   }
+
+  // When usage is not explicitly enabled, use local-only credential check
+  // (no upstream API calls to Anthropic).
+  if (!process.env.BRIDGE_ENABLE_USAGE) {
+    const status = await getClaudeAuthStatus();
+    if (status.authenticated) {
+      return { authenticated: true };
+    }
+    if (status.errorCode === "auth_login_required") {
+      return buildAuthError("no_credentials");
+    }
+    return buildAuthError("general", status.message);
+  }
+
   try {
     // getValidClaudeAccessToken() handles expiry detection + refresh + save
     // in a single serialised flow (with mutex to prevent concurrent refreshes).

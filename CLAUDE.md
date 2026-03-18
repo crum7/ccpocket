@@ -95,6 +95,7 @@ Flutter App ←WebSocket→ websocket.ts ←→ session.ts ─┤
 | `BRIDGE_RECORDING` | (なし) | セッション録画を有効化 (設定時に有効化) |
 | `DIFF_IMAGE_AUTO_DISPLAY_KB` | `1024` (1MB) | Diff画像の自動表示閾値 (KB単位) |
 | `DIFF_IMAGE_MAX_SIZE_MB` | `5` (5MB) | Diff画像の最大サイズ (MB単位、超過はテキストのみ) |
+| `BRIDGE_ENABLE_USAGE` | (なし) | 設定時にClaude使用量取得を有効化 (Anthropic APIへの直接通信が発生する。自己責任で利用) |
 | `HTTPS_PROXY` | (なし) | プロキシ設定 (`http://`, `socks5://` 対応) |
 
 ### プッシュ通知 (FCM)

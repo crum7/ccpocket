@@ -383,6 +383,14 @@ export async function getClaudeAuthStatus(): Promise<ClaudeAuthStatus> {
 }
 
 export async function fetchClaudeUsage(): Promise<UsageInfo> {
+  if (!process.env.BRIDGE_ENABLE_USAGE) {
+    return {
+      provider: "claude",
+      fiveHour: null,
+      sevenDay: null,
+      error: "Usage fetch disabled (set BRIDGE_ENABLE_USAGE=1 to enable)",
+    };
+  }
   try {
     const auth = await getValidClaudeAccessToken();
     let token = auth.accessToken;
