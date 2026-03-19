@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - "More" button positioned inline at bottom-right with gradient fade
 
 ### Changed
-- Upgraded Flutter to 3.41.5
+- Reverted Flutter to 3.41.4 (Shorebird compatibility)
 - Softened scroll-to-bottom button appearance
 - Improved worktree section layout in new session sheet
 - Removed prefixIcon from model dropdowns in new session sheet
