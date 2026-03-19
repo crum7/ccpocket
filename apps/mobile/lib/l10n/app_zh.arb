@@ -172,7 +172,7 @@
   "worktreeNew": "新建",
   "worktreeExisting": "已有 ({count})",
   "branchOptional": "分支（可选）",
-  "branchHint": "ccpocket/<auto>",
+  "branchHint": "feature/...",
   "noExistingWorktrees": "没有现有 worktree",
 
   "planApprovalSummary": "请查看上方计划，并选择批准或继续规划",

@@ -1426,24 +1426,23 @@ class _OptionsSection extends StatelessWidget {
                   onModelReasoningEffortChanged: onModelReasoningEffortChanged,
                 ),
           const SizedBox(height: 8),
-          // Worktree toggle (shared)
+          // Worktree toggle (shared) + inline options when expanded
           _WorktreeToggleTile(
             useWorktree: useWorktree,
             onChanged: onWorktreeToggle,
+            worktreeOptions: useWorktree
+                ? _WorktreeOptions(
+                    appColors: appColors,
+                    worktreeMode: worktreeMode,
+                    onWorktreeModeChanged: onWorktreeModeChanged,
+                    worktrees: worktrees,
+                    selectedWorktree: selectedWorktree,
+                    onWorktreeSelected: onWorktreeSelected,
+                    branchController: branchController,
+                    buildInputDecoration: buildInputDecoration,
+                  )
+                : null,
           ),
-          if (useWorktree) ...[
-            const SizedBox(height: 8),
-            _WorktreeOptions(
-              appColors: appColors,
-              worktreeMode: worktreeMode,
-              onWorktreeModeChanged: onWorktreeModeChanged,
-              worktrees: worktrees,
-              selectedWorktree: selectedWorktree,
-              onWorktreeSelected: onWorktreeSelected,
-              branchController: branchController,
-              buildInputDecoration: buildInputDecoration,
-            ),
-          ],
           // Advanced section (unified for both providers)
           const SizedBox(height: 8),
           _AdvancedOptions(
@@ -1478,10 +1477,12 @@ class _OptionsSection extends StatelessWidget {
 class _WorktreeToggleTile extends StatelessWidget {
   final bool useWorktree;
   final ValueChanged<bool> onChanged;
+  final Widget? worktreeOptions;
 
   const _WorktreeToggleTile({
     required this.useWorktree,
     required this.onChanged,
+    this.worktreeOptions,
   });
 
   @override
@@ -1494,48 +1495,61 @@ class _WorktreeToggleTile extends StatelessWidget {
         color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: InkWell(
-        key: const ValueKey('dialog_worktree'),
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => onChanged(!useWorktree),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              Icon(
-                Icons.account_tree_outlined,
-                size: 18,
-                color: useWorktree ? cs.primary : cs.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  l.worktree,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          InkWell(
+            key: const ValueKey('dialog_worktree'),
+            borderRadius: worktreeOptions != null
+                ? const BorderRadius.vertical(top: Radius.circular(12))
+                : BorderRadius.circular(12),
+            onTap: () => onChanged(!useWorktree),
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.account_tree_outlined,
+                    size: 18,
+                    color: useWorktree ? cs.primary : cs.onSurfaceVariant,
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l.worktree,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  Tooltip(
+                    message:
+                        'Creates an isolated git working tree for this session.',
+                    child: Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IgnorePointer(
+                    child: Switch.adaptive(
+                      value: useWorktree,
+                      onChanged: onChanged,
+                    ),
+                  ),
+                ],
               ),
-              Tooltip(
-                message:
-                    'Creates an isolated git working tree for this session.',
-                child: Icon(
-                  Icons.info_outline,
-                  size: 16,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: 12),
-              IgnorePointer(
-                child: Switch.adaptive(
-                  value: useWorktree,
-                  onChanged: onChanged,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          if (worktreeOptions != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: worktreeOptions!,
+            ),
+        ],
       ),
     );
   }
@@ -2100,7 +2114,10 @@ class _WorktreeOptions extends StatelessWidget {
             decoration: buildInputDecoration(
               l.branchOptional,
               hintText: l.branchHint,
-              prefixIcon: const Icon(Icons.account_tree_outlined, size: 18),
+              prefixIcon: const Icon(Icons.merge_outlined, size: 18),
+            ).copyWith(
+              filled: true,
+              fillColor: Color.lerp(cs.surfaceContainerHigh, cs.onSurface, 0.05),
             ),
             style: const TextStyle(fontSize: 13),
           ),

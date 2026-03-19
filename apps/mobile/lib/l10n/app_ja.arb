@@ -158,7 +158,7 @@
     }
   },
   "branchOptional": "ブランチ（任意）",
-  "branchHint": "ccpocket/<auto>",
+  "branchHint": "feature/...",
   "noExistingWorktrees": "既存の worktree はありません",
 
   "planApprovalSummary": "上のプランを確認して、承認するか計画を続けてください",

@@ -130,7 +130,7 @@
   "worktreeNew": "New",
   "worktreeExisting": "Existing ({count})",
   "branchOptional": "Branch (optional)",
-  "branchHint": "ccpocket/<auto>",
+  "branchHint": "feature/...",
   "noExistingWorktrees": "No existing worktrees",
 
   "planApprovalSummary": "Review the plan above and approve or continue planning",

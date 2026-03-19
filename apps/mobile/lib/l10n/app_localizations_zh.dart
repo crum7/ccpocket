@@ -358,7 +358,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get branchOptional => '分支（可选）';
 
   @override
-  String get branchHint => 'ccpocket/<auto>';
+  String get branchHint => 'feature/...';
 
   @override
   String get noExistingWorktrees => '没有现有 worktree';

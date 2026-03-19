@@ -360,7 +360,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get branchOptional => 'ブランチ（任意）';
 
   @override
-  String get branchHint => 'ccpocket/<auto>';
+  String get branchHint => 'feature/...';
 
   @override
   String get noExistingWorktrees => '既存の worktree はありません';

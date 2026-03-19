@@ -769,7 +769,7 @@ abstract class AppLocalizations {
   /// No description provided for @branchHint.
   ///
   /// In ja, this message translates to:
-  /// **'ccpocket/<auto>'**
+  /// **'feature/...'**
   String get branchHint;
 
   /// No description provided for @noExistingWorktrees.

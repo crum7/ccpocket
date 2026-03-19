@@ -361,7 +361,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get branchOptional => 'Branch (optional)';
 
   @override
-  String get branchHint => 'ccpocket/<auto>';
+  String get branchHint => 'feature/...';
 
   @override
   String get noExistingWorktrees => 'No existing worktrees';
