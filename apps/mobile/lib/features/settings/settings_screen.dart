@@ -10,6 +10,7 @@ import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../constants/app_constants.dart';
+import '../../constants/feature_flags.dart';
 import '../../services/app_update_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/machine_manager_cubit.dart';
@@ -160,54 +161,57 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           .read<SettingsCubit>()
                           .setHideVoiceInput(value),
                     ),
-                    Divider(
-                      height: 1,
-                      indent: 16,
-                      endIndent: 16,
-                      color: cs.outlineVariant,
-                    ),
-                    // Terminal App
-                    ListTile(
-                      leading: Icon(Icons.terminal, color: cs.primary),
-                      title: Row(
-                        children: [
-                          Text(l.terminalApp),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: cs.tertiaryContainer,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              l.terminalAppExperimental,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: cs.onTertiaryContainer,
+                    if (FeatureFlags.current.isEnabled(
+                      AppFeature.terminalAppIntegration,
+                    )) ...[
+                      Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: cs.outlineVariant,
+                      ),
+                      ListTile(
+                        leading: Icon(Icons.terminal, color: cs.primary),
+                        title: Row(
+                          children: [
+                            Text(l.terminalApp),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: cs.tertiaryContainer,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                l.terminalAppExperimental,
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: cs.onTertiaryContainer,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
+                        subtitle: Text(
+                          state.terminalApp.isConfigured
+                              ? state.terminalApp.displayName
+                              : l.terminalAppNone,
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () => showTerminalAppBottomSheet(
+                          context: context,
+                          current: state.terminalApp,
+                          onChanged: (config) => context
+                              .read<SettingsCubit>()
+                              .setTerminalApp(config),
+                          onClear: () =>
+                              context.read<SettingsCubit>().clearTerminalApp(),
+                        ),
                       ),
-                      subtitle: Text(
-                        state.terminalApp.isConfigured
-                            ? state.terminalApp.displayName
-                            : l.terminalAppNone,
-                      ),
-                      trailing: const Icon(Icons.chevron_right, size: 20),
-                      onTap: () => showTerminalAppBottomSheet(
-                        context: context,
-                        current: state.terminalApp,
-                        onChanged: (config) => context
-                            .read<SettingsCubit>()
-                            .setTerminalApp(config),
-                        onClear: () =>
-                            context.read<SettingsCubit>().clearTerminalApp(),
-                      ),
-                    ),
+                    ],
                   ],
                 ),
               ),

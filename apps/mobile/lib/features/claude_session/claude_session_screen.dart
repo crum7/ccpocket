@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
+import '../../constants/feature_flags.dart';
 import '../../hooks/use_app_resume_callback.dart';
 import '../../hooks/use_scroll_tracking.dart';
 import '../../l10n/app_localizations.dart';
@@ -671,7 +672,11 @@ class _ChatScreenBody extends HookWidget {
                           contentPadding: EdgeInsets.zero,
                         ),
                       ),
-                      if (terminalConfig.isConfigured && projectPath != null)
+                      if (FeatureFlags.current.isEnabled(
+                            AppFeature.terminalAppIntegration,
+                          ) &&
+                          terminalConfig.isConfigured &&
+                          projectPath != null)
                         PopupMenuItem(
                           key: const ValueKey('menu_terminal'),
                           value: 'terminal',
@@ -977,6 +982,9 @@ String? findPlanFromWriteTool(List<ChatEntry> entries) {
 }
 
 Future<void> _openInTerminal(BuildContext context, String? projectPath) async {
+  if (!FeatureFlags.current.isEnabled(AppFeature.terminalAppIntegration)) {
+    return;
+  }
   if (projectPath == null) return;
   final config = context.read<SettingsCubit>().state.terminalApp;
   if (!config.isConfigured) return;
