@@ -2,6 +2,14 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.25.0] - 2026-03-19
+
+### Changed
+- Subscription-based (OAuth) authentication is temporarily disabled pending Anthropic policy clarification. API key (`ANTHROPIC_API_KEY`) is now required
+
+### Fixed
+- Prevent false auth error detection on long assistant messages containing auth-related keywords
+
 ## [1.24.0] - 2026-03-19
 
 ### Changed
