@@ -11,6 +11,9 @@ All notable changes to `@ccpocket/bridge` will be documented in this file.
 - Codex thread list for recent sessions (stored threads without active sessions)
 - Simplified Chinese (zh-CN) localization support
 
+### Changed
+- Deprecated all npm package versions older than `1.25.0` for new installs due to potential Anthropic policy concerns around OAuth-based usage
+
 ### Fixed
 - Restore MCP images in Codex session history
 - Preserve Codex sandbox mode on session resume

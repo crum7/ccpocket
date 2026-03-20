@@ -75,6 +75,10 @@ npx @ccpocket/bridge@latest
 
 The server prints a QR code you can scan from the app to connect instantly.
 
+> Warning
+> `@ccpocket/bridge` versions older than `1.25.0` are deprecated for new installs due to potential Anthropic policy concerns around OAuth-based usage.
+> Use `>=1.25.0` and configure `ANTHROPIC_API_KEY` instead of OAuth.
+
 ### 2. Install the Mobile App
 
 Scan the QR code in the banner above, or download directly:
