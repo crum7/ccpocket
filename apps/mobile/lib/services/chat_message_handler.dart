@@ -571,6 +571,12 @@ class ChatMessageHandler {
     ExecutionMode? executionMode;
     bool? inPlanMode;
     bool? planMode;
+    bool hasExecutionSignals(SystemMessage message) =>
+        message.executionMode != null ||
+        message.permissionMode != null ||
+        message.approvalPolicy != null;
+    bool hasPlanSignals(SystemMessage message) =>
+        message.planMode != null || message.permissionMode != null;
     if ((subtype == 'init' ||
             subtype == 'session_created' ||
             subtype == 'supported_commands') &&
@@ -582,30 +588,38 @@ class ChatMessageHandler {
         (mode) => mode?.value == msg.permissionMode,
         orElse: () => null,
       );
-      executionMode = deriveExecutionMode(
-        provider: msg.provider,
-        executionMode: msg.executionMode,
-        permissionMode: msg.permissionMode,
-        approvalPolicy: msg.approvalPolicy,
-      );
-      planMode = derivePlanMode(
-        planMode: msg.planMode,
-        permissionMode: msg.permissionMode,
-      );
+      if (hasExecutionSignals(msg)) {
+        executionMode = deriveExecutionMode(
+          provider: msg.provider,
+          executionMode: msg.executionMode,
+          permissionMode: msg.permissionMode,
+          approvalPolicy: msg.approvalPolicy,
+        );
+      }
+      if (hasPlanSignals(msg)) {
+        planMode = derivePlanMode(
+          planMode: msg.planMode,
+          permissionMode: msg.permissionMode,
+        );
+      }
       if (subtype == 'set_permission_mode' && permissionMode != null) {
         inPlanMode = planMode;
       }
     } else if (msg is SystemMessage) {
-      executionMode = deriveExecutionMode(
-        provider: msg.provider,
-        executionMode: msg.executionMode,
-        permissionMode: msg.permissionMode,
-        approvalPolicy: msg.approvalPolicy,
-      );
-      planMode = derivePlanMode(
-        planMode: msg.planMode,
-        permissionMode: msg.permissionMode,
-      );
+      if (hasExecutionSignals(msg)) {
+        executionMode = deriveExecutionMode(
+          provider: msg.provider,
+          executionMode: msg.executionMode,
+          permissionMode: msg.permissionMode,
+          approvalPolicy: msg.approvalPolicy,
+        );
+      }
+      if (hasPlanSignals(msg)) {
+        planMode = derivePlanMode(
+          planMode: msg.planMode,
+          permissionMode: msg.permissionMode,
+        );
+      }
       if (subtype == 'set_permission_mode') {
         inPlanMode = planMode;
       }

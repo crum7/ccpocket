@@ -527,6 +527,57 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     bridge.close();
   });
 
+  it("includes explicit execution and plan modes when codex sandbox change recreates session", async () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+
+    (bridge as any).handleClientMessage(
+      {
+        type: "start",
+        projectPath: "/tmp/project-codex",
+        provider: "codex",
+        executionMode: "fullAccess",
+        planMode: true,
+      },
+      ws,
+    );
+    await Promise.resolve();
+
+    const initialMessages = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+    const created = initialMessages.find((m: any) => m.type === "system" && m.subtype === "session_created");
+    expect(created).toBeDefined();
+    const oldSessionId = created.sessionId as string;
+    const session = (bridge as any).sessionManager.get(oldSessionId);
+    session.process.approvalPolicy = "never";
+    session.process.collaborationMode = "plan";
+
+    const buildSessionCreatedMessageSpy = vi.spyOn(
+      bridge as any,
+      "buildSessionCreatedMessage",
+    );
+    ws.send.mockClear();
+    (bridge as any).handleClientMessage(
+      {
+        type: "set_sandbox_mode",
+        sessionId: oldSessionId,
+        sandboxMode: "off",
+      },
+      ws,
+    );
+
+    const params = buildSessionCreatedMessageSpy.mock.calls.at(-1)?.[0];
+    expect(params).toBeDefined();
+    expect(params.executionMode).toBe("fullAccess");
+    expect(params.planMode).toBe(true);
+    expect(params.permissionMode).toBe("plan");
+    expect(params.sandboxMode).toBe("off");
+
+    bridge.close();
+  });
+
   it("includes permissionMode in codex session_created on start", async () => {
     const bridge = new BridgeWebSocketServer({ server: httpServer });
     const ws = {

@@ -82,6 +82,31 @@ void main() {
       expect(info.agentNickname, 'Atlas');
       expect(info.agentRole, 'explorer');
     });
+
+    test(
+      'keeps canonical codex execution mode when legacy permission differs',
+      () {
+        final json = {
+          'id': 'codex-canonical',
+          'provider': 'codex',
+          'projectPath': '/home/user/my-app',
+          'status': 'idle',
+          'createdAt': '',
+          'lastActivityAt': '',
+          'permissionMode': 'acceptEdits',
+          'executionMode': 'default',
+          'planMode': false,
+          'codexSettings': {
+            'approvalPolicy': 'on-request',
+            'sandboxMode': 'workspace-write',
+          },
+        };
+
+        final info = SessionInfo.fromJson(json);
+        expect(info.resolvedExecutionMode, ExecutionMode.defaultMode);
+        expect(info.resolvedPlanMode, isFalse);
+      },
+    );
   });
 
   group('RunningSessionCard', () {

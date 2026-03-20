@@ -85,9 +85,10 @@ void main() {
     mockBridge.dispose();
   });
 
-  ChatSessionCubit createCubit(String sessionId) {
+  ChatSessionCubit createCubit(String sessionId, {Provider? provider}) {
     return ChatSessionCubit(
       sessionId: sessionId,
+      provider: provider,
       bridge: mockBridge,
       streamingCubit: streamingCubit,
     );
@@ -117,6 +118,66 @@ void main() {
 
       expect(cubit.state.status, ProcessStatus.running);
     });
+
+    test(
+      'codex explicit execution mode wins over legacy permission mode',
+      () async {
+        final cubit = createCubit('s1', provider: Provider.codex);
+        addTearDown(cubit.close);
+        await Future.microtask(() {});
+
+        mockBridge.emitMessage(
+          const SystemMessage(
+            subtype: 'set_permission_mode',
+            provider: 'codex',
+            permissionMode: 'acceptEdits',
+            executionMode: 'default',
+            planMode: false,
+          ),
+          sessionId: 's1',
+        );
+        await Future.microtask(() {});
+
+        expect(cubit.state.executionMode, ExecutionMode.defaultMode);
+        expect(cubit.state.planMode, isFalse);
+      },
+    );
+
+    test(
+      'codex sandbox-only system message does not reset execution mode',
+      () async {
+        final cubit = createCubit('s1', provider: Provider.codex);
+        addTearDown(cubit.close);
+        await Future.microtask(() {});
+
+        mockBridge.emitMessage(
+          const SystemMessage(
+            subtype: 'set_permission_mode',
+            provider: 'codex',
+            permissionMode: 'bypassPermissions',
+            executionMode: 'fullAccess',
+            planMode: false,
+          ),
+          sessionId: 's1',
+        );
+        await Future.microtask(() {});
+
+        expect(cubit.state.executionMode, ExecutionMode.fullAccess);
+
+        mockBridge.emitMessage(
+          const SystemMessage(
+            subtype: 'session_created',
+            provider: 'codex',
+            sandboxMode: 'off',
+          ),
+          sessionId: 's1',
+        );
+        await Future.microtask(() {});
+
+        expect(cubit.state.executionMode, ExecutionMode.fullAccess);
+        expect(cubit.state.planMode, isFalse);
+      },
+    );
 
     test('permission request sets approval state', () async {
       final cubit = createCubit('s1');

@@ -31,74 +31,71 @@ class SessionModeBar extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: _PulsingModeBarSurface(
-        inPlanMode: inPlanMode && isActive,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Container(
-              key: const ValueKey('session_mode_bar_glow'),
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-              decoration: BoxDecoration(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? cs.surface.withValues(alpha: 0.6)
+                  : cs.surface.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
                 color: isDark
-                    ? cs.surface.withValues(alpha: 0.6)
-                    : cs.surface.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.white.withValues(alpha: 0.6),
-                ),
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.6),
               ),
-              child: IntrinsicHeight(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ExecutionModeChip(
-                      currentMode: executionMode,
-                      provider: chatCubit.provider,
-                      onTap: () => showExecutionModeMenu(
-                        context,
-                        chatCubit,
-                        onBeforeRestart: onBeforeRestart,
-                      ),
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PlanModeChip(
+                    enabled: planMode,
+                    activeGlow: inPlanMode && isActive,
+                    onTap: () => togglePlanMode(
+                      context,
+                      chatCubit,
+                      onBeforeRestart: onBeforeRestart,
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: VerticalDivider(
-                        width: 1,
-                        thickness: 1,
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withValues(alpha: 0.4),
                     ),
-                    PlanModeChip(
-                      enabled: planMode,
-                      onTap: () => togglePlanMode(
-                        context,
-                        chatCubit,
-                        onBeforeRestart: onBeforeRestart,
-                      ),
+                  ),
+                  ExecutionModeChip(
+                    currentMode: executionMode,
+                    provider: chatCubit.provider,
+                    onTap: () => showExecutionModeMenu(
+                      context,
+                      chatCubit,
+                      onBeforeRestart: onBeforeRestart,
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: VerticalDivider(
-                        width: 1,
-                        thickness: 1,
-                        color: cs.outlineVariant.withValues(alpha: 0.4),
-                      ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: VerticalDivider(
+                      width: 1,
+                      thickness: 1,
+                      color: cs.outlineVariant.withValues(alpha: 0.4),
                     ),
-                    SandboxModeChip(
-                      currentMode: sandboxMode,
-                      provider: chatCubit.provider,
-                      onTap: () => showSandboxModeMenu(
-                        context,
-                        chatCubit,
-                        onBeforeRestart: onBeforeRestart,
-                      ),
+                  ),
+                  SandboxModeChip(
+                    currentMode: sandboxMode,
+                    provider: chatCubit.provider,
+                    onTap: () => showSandboxModeMenu(
+                      context,
+                      chatCubit,
+                      onBeforeRestart: onBeforeRestart,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -112,7 +109,11 @@ class _PulsingModeBarSurface extends StatefulWidget {
   final bool inPlanMode;
   final Widget child;
 
-  const _PulsingModeBarSurface({required this.inPlanMode, required this.child});
+  const _PulsingModeBarSurface({
+    super.key,
+    required this.inPlanMode,
+    required this.child,
+  });
 
   @override
   State<_PulsingModeBarSurface> createState() => _PulsingModeBarSurfaceState();
@@ -668,9 +669,15 @@ class ExecutionModeChip extends StatelessWidget {
 
 class PlanModeChip extends StatelessWidget {
   final bool enabled;
+  final bool activeGlow;
   final VoidCallback onTap;
 
-  const PlanModeChip({super.key, required this.enabled, required this.onTap});
+  const PlanModeChip({
+    super.key,
+    required this.enabled,
+    this.activeGlow = false,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -678,7 +685,7 @@ class PlanModeChip extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final fg = enabled ? appColors.statusPlan : cs.onSurfaceVariant;
 
-    return Material(
+    final chip = Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(10),
       clipBehavior: Clip.antiAlias,
@@ -703,6 +710,14 @@ class PlanModeChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    if (!activeGlow) return chip;
+
+    return _PulsingModeBarSurface(
+      key: const ValueKey('plan_mode_chip_glow'),
+      inPlanMode: true,
+      child: chip,
     );
   }
 }

@@ -1092,6 +1092,13 @@ export class BridgeWebSocketServer {
         const worktreeBranch = session.worktreeBranch;
         const sessionName = session.name;
         const collaborationMode = (session.process as CodexProcess).collaborationMode;
+        const executionMode = oldSettings.approvalPolicy === "never" ? "fullAccess" : "default";
+        const planMode = collaborationMode === "plan";
+        const legacyPermissionMode = modesToLegacyPermissionMode(
+          "codex",
+          executionMode,
+          planMode,
+        );
 
         this.sessionManager.destroy(oldSessionId);
         console.log(`[ws] Sandbox mode change: destroyed session ${oldSessionId}`);
@@ -1132,6 +1139,9 @@ export class BridgeWebSocketServer {
               provider: "codex",
               projectPath,
               session: newSession,
+              permissionMode: legacyPermissionMode,
+              executionMode,
+              planMode,
               sandboxMode: sandboxModeToExternal(newSandboxMode),
               sourceSessionId: oldSessionId,
             }),
@@ -1187,6 +1197,9 @@ export class BridgeWebSocketServer {
                 provider: "codex",
                 projectPath: effectiveProjectPath,
                 session: newSession,
+                permissionMode: legacyPermissionMode,
+                executionMode,
+                planMode,
                 sandboxMode: sandboxModeToExternal(newSandboxMode),
                 sourceSessionId: oldSessionId,
               }),

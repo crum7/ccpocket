@@ -266,7 +266,14 @@ class BridgeService implements BridgeServiceBase {
                 _messageController.add(msg);
               case SystemMessage(:final permissionMode):
                 if (sessionId != null && permissionMode != null) {
-                  _patchSessionPermissionMode(sessionId, permissionMode);
+                  _patchSessionPermissionMode(
+                    sessionId,
+                    permissionMode,
+                    provider: msg.provider,
+                    executionMode: msg.executionMode,
+                    planMode: msg.planMode,
+                    approvalPolicy: msg.approvalPolicy,
+                  );
                 }
                 if (sessionId != null) {
                   _patchSessionSystemSettings(sessionId, msg);
@@ -665,12 +672,31 @@ class BridgeService implements BridgeServiceBase {
     _sessionListController.add(_sessions);
   }
 
-  void _patchSessionPermissionMode(String sessionId, String permissionMode) {
+  void _patchSessionPermissionMode(
+    String sessionId,
+    String permissionMode, {
+    String? provider,
+    String? executionMode,
+    bool? planMode,
+    String? approvalPolicy,
+  }) {
+    final idx = _sessions.indexWhere((s) => s.id == sessionId);
+    if (idx < 0) return;
+    final current = _sessions[idx];
     _patchSessionModes(
       sessionId,
       permissionMode: permissionMode,
-      executionMode: deriveExecutionMode(permissionMode: permissionMode).value,
-      planMode: derivePlanMode(permissionMode: permissionMode),
+      executionMode:
+          executionModeFromRaw(executionMode)?.value ??
+          deriveExecutionMode(
+            provider: provider ?? current.provider,
+            executionMode: executionMode,
+            permissionMode: permissionMode,
+            approvalPolicy: approvalPolicy ?? current.codexApprovalPolicy,
+          ).value,
+      planMode:
+          planMode ??
+          derivePlanMode(planMode: planMode, permissionMode: permissionMode),
     );
   }
 
@@ -717,20 +743,23 @@ class BridgeService implements BridgeServiceBase {
     final current = _sessions[idx];
     _sessions = List.of(_sessions)
       ..[idx] = current.copyWith(
-        permissionMode: message.permissionMode,
-        executionMode: message.executionMode,
-        planMode: message.planMode,
+        permissionMode: message.permissionMode ?? current.permissionMode,
+        executionMode: message.executionMode ?? current.executionMode,
+        planMode: message.planMode ?? current.planMode,
         model: message.provider == Provider.claude.value ? message.model : null,
-        codexApprovalPolicy: message.approvalPolicy,
+        codexApprovalPolicy:
+            message.approvalPolicy ?? current.codexApprovalPolicy,
         codexSandboxMode: message.provider == Provider.codex.value
-            ? message.sandboxMode
-            : null,
+            ? (message.sandboxMode ?? current.codexSandboxMode)
+            : current.codexSandboxMode,
         codexModel: message.provider == Provider.codex.value
-            ? message.model
-            : null,
-        codexModelReasoningEffort: message.modelReasoningEffort,
-        codexNetworkAccessEnabled: message.networkAccessEnabled,
-        codexWebSearchMode: message.webSearchMode,
+            ? (message.model ?? current.codexModel)
+            : current.codexModel,
+        codexModelReasoningEffort:
+            message.modelReasoningEffort ?? current.codexModelReasoningEffort,
+        codexNetworkAccessEnabled:
+            message.networkAccessEnabled ?? current.codexNetworkAccessEnabled,
+        codexWebSearchMode: message.webSearchMode ?? current.codexWebSearchMode,
       );
     _sessionListController.add(_sessions);
   }
