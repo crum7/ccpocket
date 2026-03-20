@@ -741,6 +741,7 @@ class BridgeService implements BridgeServiceBase {
     final idx = _sessions.indexWhere((s) => s.id == sessionId);
     if (idx < 0) return;
     final current = _sessions[idx];
+    final codexModel = sanitizeCodexModelName(message.model);
     _sessions = List.of(_sessions)
       ..[idx] = current.copyWith(
         permissionMode: message.permissionMode ?? current.permissionMode,
@@ -753,7 +754,7 @@ class BridgeService implements BridgeServiceBase {
             ? (message.sandboxMode ?? current.codexSandboxMode)
             : current.codexSandboxMode,
         codexModel: message.provider == Provider.codex.value
-            ? (message.model ?? current.codexModel)
+            ? (codexModel ?? current.codexModel)
             : current.codexModel,
         codexModelReasoningEffort:
             message.modelReasoningEffort ?? current.codexModelReasoningEffort,
@@ -770,6 +771,7 @@ class BridgeService implements BridgeServiceBase {
     final idx = _sessions.indexWhere((s) => s.id == sessionId);
     if (idx < 0) return;
     final current = _sessions[idx];
+    final messageModel = sanitizeCodexModelName(message.model) ?? '';
     final text = message.content
         .whereType<TextContent>()
         .map((c) => c.text)
@@ -778,14 +780,14 @@ class BridgeService implements BridgeServiceBase {
         .trim();
     final shouldPatchModel =
         current.provider == Provider.codex.value &&
-        message.model.isNotEmpty &&
-        message.model != current.codexModel;
+        messageModel.isNotEmpty &&
+        messageModel != current.codexModel;
     if (text.isEmpty && !shouldPatchModel) return;
     final preview = text.length > 100 ? text.substring(0, 100) : text;
     _sessions = List.of(_sessions)
       ..[idx] = current.copyWith(
         lastMessage: text.isNotEmpty ? preview : null,
-        codexModel: shouldPatchModel ? message.model : null,
+        codexModel: shouldPatchModel ? messageModel : null,
       );
     _sessionListController.add(_sessions);
   }

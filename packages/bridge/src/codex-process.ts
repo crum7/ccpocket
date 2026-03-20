@@ -181,6 +181,10 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     return this.inputResolve !== null;
   }
 
+  private getMessageModel(): string {
+    return sanitizeCodexModel(this.startModel) ?? "";
+  }
+
   get sessionId(): string | null {
     return this._threadId;
   }
@@ -328,7 +332,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     this.pendingApprovals.clear();
     this.pendingUserInputs.clear();
     this.lastTokenUsage = null;
-    this.startModel = options?.model;
+    this.startModel = sanitizeCodexModel(options?.model);
     this._approvalPolicy = options?.approvalPolicy ?? "never";
     this._collaborationMode = options?.collaborationMode ?? "default";
     this.lastPlanItemText = null;
@@ -693,7 +697,8 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         experimentalRawEvents: false,
         persistExtendedHistory: true,
       };
-      if (options?.model) threadParams.model = options.model;
+      const requestedModel = sanitizeCodexModel(options?.model);
+      if (requestedModel) threadParams.model = requestedModel;
       if (options?.modelReasoningEffort) {
         threadParams.effort = normalizeReasoningEffort(
           options.modelReasoningEffort,
@@ -746,7 +751,9 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         subtype: "init",
         sessionId: threadId,
         provider: "codex",
-        model: this.startModel ?? "codex",
+        ...(sanitizeCodexModel(this.startModel)
+          ? { model: sanitizeCodexModel(this.startModel) }
+          : {}),
         ...(resolvedSettings.approvalPolicy
           ? { approvalPolicy: resolvedSettings.approvalPolicy }
           : {}),
@@ -916,7 +923,8 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
             this._approvalPolicy as CodexStartOptions["approvalPolicy"],
           ),
         };
-        if (options?.model) params.model = options.model;
+        const requestedModel = sanitizeCodexModel(options?.model);
+        if (requestedModel) params.model = requestedModel;
         if (options?.modelReasoningEffort) {
           params.effort = normalizeReasoningEffort(
             options.modelReasoningEffort,
@@ -926,7 +934,10 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         // Always send collaborationMode so the server switches modes correctly.
         // Omitting it causes the server to persist the previous turn's mode.
         const modeSettings: Record<string, unknown> = {
-          model: options?.model || this.startModel || "gpt-5.4",
+          model:
+            requestedModel
+            || sanitizeCodexModel(this.startModel)
+            || "gpt-5.4",
         };
         if (this._collaborationMode === "plan") {
           modeSettings.reasoning_effort = "medium";
@@ -1345,7 +1356,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
             id: randomUUID(),
             role: "assistant",
             content: [{ type: "text", text }],
-            model: "codex",
+            model: this.getMessageModel(),
           },
         });
         break;
@@ -1459,7 +1470,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
                 input: { command: commandText },
               },
             ],
-            model: "codex",
+            model: this.getMessageModel(),
           },
         });
         break;
@@ -1481,7 +1492,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
                 },
               },
             ],
-            model: "codex",
+            model: this.getMessageModel(),
           },
         });
         break;
@@ -1502,7 +1513,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
                 input: toToolUseInput(item.arguments),
               },
             ],
-            model: "codex",
+            model: this.getMessageModel(),
           },
         });
         break;
@@ -1539,7 +1550,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
                 input,
               },
             ],
-            model: "codex",
+            model: this.getMessageModel(),
           },
         });
         break;
@@ -1567,7 +1578,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
             id: itemId,
             role: "assistant",
             content: [{ type: "text", text }],
-            model: "codex",
+            model: this.getMessageModel(),
           },
         });
         break;
@@ -1628,7 +1639,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
                 input: (item.arguments as Record<string, unknown>) ?? {},
               },
             ],
-            model: "codex",
+            model: this.getMessageModel(),
           },
         });
         this.emitMessage({
@@ -1670,7 +1681,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
                 input: { query },
               },
             ],
-            model: "codex",
+            model: this.getMessageModel(),
           },
         });
         this.emitMessage({
@@ -1963,6 +1974,13 @@ function normalizeReasoningEffort(
   }
 }
 
+function sanitizeCodexModel(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  if (!normalized || normalized === "codex") return undefined;
+  return normalized;
+}
+
 function extractResolvedSettingsFromThreadResponse(
   response: Record<string, unknown>,
 ): CodexResolvedSettings {
@@ -1970,12 +1988,8 @@ function extractResolvedSettingsFromThreadResponse(
   const sandbox = response.sandbox as Record<string, unknown> | undefined;
 
   return {
-    model:
-      typeof response.model === "string"
-        ? response.model
-        : typeof thread?.model === "string"
-          ? thread.model
-          : undefined,
+    model: sanitizeCodexModel(response.model)
+      ?? sanitizeCodexModel(thread?.model),
     approvalPolicy:
       typeof response.approvalPolicy === "string"
         ? response.approvalPolicy

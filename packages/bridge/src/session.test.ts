@@ -185,6 +185,38 @@ describe("SessionManager codex path", () => {
     });
   });
 
+  it("ignores placeholder codex model names from runtime messages", () => {
+    const manager = new SessionManager(() => {});
+    const sessionId = manager.create(
+      "/tmp/project-codex",
+      undefined,
+      undefined,
+      undefined,
+      "codex",
+    );
+
+    codexInstances[0].emit("message", {
+      type: "system",
+      subtype: "init",
+      provider: "codex",
+      sessionId: "thread-runtime",
+      model: "codex",
+      sandboxMode: "workspace-write",
+    });
+    codexInstances[0].emit("message", {
+      type: "assistant",
+      message: {
+        id: "msg_1",
+        role: "assistant",
+        model: "codex",
+        content: [],
+      },
+    });
+
+    const session = manager.get(sessionId);
+    expect(session?.codexSettings?.model).toBeUndefined();
+  });
+
   it("uses existing worktree path as cwd for codex resume sessions", () => {
     const manager = new SessionManager(() => {});
     const sessionId = manager.create(

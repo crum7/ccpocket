@@ -942,6 +942,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     final persistSession =
         sessionSettings?['claudePersistSession'] as bool? ??
         claudeDefaults?.claudePersistSession;
+    final codexModel = sanitizeCodexModelName(session.codexModel);
 
     context.read<BridgeService>().resumeSession(
       session.sessionId,
@@ -977,7 +978,7 @@ class _SessionListScreenState extends State<SessionListScreen>
       persistSession: !isCodex ? persistSession : null,
       provider: session.provider,
       sandboxMode: isCodex ? session.codexSandboxMode : sandboxMode,
-      model: isCodex ? session.codexModel : claudeModel,
+      model: isCodex ? codexModel : claudeModel,
       modelReasoningEffort: session.codexModelReasoningEffort,
       networkAccessEnabled: session.codexNetworkAccessEnabled,
       webSearchMode: session.codexWebSearchMode,

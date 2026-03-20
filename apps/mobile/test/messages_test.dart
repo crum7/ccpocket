@@ -102,6 +102,35 @@ void main() {
       expect(session.projectPath, '/tmp/project');
       expect(session.resumeCwd, '/tmp/project-worktrees/feature-x');
     });
+
+    test('RecentSession ignores placeholder codex model names', () {
+      final session = RecentSession.fromJson({
+        'sessionId': 's3',
+        'provider': 'codex',
+        'firstPrompt': 'resume',
+        'created': '2026-02-13T00:00:00Z',
+        'modified': '2026-02-13T00:00:00Z',
+        'gitBranch': 'main',
+        'projectPath': '/tmp/project',
+        'isSidechain': false,
+        'codexSettings': {'model': 'codex'},
+      });
+
+      expect(session.codexModel, isNull);
+    });
+
+    test('AssistantMessage ignores placeholder codex model names', () {
+      final message = AssistantMessage.fromJson({
+        'id': 'a1',
+        'role': 'assistant',
+        'content': [
+          {'type': 'text', 'text': 'hello'},
+        ],
+        'model': 'codex',
+      });
+
+      expect(message.model, isEmpty);
+    });
   });
 
   group('Claude advanced options', () {

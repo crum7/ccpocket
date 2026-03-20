@@ -131,6 +131,77 @@ describe("CodexProcess (app-server)", () => {
     proc.stop();
   });
 
+  it("ignores placeholder codex model names from resume state", async () => {
+    const proc = new CodexProcess();
+    const messages: unknown[] = [];
+    proc.on("message", (msg) => messages.push(msg));
+
+    proc.start("/tmp/project-placeholder", {
+      sandboxMode: "workspace-write",
+      approvalPolicy: "on-request",
+      model: "codex",
+    });
+
+    const child = fakeChildren[0];
+    await tick();
+
+    const initReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: initReq.id, result: {} })}\n`,
+    );
+
+    await tick();
+    nextOutgoingNotification(child); // initialized
+
+    const startReq = nextOutgoingRequest(child);
+    expect(startReq.method).toBe("thread/start");
+    expect(startReq.params).not.toHaveProperty("model");
+
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({
+        id: startReq.id,
+        result: { thread: { id: "thr_placeholder" } },
+      })}\n`,
+    );
+
+    await tick();
+    drainSkillsList(child);
+
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: "system",
+        subtype: "init",
+        provider: "codex",
+        sessionId: "thr_placeholder",
+      }),
+    );
+    expect(messages).not.toContainEqual(
+      expect.objectContaining({
+        type: "system",
+        subtype: "init",
+        model: "codex",
+      }),
+    );
+
+    proc.sendInput("continue");
+    await tick();
+    const turnReq = nextOutgoingRequest(child);
+    expect(turnReq.method).toBe("turn/start");
+    expect(turnReq.params).not.toHaveProperty("model");
+    expect(turnReq.params).toMatchObject({
+      collaborationMode: {
+        mode: "default",
+        settings: {
+          model: "gpt-5.4",
+        },
+      },
+    });
+
+    proc.stop();
+  });
+
   it("can initialize app-server without starting a thread", async () => {
     const proc = new CodexProcess();
 

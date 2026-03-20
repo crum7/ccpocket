@@ -66,7 +66,7 @@ class AssistantMessage {
       id: json['id'] as String? ?? '',
       role: json['role'] as String? ?? 'assistant',
       content: contentList,
-      model: json['model'] as String? ?? '',
+      model: sanitizeCodexModelName(json['model'] as String?) ?? '',
     );
   }
 }
@@ -109,6 +109,14 @@ enum Provider {
   final String value;
   final String label;
   const Provider(this.value, this.label);
+}
+
+String? sanitizeCodexModelName(String? model) {
+  final normalized = model?.trim();
+  if (normalized == null || normalized.isEmpty || normalized == 'codex') {
+    return null;
+  }
+  return normalized;
 }
 
 // ---- Permission mode ----
@@ -1732,7 +1740,7 @@ class RecentSession {
         permissionMode: json['permissionMode'] as String?,
       ),
       codexSandboxMode: codexSettings?['sandboxMode'] as String?,
-      codexModel: codexSettings?['model'] as String?,
+      codexModel: sanitizeCodexModelName(codexSettings?['model'] as String?),
       codexModelReasoningEffort:
           codexSettings?['modelReasoningEffort'] as String?,
       codexNetworkAccessEnabled:
@@ -1944,7 +1952,7 @@ class SessionInfo {
       model: json['model'] as String?,
       codexApprovalPolicy: codexSettings?['approvalPolicy'] as String?,
       codexSandboxMode: codexSettings?['sandboxMode'] as String?,
-      codexModel: codexSettings?['model'] as String?,
+      codexModel: sanitizeCodexModelName(codexSettings?['model'] as String?),
       codexModelReasoningEffort:
           codexSettings?['modelReasoningEffort'] as String?,
       codexNetworkAccessEnabled:

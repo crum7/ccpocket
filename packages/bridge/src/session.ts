@@ -109,13 +109,14 @@ function mergeCodexSettings(
   current: SessionInfo["codexSettings"],
   msg: Extract<ServerMessage, { type: "system" }>,
 ): SessionInfo["codexSettings"] {
+  const model = sanitizeCodexModel(msg.model);
   const next = {
     ...(current ?? {}),
     ...(msg.approvalPolicy !== undefined
       ? { approvalPolicy: msg.approvalPolicy }
       : {}),
     ...(msg.sandboxMode !== undefined ? { sandboxMode: msg.sandboxMode } : {}),
-    ...(msg.model !== undefined ? { model: msg.model } : {}),
+    ...(model !== undefined ? { model } : {}),
     ...(msg.modelReasoningEffort !== undefined
       ? { modelReasoningEffort: msg.modelReasoningEffort }
       : {}),
@@ -130,6 +131,13 @@ function mergeCodexSettings(
   return Object.values(next).some((value) => value !== undefined)
     ? next
     : current;
+}
+
+function sanitizeCodexModel(model: unknown): string | undefined {
+  if (typeof model !== "string") return undefined;
+  const normalized = model.trim();
+  if (!normalized || normalized === "codex") return undefined;
+  return normalized;
 }
 
 export class SessionManager {
@@ -297,14 +305,13 @@ export class SessionManager {
               msg,
             );
           }
-          if (
-            msg.type === "assistant" &&
-            typeof msg.message.model === "string" &&
-            msg.message.model.length > 0
-          ) {
+          const messageModel = sanitizeCodexModel(
+            msg.type === "assistant" ? msg.message.model : undefined,
+          );
+          if (msg.type === "assistant" && messageModel) {
             session.codexSettings = {
               ...(session.codexSettings ?? {}),
-              model: msg.message.model,
+              model: messageModel,
             };
           }
         }
