@@ -213,10 +213,9 @@ void main() {
         _wrap(RunningSessionCard(session: session, onTap: () {})),
       );
 
-      expect(
-        find.text('gpt-5.3-codex  sandbox-workspace-write  on-request'),
-        findsOneWidget,
-      );
+      expect(find.text('gpt-5.3-codex'), findsOneWidget);
+      expect(find.byIcon(Icons.edit_note), findsOneWidget);
+      expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
     });
 
     testWidgets('shows agent metadata for codex sub-agent sessions', (
@@ -655,10 +654,9 @@ void main() {
         _wrap(RecentSessionCard(session: session, onTap: () {})),
       );
 
-      expect(
-        find.text('gpt-5-codex  sandbox-danger-full-access  on-failure'),
-        findsOneWidget,
-      );
+      expect(find.text('gpt-5-codex'), findsOneWidget);
+      expect(find.byIcon(Icons.tune), findsOneWidget);
+      expect(find.byIcon(Icons.warning_amber), findsOneWidget);
     });
 
     testWidgets('calls onLongPress callback', (tester) async {

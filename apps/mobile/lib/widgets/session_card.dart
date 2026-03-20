@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../theme/provider_style.dart';
 import '../utils/command_parser.dart';
 import '../utils/request_user_input.dart';
+import 'codex_environment_summary.dart';
 import 'plan_detail_sheet.dart';
 import 'expandable_summary_text.dart';
 import 'session_visual_status.dart';
@@ -133,14 +134,6 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
     final displayMessage = formatCommandText(
       session.lastMessage.replaceAll(RegExp(r'\s+'), ' ').trim(),
     );
-    final settingsSummary = _buildSettingsSummary(
-      isCodex: session.provider == 'codex',
-      model: session.provider == 'codex' ? session.codexModel : session.model,
-      sandboxMode: session.codexSandboxMode,
-      approvalPolicy: session.codexApprovalPolicy,
-      permissionMode: session.permissionMode,
-    );
-
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 0),
       clipBehavior: Clip.antiAlias,
@@ -453,12 +446,29 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                     ),
                   ],
                   const SizedBox(height: 4),
-                  Text(
-                    settingsSummary,
-                    style: TextStyle(fontSize: 11, color: appColors.subtleText),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  if (isCodexSession)
+                    CodexEnvironmentSummary(
+                      model: session.codexModel,
+                      reasoningEffort: session.codexModelReasoningEffort,
+                      approvalPolicy: session.codexApprovalPolicy,
+                      permissionMode: session.permissionMode,
+                      sandboxMode: session.codexSandboxMode,
+                      compact: true,
+                    )
+                  else
+                    Text(
+                      _buildSettingsSummary(
+                        isCodex: false,
+                        model: session.model,
+                        permissionMode: session.permissionMode,
+                      ),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: appColors.subtleText,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   // Meta Row: branch + worktree (left) + elapsed (right)
                   const SizedBox(height: 4),
                   Row(
@@ -2257,14 +2267,6 @@ class RecentSessionCard extends StatelessWidget {
       session.agentNickname,
       session.agentRole,
     );
-    final settingsSummary = isCodex
-        ? _buildSettingsSummary(
-            isCodex: true,
-            model: session.codexModel,
-            sandboxMode: session.codexSandboxMode,
-            approvalPolicy: session.codexApprovalPolicy,
-          )
-        : null;
     final dateStr = _formatDateRange(session.created, session.modified);
 
     return Card(
@@ -2414,16 +2416,14 @@ class RecentSessionCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
 
-                  if (settingsSummary != null) ...[
+                  if (isCodex) ...[
                     const SizedBox(height: 6),
-                    Text(
-                      settingsSummary,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: appColors.subtleText,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    CodexEnvironmentSummary(
+                      model: session.codexModel,
+                      reasoningEffort: session.codexModelReasoningEffort,
+                      approvalPolicy: session.codexApprovalPolicy,
+                      sandboxMode: session.codexSandboxMode,
+                      compact: true,
                     ),
                   ],
 
@@ -2570,32 +2570,13 @@ class RecentSessionCard extends StatelessWidget {
   }
 }
 
-/// Build a compact settings summary for session cards.
-///
-/// Codex:  "gpt-5.3-codex  sandbox-on  bypass-all"
-/// Claude: "claude-sonnet-4-20250514  default" / "plan" / "bypass-all"
+/// Build a compact settings summary for Claude session cards.
 String _buildSettingsSummary({
   required bool isCodex,
   String? model,
-  String? sandboxMode,
-  String? approvalPolicy,
   String? permissionMode,
 }) {
-  if (isCodex) {
-    final modelText = (model == null || model.isEmpty) ? 'model:auto' : model;
-    final sandboxText = switch (sandboxMode) {
-      null || '' => 'sandbox-default',
-      'on' => 'sandbox-on',
-      'off' => 'sandbox-off',
-      final v => 'sandbox-$v',
-    };
-    final approvalText = switch (approvalPolicy) {
-      null || '' || 'unless-allow-listed' => 'default',
-      'never' => 'bypass-all',
-      final v => v,
-    };
-    return '$modelText  $sandboxText  $approvalText';
-  }
+  if (isCodex) return model ?? '';
   // Claude Code: show model + permissionMode label
   final modeLabel = switch (permissionMode) {
     null || '' || 'default' => 'default',

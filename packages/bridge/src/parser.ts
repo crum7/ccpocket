@@ -161,6 +161,7 @@ export type ServerMessage =
       model?: string;
       provider?: Provider;
       projectPath?: string;
+      approvalPolicy?: string;
       slashCommands?: string[];
       skills?: string[];
       skillMetadata?: Array<{
@@ -178,6 +179,9 @@ export type ServerMessage =
       worktreeBranch?: string;
       permissionMode?: PermissionMode;
       sandboxMode?: string;
+      modelReasoningEffort?: string;
+      networkAccessEnabled?: boolean;
+      webSearchMode?: string;
       clearContext?: boolean;
       sourceSessionId?: string;
       tipCode?: string;

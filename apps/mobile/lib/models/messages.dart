@@ -322,10 +322,14 @@ sealed class ServerMessage {
         sessionId: json['sessionId'] as String?,
         claudeSessionId: json['claudeSessionId'] as String?,
         model: json['model'] as String?,
+        approvalPolicy: json['approvalPolicy'] as String?,
         provider: json['provider'] as String?,
         projectPath: json['projectPath'] as String?,
         permissionMode: json['permissionMode'] as String?,
         sandboxMode: json['sandboxMode'] as String?,
+        modelReasoningEffort: json['modelReasoningEffort'] as String?,
+        networkAccessEnabled: json['networkAccessEnabled'] as bool?,
+        webSearchMode: json['webSearchMode'] as String?,
         slashCommands:
             (json['slashCommands'] as List?)
                 ?.map((e) => e as String)
@@ -665,10 +669,14 @@ class SystemMessage implements ServerMessage {
   /// Falls back to [sessionId] when not provided.
   final String? claudeSessionId;
   final String? model;
+  final String? approvalPolicy;
   final String? provider;
   final String? projectPath;
   final String? permissionMode;
   final String? sandboxMode;
+  final String? modelReasoningEffort;
+  final bool? networkAccessEnabled;
+  final String? webSearchMode;
   final List<String> slashCommands;
   final List<String> skills;
   final List<CodexSkillMetadata> skillMetadata;
@@ -682,10 +690,14 @@ class SystemMessage implements ServerMessage {
     this.sessionId,
     this.claudeSessionId,
     this.model,
+    this.approvalPolicy,
     this.provider,
     this.projectPath,
     this.permissionMode,
     this.sandboxMode,
+    this.modelReasoningEffort,
+    this.networkAccessEnabled,
+    this.webSearchMode,
     this.slashCommands = const [],
     this.skills = const [],
     this.skillMetadata = const [],
@@ -1734,6 +1746,13 @@ class SessionInfo {
     bool clearName = false,
     String? lastMessage,
     String? permissionMode,
+    String? model,
+    String? codexApprovalPolicy,
+    String? codexSandboxMode,
+    String? codexModel,
+    String? codexModelReasoningEffort,
+    bool? codexNetworkAccessEnabled,
+    String? codexWebSearchMode,
     PermissionRequestMessage? pendingPermission,
     bool clearPermission = false,
   }) {
@@ -1753,13 +1772,15 @@ class SessionInfo {
       worktreePath: worktreePath,
       worktreeBranch: worktreeBranch,
       permissionMode: permissionMode ?? this.permissionMode,
-      model: model,
-      codexApprovalPolicy: codexApprovalPolicy,
-      codexSandboxMode: codexSandboxMode,
-      codexModel: codexModel,
-      codexModelReasoningEffort: codexModelReasoningEffort,
-      codexNetworkAccessEnabled: codexNetworkAccessEnabled,
-      codexWebSearchMode: codexWebSearchMode,
+      model: model ?? this.model,
+      codexApprovalPolicy: codexApprovalPolicy ?? this.codexApprovalPolicy,
+      codexSandboxMode: codexSandboxMode ?? this.codexSandboxMode,
+      codexModel: codexModel ?? this.codexModel,
+      codexModelReasoningEffort:
+          codexModelReasoningEffort ?? this.codexModelReasoningEffort,
+      codexNetworkAccessEnabled:
+          codexNetworkAccessEnabled ?? this.codexNetworkAccessEnabled,
+      codexWebSearchMode: codexWebSearchMode ?? this.codexWebSearchMode,
       pendingPermission: clearPermission
           ? null
           : (pendingPermission ?? this.pendingPermission),

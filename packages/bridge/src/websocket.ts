@@ -8,7 +8,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { SessionManager, type SessionInfo } from "./session.js";
 import { SdkProcess } from "./sdk-process.js";
 import { CodexProcess, type CodexThreadSummary } from "./codex-process.js";
-import { parseClientMessage, type ClientMessage, type DebugTraceEvent, type ImageChange, type ServerMessage } from "./parser.js";
+import { parseClientMessage, type ClientMessage, type DebugTraceEvent, type ImageChange, type Provider, type ServerMessage } from "./parser.js";
 import { getAllRecentSessions, getCodexSessionHistory, getSessionHistory, findSessionsByClaudeIds, extractMessageImages, getClaudeSessionName, loadCodexSessionNames, renameClaudeSession, renameCodexSession } from "./sessions-index.js";
 import type { ImageStore } from "./image-store.js";
 import type { GalleryStore } from "./gallery-store.js";
@@ -26,6 +26,7 @@ import { fetchAllUsage } from "./usage.js";
 import type { PromptHistoryBackupStore } from "./prompt-history-backup.js";
 import { getPackageVersion } from "./version.js";
 
+type SystemServerMessage = Extract<ServerMessage, { type: "system" }>;
 
 // ---- Available model lists (delivered to clients via session_list) ----
 
@@ -235,6 +236,77 @@ export class BridgeWebSocketServer {
     };
   }
 
+  private buildSessionCreatedMessage(params: {
+    sessionId: string;
+    provider: Provider;
+    projectPath: string;
+    session?: SessionInfo;
+    permissionMode?: string;
+    sandboxMode?: string;
+    slashCommands?: string[];
+    skills?: string[];
+    skillMetadata?: Array<Record<string, unknown>>;
+    sourceSessionId?: string;
+  }): SystemServerMessage {
+    const {
+      sessionId,
+      provider,
+      projectPath,
+      session,
+      permissionMode,
+      sandboxMode,
+      slashCommands,
+      skills,
+      skillMetadata,
+      sourceSessionId,
+    } = params;
+
+    const msg: SystemServerMessage = {
+      type: "system",
+      subtype: "session_created",
+      sessionId,
+      provider,
+      projectPath,
+      ...(permissionMode ? { permissionMode: permissionMode as "default" | "acceptEdits" | "bypassPermissions" | "plan" } : {}),
+      ...(sandboxMode ? { sandboxMode } : {}),
+      ...(slashCommands ? { slashCommands } : {}),
+      ...(skills ? { skills } : {}),
+      ...(skillMetadata
+        ? {
+            skillMetadata:
+              skillMetadata as SystemServerMessage["skillMetadata"],
+          }
+        : {}),
+      ...(session?.worktreePath
+        ? {
+            worktreePath: session.worktreePath,
+            worktreeBranch: session.worktreeBranch,
+          }
+        : {}),
+      ...(sourceSessionId ? { sourceSessionId } : {}),
+    };
+
+    if (provider === "codex" && session?.codexSettings) {
+      if (session.codexSettings.model !== undefined) {
+        msg.model = session.codexSettings.model;
+      }
+      if (session.codexSettings.approvalPolicy !== undefined) {
+        msg.approvalPolicy = session.codexSettings.approvalPolicy;
+      }
+      if (session.codexSettings.modelReasoningEffort !== undefined) {
+        msg.modelReasoningEffort = session.codexSettings.modelReasoningEffort;
+      }
+      if (session.codexSettings.networkAccessEnabled !== undefined) {
+        msg.networkAccessEnabled = session.codexSettings.networkAccessEnabled;
+      }
+      if (session.codexSettings.webSearchMode !== undefined) {
+        msg.webSearchMode = session.codexSettings.webSearchMode;
+      }
+    }
+
+    return msg;
+  }
+
   close(): void {
     console.log("[ws] Shutting down...");
     this.sessionManager.destroyAll();
@@ -357,20 +429,26 @@ export class BridgeWebSocketServer {
 
           // Load saved session name from CLI storage (for resumed sessions)
           void this.loadAndSetSessionName(createdSession, provider, msg.projectPath, msg.sessionId).then(() => {
-            this.send(ws, {
-              type: "system",
-              subtype: "session_created",
-              sessionId,
-              provider,
-              projectPath: msg.projectPath,
-              ...(msg.permissionMode ? { permissionMode: msg.permissionMode } : {}),
-              ...(msg.sandboxMode ? { sandboxMode: msg.sandboxMode } : {}),
-              ...(cached ? { slashCommands: cached.slashCommands, skills: cached.skills, ...(cached.skillMetadata ? { skillMetadata: cached.skillMetadata } : {}) } : {}),
-              ...(createdSession?.worktreePath ? {
-                worktreePath: createdSession.worktreePath,
-                worktreeBranch: createdSession.worktreeBranch,
-              } : {}),
-            });
+            this.send(
+              ws,
+              this.buildSessionCreatedMessage({
+                sessionId,
+                provider,
+                projectPath: msg.projectPath,
+                session: createdSession,
+                permissionMode: msg.permissionMode,
+                sandboxMode: msg.sandboxMode,
+                ...(cached
+                  ? {
+                      slashCommands: cached.slashCommands,
+                      skills: cached.skills,
+                      ...(cached.skillMetadata
+                        ? { skillMetadata: cached.skillMetadata }
+                        : {}),
+                    }
+                  : {}),
+              }),
+            );
             this.broadcastSessionList();
             // Send a gentle tip when the project is not a git repository
             if (createdSession && !createdSession.gitBranch) {
@@ -645,17 +723,19 @@ export class BridgeWebSocketServer {
             );
             const newSession = this.sessionManager.get(newId);
             if (newSession && sessionName) newSession.name = sessionName;
-            this.broadcast({
-              type: "system",
-              subtype: "session_created",
-              sessionId: newId,
-              provider: "codex",
-              projectPath,
-              permissionMode: msg.mode,
-              ...(oldSettings.sandboxMode ? { sandboxMode: sandboxModeToExternal(oldSettings.sandboxMode) } : {}),
-              sourceSessionId: oldSessionId,
-              ...(newSession?.worktreePath ? { worktreePath: newSession.worktreePath, worktreeBranch: newSession.worktreeBranch } : {}),
-            });
+            this.broadcast(
+              this.buildSessionCreatedMessage({
+                sessionId: newId,
+                provider: "codex",
+                projectPath,
+                session: newSession,
+                permissionMode: msg.mode,
+                sandboxMode: oldSettings.sandboxMode
+                  ? sandboxModeToExternal(oldSettings.sandboxMode)
+                  : undefined,
+                sourceSessionId: oldSessionId,
+              }),
+            );
             this.broadcastSessionList();
             console.log(`[ws] Permission mode change (no thread): created new session ${newId} (mode=${msg.mode})`);
             break;
@@ -700,20 +780,19 @@ export class BridgeWebSocketServer {
             }
 
             void this.loadAndSetSessionName(newSession, "codex", effectiveProjectPath, threadId).then(() => {
-              this.broadcast({
-                type: "system",
-                subtype: "session_created",
-                sessionId: newId,
-                provider: "codex",
-                projectPath: effectiveProjectPath,
-                permissionMode: msg.mode,
-                ...(oldSettings.sandboxMode ? { sandboxMode: sandboxModeToExternal(oldSettings.sandboxMode) } : {}),
-                sourceSessionId: oldSessionId,
-                ...(newSession?.worktreePath ? {
-                  worktreePath: newSession.worktreePath,
-                  worktreeBranch: newSession.worktreeBranch,
-                } : {}),
-              });
+              this.broadcast(
+                this.buildSessionCreatedMessage({
+                  sessionId: newId,
+                  provider: "codex",
+                  projectPath: effectiveProjectPath,
+                  session: newSession,
+                  permissionMode: msg.mode,
+                  sandboxMode: oldSettings.sandboxMode
+                    ? sandboxModeToExternal(oldSettings.sandboxMode)
+                    : undefined,
+                  sourceSessionId: oldSessionId,
+                }),
+              );
               this.broadcastSessionList();
             });
 
@@ -787,19 +866,16 @@ export class BridgeWebSocketServer {
           if (newSession && sessionName) newSession.name = sessionName;
 
           void this.loadAndSetSessionName(newSession, "claude", projectPath, claudeSessionId).then(() => {
-            this.broadcast({
-              type: "system",
-              subtype: "session_created",
-              sessionId: newId,
-              provider: "claude",
-              projectPath,
-              sandboxMode: msg.sandboxMode,
-              sourceSessionId: oldSessionId,
-              ...(newSession?.worktreePath ? {
-                worktreePath: newSession.worktreePath,
-                worktreeBranch: newSession.worktreeBranch,
-              } : {}),
-            });
+            this.broadcast(
+              this.buildSessionCreatedMessage({
+                sessionId: newId,
+                provider: "claude",
+                projectPath,
+                session: newSession,
+                sandboxMode: msg.sandboxMode,
+                sourceSessionId: oldSessionId,
+              }),
+            );
             this.broadcastSessionList();
           });
 
@@ -867,16 +943,16 @@ export class BridgeWebSocketServer {
           );
           const newSession = this.sessionManager.get(newId);
           if (newSession && sessionName) newSession.name = sessionName;
-          this.broadcast({
-            type: "system",
-            subtype: "session_created",
-            sessionId: newId,
-            provider: "codex",
-            projectPath,
-            sandboxMode: sandboxModeToExternal(newSandboxMode),
-            sourceSessionId: oldSessionId,
-            ...(newSession?.worktreePath ? { worktreePath: newSession.worktreePath, worktreeBranch: newSession.worktreeBranch } : {}),
-          });
+          this.broadcast(
+            this.buildSessionCreatedMessage({
+              sessionId: newId,
+              provider: "codex",
+              projectPath,
+              session: newSession,
+              sandboxMode: sandboxModeToExternal(newSandboxMode),
+              sourceSessionId: oldSessionId,
+            }),
+          );
           this.broadcastSessionList();
           console.log(`[ws] Sandbox mode change (no thread): created new session ${newId} (sandbox=${newSandboxMode})`);
           break;
@@ -922,19 +998,16 @@ export class BridgeWebSocketServer {
           }
 
           void this.loadAndSetSessionName(newSession, "codex", effectiveProjectPath, threadId).then(() => {
-            this.broadcast({
-              type: "system",
-              subtype: "session_created",
-              sessionId: newId,
-              provider: "codex",
-              projectPath: effectiveProjectPath,
-              sandboxMode: sandboxModeToExternal(newSandboxMode),
-              sourceSessionId: oldSessionId,
-              ...(newSession?.worktreePath ? {
-                worktreePath: newSession.worktreePath,
-                worktreeBranch: newSession.worktreeBranch,
-              } : {}),
-            });
+            this.broadcast(
+              this.buildSessionCreatedMessage({
+                sessionId: newId,
+                provider: "codex",
+                projectPath: effectiveProjectPath,
+                session: newSession,
+                sandboxMode: sandboxModeToExternal(newSandboxMode),
+                sourceSessionId: oldSessionId,
+              }),
+            );
             this.broadcastSessionList();
           });
 
@@ -1007,16 +1080,15 @@ export class BridgeWebSocketServer {
 
           // Notify all clients. Broadcast is used so reconnecting clients also receive it.
           const newSession = this.sessionManager.get(newId);
-          this.broadcast({
-            type: "system",
-            subtype: "session_created",
+          const createdMsg = this.buildSessionCreatedMessage({
             sessionId: newId,
             provider: newSession?.provider ?? "claude",
             projectPath,
-            ...(permissionMode ? { permissionMode } : {}),
-            clearContext: true,
+            session: newSession,
+            permissionMode,
             sourceSessionId: sessionId,
           });
+          this.broadcast({ ...createdMsg, clearContext: true });
           this.broadcastSessionList();
         } else {
           sdkProc.approve(msg.id, msg.updatedInput);
@@ -1317,19 +1389,19 @@ export class BridgeWebSocketServer {
             );
             const createdSession = this.sessionManager.get(sessionId);
             void this.loadAndSetSessionName(createdSession, "codex", effectiveProjectPath, sessionRefId).then(() => {
-              this.send(ws, {
-                type: "system",
-                subtype: "session_created",
-                sessionId,
-                provider: "codex",
-                projectPath: effectiveProjectPath,
-                ...(createdSession?.codexSettings?.sandboxMode ? { sandboxMode: sandboxModeToExternal(createdSession.codexSettings.sandboxMode) } : {}),
-                ...(msg.permissionMode ? { permissionMode: msg.permissionMode } : {}),
-                ...(createdSession?.worktreePath ? {
-                  worktreePath: createdSession.worktreePath,
-                  worktreeBranch: createdSession.worktreeBranch,
-                } : {}),
-              });
+              this.send(
+                ws,
+                this.buildSessionCreatedMessage({
+                  sessionId,
+                  provider: "codex",
+                  projectPath: effectiveProjectPath,
+                  session: createdSession,
+                  sandboxMode: createdSession?.codexSettings?.sandboxMode
+                    ? sandboxModeToExternal(createdSession.codexSettings.sandboxMode)
+                    : undefined,
+                  permissionMode: msg.permissionMode,
+                }),
+              );
               this.broadcastSessionList();
             });
             this.debugEvents.set(sessionId, []);
@@ -1386,19 +1458,24 @@ export class BridgeWebSocketServer {
           const createdSession = this.sessionManager.get(sessionId);
           void this.loadAndSetSessionName(createdSession, "claude", msg.projectPath, claudeSessionId).then(() => {
             this.send(ws, {
-              type: "system",
-              subtype: "session_created",
-              sessionId,
+              ...this.buildSessionCreatedMessage({
+                sessionId,
+                provider: "claude",
+                projectPath: msg.projectPath,
+                session: createdSession,
+                permissionMode: msg.permissionMode,
+                sandboxMode: msg.sandboxMode,
+                ...(cached
+                  ? {
+                      slashCommands: cached.slashCommands,
+                      skills: cached.skills,
+                      ...(cached.skillMetadata
+                        ? { skillMetadata: cached.skillMetadata }
+                        : {}),
+                    }
+                  : {}),
+              }),
               claudeSessionId,
-              provider: "claude",
-              projectPath: msg.projectPath,
-              ...(msg.permissionMode ? { permissionMode: msg.permissionMode } : {}),
-              ...(msg.sandboxMode ? { sandboxMode: msg.sandboxMode } : {}),
-              ...(cached ? { slashCommands: cached.slashCommands, skills: cached.skills, ...(cached.skillMetadata ? { skillMetadata: cached.skillMetadata } : {}) } : {}),
-              ...(createdSession?.worktreePath ? {
-                worktreePath: createdSession.worktreePath,
-                worktreeBranch: createdSession.worktreeBranch,
-              } : {}),
             });
             this.broadcastSessionList();
           });
@@ -1711,15 +1788,17 @@ export class BridgeWebSocketServer {
               // Notify the new session ID
               const newSession = this.sessionManager.get(newSessionId);
               const rewindPermMode = newSession?.process instanceof SdkProcess ? newSession.process.permissionMode : undefined;
-              this.send(ws, {
-                type: "system",
-                subtype: "session_created",
-                sessionId: newSessionId,
-                provider: newSession?.provider ?? "claude",
-                projectPath: newSession?.projectPath ?? "",
-                ...(rewindPermMode ? { permissionMode: rewindPermMode } : {}),
-                sourceSessionId: msg.sessionId,
-              });
+              this.send(
+                ws,
+                this.buildSessionCreatedMessage({
+                  sessionId: newSessionId,
+                  provider: newSession?.provider ?? "claude",
+                  projectPath: newSession?.projectPath ?? "",
+                  session: newSession,
+                  permissionMode: rewindPermMode,
+                  sourceSessionId: msg.sessionId,
+                }),
+              );
               this.sendSessionList(ws);
             });
           } catch (err) {
@@ -1737,15 +1816,17 @@ export class BridgeWebSocketServer {
                 this.send(ws, { type: "rewind_result", success: true, mode: "both" });
                 const newSession = this.sessionManager.get(newSessionId);
                 const rewindPermMode2 = newSession?.process instanceof SdkProcess ? newSession.process.permissionMode : undefined;
-                this.send(ws, {
-                  type: "system",
-                  subtype: "session_created",
-                  sessionId: newSessionId,
-                  provider: newSession?.provider ?? "claude",
-                  projectPath: newSession?.projectPath ?? "",
-                  ...(rewindPermMode2 ? { permissionMode: rewindPermMode2 } : {}),
-                  sourceSessionId: msg.sessionId,
-                });
+                this.send(
+                  ws,
+                  this.buildSessionCreatedMessage({
+                    sessionId: newSessionId,
+                    provider: newSession?.provider ?? "claude",
+                    projectPath: newSession?.projectPath ?? "",
+                    session: newSession,
+                    permissionMode: rewindPermMode2,
+                    sourceSessionId: msg.sessionId,
+                  }),
+                );
                 this.sendSessionList(ws);
               });
             } catch (err) {

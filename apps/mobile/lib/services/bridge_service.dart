@@ -268,6 +268,9 @@ class BridgeService implements BridgeServiceBase {
                 if (sessionId != null && permissionMode != null) {
                   _patchSessionPermissionMode(sessionId, permissionMode);
                 }
+                if (sessionId != null) {
+                  _patchSessionSystemSettings(sessionId, msg);
+                }
                 _taggedMessageController.add((msg, sessionId));
                 _messageController.add(msg);
               case StatusMessage(:final status):
@@ -668,21 +671,51 @@ class BridgeService implements BridgeServiceBase {
     _sessionListController.add(_sessions);
   }
 
+  void _patchSessionSystemSettings(String sessionId, SystemMessage message) {
+    final idx = _sessions.indexWhere((s) => s.id == sessionId);
+    if (idx < 0) return;
+    final current = _sessions[idx];
+    _sessions = List.of(_sessions)
+      ..[idx] = current.copyWith(
+        permissionMode: message.permissionMode,
+        model: message.provider == Provider.claude.value ? message.model : null,
+        codexApprovalPolicy: message.approvalPolicy,
+        codexSandboxMode: message.provider == Provider.codex.value
+            ? message.sandboxMode
+            : null,
+        codexModel: message.provider == Provider.codex.value
+            ? message.model
+            : null,
+        codexModelReasoningEffort: message.modelReasoningEffort,
+        codexNetworkAccessEnabled: message.networkAccessEnabled,
+        codexWebSearchMode: message.webSearchMode,
+      );
+    _sessionListController.add(_sessions);
+  }
+
   /// Update the cached lastMessage when an [AssistantMessage] arrives so the
   /// session list card shows the latest response in real-time.
   void _patchSessionLastMessage(String sessionId, AssistantMessage message) {
     final idx = _sessions.indexWhere((s) => s.id == sessionId);
     if (idx < 0) return;
+    final current = _sessions[idx];
     final text = message.content
         .whereType<TextContent>()
         .map((c) => c.text)
         .join(' ')
         .replaceAll(RegExp(r'\s+'), ' ')
         .trim();
-    if (text.isEmpty) return;
+    final shouldPatchModel =
+        current.provider == Provider.codex.value &&
+        message.model.isNotEmpty &&
+        message.model != current.codexModel;
+    if (text.isEmpty && !shouldPatchModel) return;
     final preview = text.length > 100 ? text.substring(0, 100) : text;
     _sessions = List.of(_sessions)
-      ..[idx] = _sessions[idx].copyWith(lastMessage: preview);
+      ..[idx] = current.copyWith(
+        lastMessage: text.isNotEmpty ? preview : null,
+        codexModel: shouldPatchModel ? message.model : null,
+      );
     _sessionListController.add(_sessions);
   }
 
