@@ -27,6 +27,7 @@ import 'state/session_list_cubit.dart';
 import 'widgets/connect_form.dart';
 import 'widgets/home_content.dart';
 import 'widgets/machine_edit_sheet.dart';
+import 'widgets/session_list_app_bar.dart';
 
 // ---- Testable helpers (top-level) ----
 
@@ -1112,161 +1113,161 @@ class _SessionListScreenState extends State<SessionListScreen>
                 child: Focus(
                   autofocus: true,
                   child: Scaffold(
-                    appBar: AppBar(
-                      title: GestureDetector(
-                        onTap: _onTitleTap,
-                        child: Text(l.appTitle),
-                      ),
-                      actions: [
-                        IconButton(
-                          key: const ValueKey('settings_button'),
-                          icon: Badge(
-                            isLabelVisible:
-                                AppUpdateService.instance.cachedUpdate != null,
-                            smallSize: 8,
-                            child: const Icon(Icons.settings),
+                    appBar: showConnectedUI && !_isAutoConnecting
+                        ? null
+                        : AppBar(
+                            title: GestureDetector(
+                              onTap: _onTitleTap,
+                              child: Text(l.appTitle),
+                            ),
+                            actions: [
+                              IconButton(
+                                key: const ValueKey('settings_button'),
+                                icon: Badge(
+                                  isLabelVisible:
+                                      AppUpdateService.instance.cachedUpdate !=
+                                      null,
+                                  smallSize: 8,
+                                  child: const Icon(Icons.settings),
+                                ),
+                                onPressed: () =>
+                                    context.router.push(const SettingsRoute()),
+                                tooltip: l.settings,
+                              ),
+                            ],
                           ),
-                          onPressed: () =>
-                              context.router.push(const SettingsRoute()),
-                          tooltip: l.settings,
-                        ),
-                        if (showConnectedUI)
-                          IconButton(
-                            key: const ValueKey('gallery_button'),
-                            icon: const Icon(Icons.collections),
-                            onPressed: () =>
-                                context.router.push(GalleryRoute()),
-                            tooltip: l.gallery,
-                          ),
-                        if (showConnectedUI)
-                          IconButton(
-                            key: const ValueKey('disconnect_button'),
-                            icon: const Icon(Icons.link_off),
-                            onPressed: _disconnect,
-                            tooltip: l.disconnect,
-                          ),
-                      ],
-                    ),
                     body: _isAutoConnecting
                         ? const Center(child: CircularProgressIndicator())
                         : showConnectedUI
-                        ? RefreshIndicator(
-                            onRefresh: () async => _refresh(),
-                            child: HomeContent(
-                              key: _homeContentKey,
-                              connectionState: connectionState,
-                              bridgeVersion: context
-                                  .read<BridgeService>()
-                                  .bridgeVersion,
-                              sessions: sessions,
-                              recentSessions: recentSessionsList,
-                              accumulatedProjectPaths:
-                                  slState.accumulatedProjectPaths,
-                              searchQuery: slState.searchQuery,
-                              isLoadingMore: slState.isLoadingMore,
-                              isInitialLoading: slState.isInitialLoading,
-                              hasMoreSessions: slState.hasMore,
-                              archivingSessionIds: _archivingSessionIds,
-                              unseenSessionIds: unseenSessionIds,
-                              currentProjectFilter: context
-                                  .read<BridgeService>()
-                                  .currentProjectFilter,
-                              onNewSession: _showNewSessionDialog,
-                              onTapRunning:
-                                  (
-                                    sessionId, {
-                                    String? projectPath,
-                                    String? gitBranch,
-                                    String? worktreePath,
-                                    String? provider,
-                                    String? permissionMode,
-                                    String? sandboxMode,
-                                  }) => _navigateToChat(
-                                    sessionId,
-                                    projectPath: projectPath,
-                                    gitBranch: gitBranch,
-                                    worktreePath: worktreePath,
-                                    provider: provider == 'codex'
-                                        ? Provider.codex
-                                        : null,
-                                    permissionMode: permissionMode,
-                                    sandboxMode: sandboxMode,
+                        ? NestedScrollView(
+                            headerSliverBuilder:
+                                (context, innerBoxIsScrolled) => [
+                                  SessionListSliverAppBar(
+                                    onTitleTap: _onTitleTap,
+                                    onDisconnect: _disconnect,
+                                    forceElevated: innerBoxIsScrolled,
                                   ),
-                              onStopSession: _stopSession,
-                              onApprovePermission:
-                                  (
-                                    sessionId,
-                                    toolUseId, {
-                                    Map<String, dynamic>? updatedInput,
-                                    bool clearContext = false,
-                                  }) {
-                                    final bridge = context
-                                        .read<BridgeService>();
-                                    bridge.send(
-                                      ClientMessage.approve(
-                                        toolUseId,
-                                        sessionId: sessionId,
-                                        updatedInput: updatedInput,
-                                        clearContext: clearContext,
-                                      ),
-                                    );
-                                    bridge.clearSessionPermission(sessionId);
-                                  },
-                              onApproveAlways: (sessionId, toolUseId) {
-                                final bridge = context.read<BridgeService>();
-                                bridge.send(
-                                  ClientMessage.approveAlways(
-                                    toolUseId,
-                                    sessionId: sessionId,
-                                  ),
-                                );
-                                bridge.clearSessionPermission(sessionId);
-                              },
-                              onRejectPermission:
-                                  (sessionId, toolUseId, {message}) {
-                                    final bridge = context
-                                        .read<BridgeService>();
-                                    bridge.send(
-                                      ClientMessage.reject(
-                                        toolUseId,
-                                        message: message,
-                                        sessionId: sessionId,
-                                      ),
-                                    );
-                                    bridge.clearSessionPermission(sessionId);
-                                  },
-                              onAnswerQuestion: (sessionId, toolUseId, result) {
-                                final bridge = context.read<BridgeService>();
-                                bridge.send(
-                                  ClientMessage.answer(
-                                    toolUseId,
-                                    result,
-                                    sessionId: sessionId,
-                                  ),
-                                );
-                                bridge.clearSessionPermission(sessionId);
-                              },
-                              onResumeSession: _resumeSession,
-                              onLongPressRecentSession:
-                                  _showRecentSessionActions,
-                              onArchiveSession: _archiveSession,
-                              onLongPressRunningSession:
-                                  _showRunningSessionActions,
-                              onSelectProject: (path) => context
-                                  .read<SessionListCubit>()
-                                  .selectProject(path),
-                              onLoadMore: () =>
-                                  context.read<SessionListCubit>().loadMore(),
-                              providerFilter: slState.providerFilter,
-                              namedOnly: slState.namedOnly,
-                              onToggleProvider: () => context
-                                  .read<SessionListCubit>()
-                                  .toggleProviderFilter(),
-                              onToggleNamed: () => context
-                                  .read<SessionListCubit>()
-                                  .toggleNamedOnly(),
-                              appUpdateInfo: _appUpdateInfo,
-                              onDismissAppUpdate: _dismissAppUpdate,
+                                ],
+                            body: RefreshIndicator(
+                              onRefresh: () async => _refresh(),
+                              child: HomeContent(
+                                key: _homeContentKey,
+                                connectionState: connectionState,
+                                bridgeVersion: context
+                                    .read<BridgeService>()
+                                    .bridgeVersion,
+                                sessions: sessions,
+                                recentSessions: recentSessionsList,
+                                accumulatedProjectPaths:
+                                    slState.accumulatedProjectPaths,
+                                searchQuery: slState.searchQuery,
+                                isLoadingMore: slState.isLoadingMore,
+                                isInitialLoading: slState.isInitialLoading,
+                                hasMoreSessions: slState.hasMore,
+                                archivingSessionIds: _archivingSessionIds,
+                                unseenSessionIds: unseenSessionIds,
+                                currentProjectFilter: context
+                                    .read<BridgeService>()
+                                    .currentProjectFilter,
+                                onNewSession: _showNewSessionDialog,
+                                onTapRunning:
+                                    (
+                                      sessionId, {
+                                      String? projectPath,
+                                      String? gitBranch,
+                                      String? worktreePath,
+                                      String? provider,
+                                      String? permissionMode,
+                                      String? sandboxMode,
+                                    }) => _navigateToChat(
+                                      sessionId,
+                                      projectPath: projectPath,
+                                      gitBranch: gitBranch,
+                                      worktreePath: worktreePath,
+                                      provider: provider == 'codex'
+                                          ? Provider.codex
+                                          : null,
+                                      permissionMode: permissionMode,
+                                      sandboxMode: sandboxMode,
+                                    ),
+                                onStopSession: _stopSession,
+                                onApprovePermission:
+                                    (
+                                      sessionId,
+                                      toolUseId, {
+                                      Map<String, dynamic>? updatedInput,
+                                      bool clearContext = false,
+                                    }) {
+                                      final bridge = context
+                                          .read<BridgeService>();
+                                      bridge.send(
+                                        ClientMessage.approve(
+                                          toolUseId,
+                                          sessionId: sessionId,
+                                          updatedInput: updatedInput,
+                                          clearContext: clearContext,
+                                        ),
+                                      );
+                                      bridge.clearSessionPermission(sessionId);
+                                    },
+                                onApproveAlways: (sessionId, toolUseId) {
+                                  final bridge = context.read<BridgeService>();
+                                  bridge.send(
+                                    ClientMessage.approveAlways(
+                                      toolUseId,
+                                      sessionId: sessionId,
+                                    ),
+                                  );
+                                  bridge.clearSessionPermission(sessionId);
+                                },
+                                onRejectPermission:
+                                    (sessionId, toolUseId, {message}) {
+                                      final bridge = context
+                                          .read<BridgeService>();
+                                      bridge.send(
+                                        ClientMessage.reject(
+                                          toolUseId,
+                                          message: message,
+                                          sessionId: sessionId,
+                                        ),
+                                      );
+                                      bridge.clearSessionPermission(sessionId);
+                                    },
+                                onAnswerQuestion:
+                                    (sessionId, toolUseId, result) {
+                                      final bridge = context
+                                          .read<BridgeService>();
+                                      bridge.send(
+                                        ClientMessage.answer(
+                                          toolUseId,
+                                          result,
+                                          sessionId: sessionId,
+                                        ),
+                                      );
+                                      bridge.clearSessionPermission(sessionId);
+                                    },
+                                onResumeSession: _resumeSession,
+                                onLongPressRecentSession:
+                                    _showRecentSessionActions,
+                                onArchiveSession: _archiveSession,
+                                onLongPressRunningSession:
+                                    _showRunningSessionActions,
+                                onSelectProject: (path) => context
+                                    .read<SessionListCubit>()
+                                    .selectProject(path),
+                                onLoadMore: () =>
+                                    context.read<SessionListCubit>().loadMore(),
+                                providerFilter: slState.providerFilter,
+                                namedOnly: slState.namedOnly,
+                                onToggleProvider: () => context
+                                    .read<SessionListCubit>()
+                                    .toggleProviderFilter(),
+                                onToggleNamed: () => context
+                                    .read<SessionListCubit>()
+                                    .toggleNamedOnly(),
+                                appUpdateInfo: _appUpdateInfo,
+                                onDismissAppUpdate: _dismissAppUpdate,
+                              ),
                             ),
                           )
                         : connectionState == BridgeConnectionState.connecting
