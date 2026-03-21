@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.47.3] - 2026-03-22
+
+### Changed
+- Replace AnimatedList with reverse ListView.builder for chat message rendering
+
+### Fixed
+- Server entries in chat history now inherit timestamp from user messages
+- Flaky unseen sessions test using future date far enough from buffer
+
 ## [1.47.2] - 2026-03-21
 
 ### Fixed
