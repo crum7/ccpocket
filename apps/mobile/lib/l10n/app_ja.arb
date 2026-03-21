@@ -198,13 +198,13 @@
 
   "claudeEffortLowDesc": "高速な応答、分析は少なめ",
   "claudeEffortMediumDesc": "速度と品質のバランス",
-  "claudeEffortHighDesc": "より丁寧な分析（デフォルト）",
+  "claudeEffortHighDesc": "より丁寧な分析",
   "claudeEffortMaxDesc": "最も丁寧、最も遅い",
 
   "reasoningEffortMinimalDesc": "最速、分析は最小限",
   "reasoningEffortLowDesc": "高速な応答、分析は少なめ",
   "reasoningEffortMediumDesc": "速度と品質のバランス",
-  "reasoningEffortHighDesc": "より丁寧な分析（デフォルト）",
+  "reasoningEffortHighDesc": "より丁寧な分析",
   "reasoningEffortXhighDesc": "最も丁寧、最も遅い",
 
   "changePermissionModeTitle": "Permission Mode を変更",

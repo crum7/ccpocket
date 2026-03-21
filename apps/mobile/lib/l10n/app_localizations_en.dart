@@ -484,7 +484,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get claudeEffortMediumDesc => 'Balanced speed and quality';
 
   @override
-  String get claudeEffortHighDesc => 'More thorough analysis (default)';
+  String get claudeEffortHighDesc => 'More thorough analysis';
 
   @override
   String get claudeEffortMaxDesc => 'Most thorough, slowest';
@@ -499,7 +499,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reasoningEffortMediumDesc => 'Balanced speed and quality';
 
   @override
-  String get reasoningEffortHighDesc => 'More thorough analysis (default)';
+  String get reasoningEffortHighDesc => 'More thorough analysis';
 
   @override
   String get reasoningEffortXhighDesc => 'Most thorough, slowest';

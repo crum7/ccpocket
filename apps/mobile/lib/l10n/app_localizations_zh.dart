@@ -469,7 +469,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get claudeEffortMediumDesc => '速度与质量的平衡';
 
   @override
-  String get claudeEffortHighDesc => '更深入的分析（默认）';
+  String get claudeEffortHighDesc => '更深入的分析';
 
   @override
   String get claudeEffortMaxDesc => '最深入，最慢';
@@ -484,7 +484,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get reasoningEffortMediumDesc => '速度与质量的平衡';
 
   @override
-  String get reasoningEffortHighDesc => '更深入的分析（默认）';
+  String get reasoningEffortHighDesc => '更深入的分析';
 
   @override
   String get reasoningEffortXhighDesc => '最深入，最慢';

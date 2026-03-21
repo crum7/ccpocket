@@ -473,7 +473,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get claudeEffortMediumDesc => '速度と品質のバランス';
 
   @override
-  String get claudeEffortHighDesc => 'より丁寧な分析（デフォルト）';
+  String get claudeEffortHighDesc => 'より丁寧な分析';
 
   @override
   String get claudeEffortMaxDesc => '最も丁寧、最も遅い';
@@ -488,7 +488,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get reasoningEffortMediumDesc => '速度と品質のバランス';
 
   @override
-  String get reasoningEffortHighDesc => 'より丁寧な分析（デフォルト）';
+  String get reasoningEffortHighDesc => 'より丁寧な分析';
 
   @override
   String get reasoningEffortXhighDesc => '最も丁寧、最も遅い';

@@ -170,13 +170,13 @@
 
   "claudeEffortLowDesc": "Faster responses, less thorough",
   "claudeEffortMediumDesc": "Balanced speed and quality",
-  "claudeEffortHighDesc": "More thorough analysis (default)",
+  "claudeEffortHighDesc": "More thorough analysis",
   "claudeEffortMaxDesc": "Most thorough, slowest",
 
   "reasoningEffortMinimalDesc": "Fastest, least analysis",
   "reasoningEffortLowDesc": "Faster responses, less thorough",
   "reasoningEffortMediumDesc": "Balanced speed and quality",
-  "reasoningEffortHighDesc": "More thorough analysis (default)",
+  "reasoningEffortHighDesc": "More thorough analysis",
   "reasoningEffortXhighDesc": "Most thorough, slowest",
 
   "changePermissionModeTitle": "Change Permission Mode",

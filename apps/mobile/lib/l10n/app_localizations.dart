@@ -991,7 +991,7 @@ abstract class AppLocalizations {
   /// No description provided for @claudeEffortHighDesc.
   ///
   /// In ja, this message translates to:
-  /// **'より丁寧な分析（デフォルト）'**
+  /// **'より丁寧な分析'**
   String get claudeEffortHighDesc;
 
   /// No description provided for @claudeEffortMaxDesc.
@@ -1021,7 +1021,7 @@ abstract class AppLocalizations {
   /// No description provided for @reasoningEffortHighDesc.
   ///
   /// In ja, this message translates to:
-  /// **'より丁寧な分析（デフォルト）'**
+  /// **'より丁寧な分析'**
   String get reasoningEffortHighDesc;
 
   /// No description provided for @reasoningEffortXhighDesc.

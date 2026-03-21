@@ -174,13 +174,13 @@
 
   "claudeEffortLowDesc": "更快响应，分析较少",
   "claudeEffortMediumDesc": "速度与质量的平衡",
-  "claudeEffortHighDesc": "更深入的分析（默认）",
+  "claudeEffortHighDesc": "更深入的分析",
   "claudeEffortMaxDesc": "最深入，最慢",
 
   "reasoningEffortMinimalDesc": "最快，分析最少",
   "reasoningEffortLowDesc": "更快响应，分析较少",
   "reasoningEffortMediumDesc": "速度与质量的平衡",
-  "reasoningEffortHighDesc": "更深入的分析（默认）",
+  "reasoningEffortHighDesc": "更深入的分析",
   "reasoningEffortXhighDesc": "最深入，最慢",
 
   "changeSandboxModeTitle": "更改沙箱模式",
