@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.46.0] - 2026-03-21
+
+### Added
+- Mode descriptions displayed in new session sheet for better discoverability
+- Simplified Codex session metadata and new session mode selection
+- Plan mode toggle without restart when Codex session is idle
+
+### Changed
+- Localized mode descriptions and restored Claude mode grouping
+
+### Fixed
+- Cleared plan mode immediately after approval to prevent stale state
+- Ignored placeholder model name on Codex session resume
+- Fixed 14 failing tests from mode bar and session sheet changes
+
 ## [1.45.0] - 2026-03-20
 
 ### Added
