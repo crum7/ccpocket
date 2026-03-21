@@ -1360,6 +1360,71 @@ class _OptionsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    final selectedPermissionMode = legacyPermissionModeFromModes(
+      provider,
+      executionMode: executionMode,
+      planMode: planMode,
+    );
+
+    String executionDescription(ExecutionMode mode) {
+      return switch (mode) {
+        ExecutionMode.defaultMode => l.executionDefaultDescription,
+        ExecutionMode.acceptEdits => l.executionAcceptEditsDescription,
+        ExecutionMode.fullAccess => l.executionFullAccessDescription,
+      };
+    }
+
+    String permissionDescription(PermissionMode mode) {
+      return switch (mode) {
+        PermissionMode.defaultMode => l.permissionDefaultDescription,
+        PermissionMode.acceptEdits => l.permissionAcceptEditsDescription,
+        PermissionMode.plan => l.permissionPlanDescription,
+        PermissionMode.bypassPermissions => l.permissionBypassDescription,
+      };
+    }
+
+    String sandboxDescription(SandboxMode mode) {
+      if (provider == Provider.claude) {
+        return mode == SandboxMode.on
+            ? l.sandboxRestrictedDescription
+            : l.sandboxNativeDescription;
+      }
+      return mode == SandboxMode.on
+          ? l.sandboxRestrictedDescription
+          : l.sandboxNativeCautionDescription;
+    }
+
+    Widget selectedFieldContent({
+      required IconData icon,
+      required String title,
+      required String subtitle,
+    }) {
+      return Row(
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 13)),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -1386,6 +1451,27 @@ class _OptionsSection extends StatelessWidget {
                       initialValue: executionMode,
                       isExpanded: true,
                       decoration: buildInputDecoration(l.approval),
+                      selectedItemBuilder: (context) =>
+                          const [
+                                ExecutionMode.defaultMode,
+                                ExecutionMode.fullAccess,
+                              ]
+                              .map(
+                                (mode) => selectedFieldContent(
+                                  icon: switch (mode) {
+                                    ExecutionMode.defaultMode => Icons.tune,
+                                    ExecutionMode.acceptEdits =>
+                                      Icons.edit_note,
+                                    ExecutionMode.fullAccess => Icons.flash_on,
+                                  },
+                                  title: switch (mode) {
+                                    ExecutionMode.fullAccess => 'Full Access',
+                                    _ => mode.label,
+                                  },
+                                  subtitle: executionDescription(mode),
+                                ),
+                              )
+                              .toList(),
                       items:
                           const [
                                 ExecutionMode.defaultMode,
@@ -1424,23 +1510,25 @@ class _OptionsSection extends StatelessWidget {
                 )
               : DropdownButtonFormField<PermissionMode>(
                   key: const ValueKey('dialog_permission_mode'),
-                  initialValue: legacyPermissionModeFromModes(
-                    provider,
-                    executionMode: executionMode,
-                    planMode: planMode,
-                  ),
+                  initialValue: selectedPermissionMode,
                   isExpanded: true,
                   decoration: buildInputDecoration(l.approval),
+                  selectedItemBuilder: (context) => PermissionMode.values
+                      .map(
+                        (mode) => selectedFieldContent(
+                          icon: switch (mode) {
+                            PermissionMode.defaultMode => Icons.tune,
+                            PermissionMode.acceptEdits => Icons.edit_note,
+                            PermissionMode.plan => Icons.assignment_outlined,
+                            PermissionMode.bypassPermissions => Icons.flash_on,
+                          },
+                          title: mode.label,
+                          subtitle: permissionDescription(mode),
+                        ),
+                      )
+                      .toList(),
                   items: PermissionMode.values.map((mode) {
-                    final description = switch (mode) {
-                      PermissionMode.defaultMode =>
-                        l.permissionDefaultDescription,
-                      PermissionMode.acceptEdits =>
-                        l.permissionAcceptEditsDescription,
-                      PermissionMode.plan => l.permissionPlanDescription,
-                      PermissionMode.bypassPermissions =>
-                        l.permissionBypassDescription,
-                    };
+                    final description = permissionDescription(mode);
                     return DropdownMenuItem(
                       value: mode,
                       child: Column(
@@ -1492,6 +1580,27 @@ class _OptionsSection extends StatelessWidget {
             initialValue: sandboxMode,
             isExpanded: true,
             decoration: buildInputDecoration(l.sandbox),
+            selectedItemBuilder: (context) =>
+                (provider == Provider.claude
+                        ? SandboxMode.values.reversed
+                        : SandboxMode.values)
+                    .map((m) {
+                      final isClaude = provider == Provider.claude;
+                      final icon = m == SandboxMode.on
+                          ? Icons.shield_outlined
+                          : (isClaude ? Icons.code : Icons.warning_amber);
+                      final label = isClaude
+                          ? (m == SandboxMode.on
+                                ? 'Sandbox (Safe Mode)'
+                                : 'Standard')
+                          : m.label;
+                      return selectedFieldContent(
+                        icon: icon,
+                        title: label,
+                        subtitle: sandboxDescription(m),
+                      );
+                    })
+                    .toList(),
             style: TextStyle(
               fontSize: 13,
               color: Theme.of(context).colorScheme.onSurface,

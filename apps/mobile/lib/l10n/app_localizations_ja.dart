@@ -292,6 +292,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get approval => '承認';
 
   @override
+  String get restart => '再起動';
+
+  @override
   String get worktree => 'Worktree';
 
   @override
@@ -481,9 +484,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String changeSandboxModeBody(String mode) {
     return '$mode に切り替えるとセッションが再起動します。会話は保持されます。';
   }
-
-  @override
-  String get restart => '再起動';
 
   @override
   String get messagePlaceholder => 'Claude にメッセージ...';

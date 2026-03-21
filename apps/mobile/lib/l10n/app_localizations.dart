@@ -634,6 +634,12 @@ abstract class AppLocalizations {
   /// **'承認'**
   String get approval;
 
+  /// No description provided for @restart.
+  ///
+  /// In ja, this message translates to:
+  /// **'再起動'**
+  String get restart;
+
   /// No description provided for @worktree.
   ///
   /// In ja, this message translates to:
@@ -999,12 +1005,6 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'{mode} に切り替えるとセッションが再起動します。会話は保持されます。'**
   String changeSandboxModeBody(String mode);
-
-  /// No description provided for @restart.
-  ///
-  /// In ja, this message translates to:
-  /// **'再起動'**
-  String get restart;
 
   /// No description provided for @messagePlaceholder.
   ///

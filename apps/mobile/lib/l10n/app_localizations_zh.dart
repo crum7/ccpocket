@@ -290,6 +290,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get approval => '审批';
 
   @override
+  String get restart => '重启';
+
+  @override
   String get worktree => '工作树';
 
   @override
@@ -418,10 +421,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get permissionAcceptEditsDescription => '自动批准文件编辑';
 
   @override
-  String get permissionPlanDescription => '执行变更前先分析并制定计划';
+  String get permissionPlanDescription => '仅分析和规划，不执行';
 
   @override
-  String get permissionBypassDescription => '跳过大多数审批提示';
+  String get permissionBypassDescription => '跳过所有权限提示';
 
   @override
   String get executionDefaultDescription => '标准权限提示';
@@ -439,13 +442,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sandboxRestrictedDescription => '在受限环境中运行命令';
 
   @override
-  String get sandboxNativeDescription => '在原生命令环境中运行';
+  String get sandboxNativeDescription => '在原生环境中运行命令';
 
   @override
-  String get sandboxNativeCautionDescription => '在原生命令环境中运行（注意）';
+  String get sandboxNativeCautionDescription => '在原生环境中运行命令（谨慎）';
 
   @override
-  String get changePermissionModeTitle => '更改 Permission Mode';
+  String get changePermissionModeTitle => '更改权限模式';
 
   @override
   String changePermissionModeBody(String mode) {
@@ -453,11 +456,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get changeExecutionModeTitle => '更改 Execution Mode';
+  String get changeExecutionModeTitle => 'Execution Mode を変更';
 
   @override
   String changeExecutionModeBody(String mode) {
-    return '切换到 $mode 会重启当前会话。你的对话会被保留。';
+    return '$mode に切り替えるとセッションが再起動します。会話は保持されます。';
   }
 
   @override
@@ -473,15 +476,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get disablePlanModeBody => '关闭 Plan Mode 会重启当前会话。你的对话会被保留。';
 
   @override
-  String get changeSandboxModeTitle => '更改 Sandbox Mode';
+  String get changeSandboxModeTitle => '更改沙箱模式';
 
   @override
   String changeSandboxModeBody(String mode) {
     return '切换到 $mode 会重启当前会话。你的对话会被保留。';
   }
-
-  @override
-  String get restart => '重启';
 
   @override
   String get messagePlaceholder => '给 Claude 发消息...';
