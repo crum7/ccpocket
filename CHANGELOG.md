@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.47.0] - 2026-03-21
+
+### Added
+- BottomSheet pattern for all mode selectors (Approval, Sandbox, Model, Effort/Reasoning) with localized descriptions
+- Category subtitles in BottomSheets explaining each setting's purpose
+- Provider-specific Sandbox descriptions (Codex defaults on, Claude defaults off)
+- Localized effort/reasoning level descriptions (en, ja, zh)
+
+### Changed
+- Removed "Default" option from Model, Effort, and Reasoning selectors for clarity
+- Model pre-selects first available model; Effort defaults to Medium; Reasoning defaults to High
+- Claude Effort selector only appears when an Opus model is selected
+- Unified branding to CC Pocket in store metadata
+
 ## [1.46.0] - 2026-03-21
 
 ### Added
