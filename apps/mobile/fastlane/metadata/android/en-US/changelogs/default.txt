@@ -1,6 +1,5 @@
-- Unified session settings into BottomSheets with descriptions for each option
-- Mode descriptions now shown in the new session sheet
-- Redesigned session modes with Execution and Plan controls
-- Plan mode can now be toggled without restart when idle
-- Clearer approval dialog labels
+- Redesigned Codex session modes (Execution / Plan controls)
+- Refined new session sheet UI with mode descriptions
+- Plan mode can now be toggled without restarting idle Codex sessions
+- Simplified settings by removing default options from Model and others
 - Many stability improvements and bug fixes
