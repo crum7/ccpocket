@@ -148,7 +148,7 @@ void main() {
     expect(execution, lessThan(sandbox));
   });
 
-  testWidgets('shows plan-local glow when running in plan mode', (
+  testWidgets('shows bar-level glow when running in plan mode', (
     tester,
   ) async {
     bridge.emitMessage(
@@ -168,8 +168,8 @@ void main() {
     await tester.pumpWidget(_wrap(cubit));
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.byKey(const ValueKey('plan_mode_chip_glow')), findsOneWidget);
-    expect(find.byKey(const ValueKey('session_mode_bar_glow')), findsNothing);
+    // Chip-local glow is off; bar-level rotating glow is used instead
+    expect(find.byKey(const ValueKey('plan_mode_chip_glow')), findsNothing);
   });
 
   testWidgets('plan toggle updates in place for idle codex session', (

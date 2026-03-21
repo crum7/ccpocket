@@ -56,7 +56,7 @@ class SessionModeBar extends StatelessWidget {
                 if (isCodex) ...[
                   PlanModeChip(
                     enabled: planMode,
-                    activeGlow: inPlanMode && isActive,
+                    activeGlow: false,
                     onTap: () => togglePlanMode(
                       context,
                       chatCubit,
@@ -115,12 +115,10 @@ class SessionModeBar extends StatelessWidget {
     );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: isCodex
-          ? bar
-          : _PulsingModeBarSurface(
-              inPlanMode: inPlanMode && isActive,
-              child: bar,
-            ),
+      child: _PulsingModeBarSurface(
+        inPlanMode: inPlanMode && isActive,
+        child: bar,
+      ),
     );
   }
 }
