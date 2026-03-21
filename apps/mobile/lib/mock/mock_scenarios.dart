@@ -66,6 +66,7 @@ final List<MockScenario> mockScenarios = [
   _authErrorScenario,
   _assistantAuthErrorScenario,
   _fullConversation,
+  _longHistory,
   // Chat session scenarios — Codex
   _codexPlanApproval,
   _codexBashApproval,
@@ -2288,6 +2289,215 @@ final _fullConversation = MockScenario(
     ),
   ],
 );
+
+// ---------------------------------------------------------------------------
+// Long History (chunked loading test — 50+ entries)
+// ---------------------------------------------------------------------------
+
+/// Generates 50+ chat entries to test chunked loading (initial 30 + scroll).
+/// Simulates a realistic long refactoring session with multiple rounds of
+/// read → edit → test cycles.
+final _longHistory = MockScenario(
+  name: 'Long History (50+)',
+  icon: Icons.history,
+  description: 'Long conversation (50+ entries) for chunked loading test',
+  steps: [
+    const MockStep(
+      delay: Duration(milliseconds: 100),
+      message: SystemMessage(
+        subtype: 'init',
+        sessionId: 'mock-session-long',
+        model: 'claude-sonnet-4-20250514',
+        projectPath: '/Users/demo/project',
+        slashCommands: ['compact', 'plan', 'clear'],
+        skills: [],
+      ),
+    ),
+    const MockStep(
+      delay: Duration(milliseconds: 200),
+      message: StatusMessage(status: ProcessStatus.running),
+    ),
+    // --- Round 1: Read project structure ---
+    MockStep(
+      delay: const Duration(milliseconds: 300),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'long-1',
+          role: 'assistant',
+          content: [
+            const TextContent(
+              text: 'Let me start by understanding the project structure.',
+            ),
+            const ToolUseContent(
+              id: 'tool-long-read-1',
+              name: 'Bash',
+              input: {'command': 'find lib -name "*.dart" | head -20'},
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    const MockStep(
+      delay: Duration(milliseconds: 400),
+      message: ToolResultMessage(
+        toolUseId: 'tool-long-read-1',
+        toolName: 'Bash',
+        content:
+            'lib/main.dart\nlib/app.dart\nlib/router.dart\n'
+            'lib/models/user.dart\nlib/models/session.dart\n'
+            'lib/services/api_service.dart\nlib/services/auth_service.dart\n'
+            'lib/screens/home_screen.dart\nlib/screens/login_screen.dart\n'
+            'lib/widgets/user_card.dart',
+      ),
+    ),
+    // --- Round 2-15: Repeated read/edit/test cycles ---
+    ..._generateLongHistoryRounds(2, 14),
+    // --- Final round ---
+    MockStep(
+      delay: const Duration(milliseconds: 500),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'long-final',
+          role: 'assistant',
+          content: [
+            const TextContent(
+              text:
+                  '## Summary\n\n'
+                  'All refactoring tasks are complete:\n\n'
+                  '- Migrated 14 files to the new architecture\n'
+                  '- Updated all imports and references\n'
+                  '- All 47 tests passing\n'
+                  '- No analyzer warnings\n\n'
+                  'The codebase is now using the feature-first pattern consistently.',
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    const MockStep(
+      delay: Duration(milliseconds: 600),
+      message: ResultMessage(
+        subtype: 'success',
+        result: 'Refactoring complete.',
+        cost: 0.2847,
+        duration: 142.5,
+        sessionId: 'mock-session-long',
+      ),
+    ),
+    const MockStep(
+      delay: Duration(milliseconds: 700),
+      message: StatusMessage(status: ProcessStatus.idle),
+    ),
+  ],
+);
+
+/// Generate repeated read→edit→test rounds for long history.
+List<MockStep> _generateLongHistoryRounds(int start, int count) {
+  final steps = <MockStep>[];
+  final files = [
+    'lib/models/user.dart',
+    'lib/models/session.dart',
+    'lib/services/api_service.dart',
+    'lib/services/auth_service.dart',
+    'lib/screens/home_screen.dart',
+    'lib/screens/login_screen.dart',
+    'lib/screens/settings_screen.dart',
+    'lib/widgets/user_card.dart',
+    'lib/widgets/session_tile.dart',
+    'lib/utils/validators.dart',
+    'lib/utils/formatters.dart',
+    'lib/providers/auth_provider.dart',
+    'lib/providers/theme_provider.dart',
+    'lib/config/routes.dart',
+  ];
+
+  for (var i = 0; i < count; i++) {
+    final round = start + i;
+    final file = files[i % files.length];
+    final fileName = file.split('/').last;
+
+    // Assistant reads the file
+    steps.add(
+      MockStep(
+        delay: Duration(milliseconds: 300 + round * 10),
+        message: AssistantServerMessage(
+          message: AssistantMessage(
+            id: 'long-r$round-read',
+            role: 'assistant',
+            content: [
+              TextContent(text: 'Reading `$fileName` to plan the migration.'),
+              ToolUseContent(
+                id: 'tool-long-r$round-read',
+                name: 'Read',
+                input: {'file_path': file},
+              ),
+            ],
+            model: 'claude-sonnet-4-20250514',
+          ),
+        ),
+      ),
+    );
+
+    // Tool result
+    steps.add(
+      MockStep(
+        delay: Duration(milliseconds: 400 + round * 10),
+        message: ToolResultMessage(
+          toolUseId: 'tool-long-r$round-read',
+          toolName: 'Read',
+          content:
+              '// $fileName\nimport \'package:flutter/material.dart\';\n\n'
+              'class ${fileName.replaceAll('.dart', '').split('_').map((w) => '${w[0].toUpperCase()}${w.substring(1)}').join()} {\n'
+              '  // TODO: migrate to feature-first\n'
+              '}\n',
+        ),
+      ),
+    );
+
+    // Assistant edits the file
+    steps.add(
+      MockStep(
+        delay: Duration(milliseconds: 500 + round * 10),
+        message: AssistantServerMessage(
+          message: AssistantMessage(
+            id: 'long-r$round-edit',
+            role: 'assistant',
+            content: [
+              TextContent(
+                text: 'Migrating `$fileName` to the feature-first pattern.',
+              ),
+              ToolUseContent(
+                id: 'tool-long-r$round-edit',
+                name: 'Edit',
+                input: {
+                  'file_path': file,
+                  'old_string': '// TODO: migrate to feature-first',
+                  'new_string': '// Migrated to feature-first pattern ✓',
+                },
+              ),
+            ],
+            model: 'claude-sonnet-4-20250514',
+          ),
+        ),
+      ),
+    );
+
+    // Edit result
+    steps.add(
+      MockStep(
+        delay: Duration(milliseconds: 600 + round * 10),
+        message: ToolResultMessage(
+          toolUseId: 'tool-long-r$round-edit',
+          toolName: 'Edit',
+          content: 'File edited successfully.',
+        ),
+      ),
+    );
+  }
+  return steps;
+}
 
 // ===========================================================================
 // Session List Scenarios
