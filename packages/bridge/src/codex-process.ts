@@ -166,6 +166,8 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   private _approvalPolicy: string = "never";
   private _collaborationMode: "plan" | "default" = "default";
   private lastPlanItemText: string | null = null;
+  /** Last assistant text message — used as `result` in completion notification. */
+  private lastResultText: string | null = null;
   private pendingPlanCompletion: {
     toolUseId: string;
     planText: string;
@@ -336,6 +338,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     this._approvalPolicy = options?.approvalPolicy ?? "never";
     this._collaborationMode = options?.collaborationMode ?? "default";
     this.lastPlanItemText = null;
+    this.lastResultText = null;
     this.pendingPlanCompletion = null;
     this._pendingPlanInput = null;
     this._projectPath = projectPath;
@@ -1401,6 +1404,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         type: "result",
         subtype: "success",
         sessionId: this._threadId ?? undefined,
+        ...(this.lastResultText ? { result: this.lastResultText } : {}),
         ...(usage?.input != null ? { inputTokens: usage.input } : {}),
         ...(usage?.cachedInput != null
           ? { cachedInputTokens: usage.cachedInput }
@@ -1572,6 +1576,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
       case "agentmessage": {
         const text = extractAgentText(item);
         if (!text) return;
+        this.lastResultText = text;
         this.emitMessage({
           type: "assistant",
           message: {
