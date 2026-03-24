@@ -1,5 +1,3 @@
-- Redesigned Codex session modes (Execution / Plan controls)
-- Refined new session sheet UI with mode descriptions
-- Plan mode can now be toggled without restarting idle Codex sessions
-- Simplified settings by removing default options from Model and others
-- Many stability improvements and bug fixes
+- Session list now hides the header on scroll for a more immersive experience
+- Improved chat rendering stability and performance
+- Minor UI refinements and bug fixes
