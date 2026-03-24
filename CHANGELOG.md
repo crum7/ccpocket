@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.48.0] - 2026-03-24
+
+### Added
+- Hide bridge-dependent settings sections when disconnected
+- Hide AppBar on scroll with floating SliverAppBar in session list
+
+### Changed
+- Swap default Claude model order: opus 4.6 before opus 4.6[1m]
+- Update expected Bridge Server version to 1.28.0
+
 ## [1.47.3] - 2026-03-22
 
 ### Changed
