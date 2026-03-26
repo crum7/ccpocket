@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../../models/new_session_tab.dart';
 import '../../../models/terminal_app.dart';
 
 part 'settings_state.freezed.dart';
@@ -62,6 +63,9 @@ abstract class SettingsState with _$SettingsState {
 
     /// External terminal app configuration (preset or custom URL template).
     @Default(TerminalAppConfig.empty) TerminalAppConfig terminalApp,
+
+    /// Visible tabs (and their order) in the new session sheet.
+    @Default(defaultNewSessionTabs) List<NewSessionTab> newSessionTabs,
   }) = _SettingsState;
 
   /// Whether push notifications are enabled for the currently connected machine.

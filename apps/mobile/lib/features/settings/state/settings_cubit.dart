@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../models/messages.dart';
+import '../../../models/new_session_tab.dart';
 import '../../../models/terminal_app.dart';
 import '../../../services/bridge_service.dart';
 import '../../../services/fcm_service.dart';
@@ -35,6 +36,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   static const keyShorebirdTrack = 'settings_shorebird_track';
   static const _keyHideVoiceInput = 'settings_hide_voice_input';
   static const _keyTerminalApp = 'settings_terminal_app';
+  static const _keyNewSessionTabs = 'settings_new_session_tabs';
   // Legacy key for migration
   static const _keyIndentSize = 'settings_indent_size';
   // Legacy key for migration
@@ -150,6 +152,13 @@ class SettingsCubit extends Cubit<SettingsState> {
       }
     }
 
+    // Load new session tabs
+    var newSessionTabs = defaultNewSessionTabs;
+    final tabsJson = prefs.getString(_keyNewSessionTabs);
+    if (tabsJson != null) {
+      newSessionTabs = tabsFromJson(tabsJson) ?? defaultNewSessionTabs;
+    }
+
     return SettingsState(
       themeMode:
           (themeModeIndex != null &&
@@ -165,6 +174,7 @@ class SettingsCubit extends Cubit<SettingsState> {
       indentSize: indentSize.clamp(1, 4),
       hideVoiceInput: hideVoiceInput,
       terminalApp: terminalApp,
+      newSessionTabs: newSessionTabs,
     );
   }
 
@@ -248,6 +258,11 @@ class SettingsCubit extends Cubit<SettingsState> {
   void clearTerminalApp() {
     _prefs.remove(_keyTerminalApp);
     emit(state.copyWith(terminalApp: TerminalAppConfig.empty));
+  }
+
+  void setNewSessionTabs(List<NewSessionTab> tabs) {
+    _prefs.setString(_keyNewSessionTabs, tabsToJson(tabs));
+    emit(state.copyWith(newSessionTabs: tabs));
   }
 
   Future<void> toggleFcm(bool enabled) async {
