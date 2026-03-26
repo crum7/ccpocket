@@ -22,6 +22,7 @@ import 'state/settings_cubit.dart';
 import 'state/settings_state.dart';
 import 'widgets/app_locale_bottom_sheet.dart';
 
+import 'widgets/new_session_tabs_bottom_sheet.dart';
 import 'widgets/speech_locale_bottom_sheet.dart';
 import 'widgets/terminal_app_bottom_sheet.dart';
 import 'widgets/theme_bottom_sheet.dart';
@@ -68,8 +69,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       ListTile(
-                        leading:
-                            Icon(Icons.computer_outlined, color: cs.primary),
+                        leading: Icon(
+                          Icons.computer_outlined,
+                          color: cs.primary,
+                        ),
                         title: const Text('Bridge machine'),
                         subtitle: Text(
                           machine?.displayName ??
@@ -164,6 +167,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       onChanged: (value) => context
                           .read<SettingsCubit>()
                           .setHideVoiceInput(value),
+                    ),
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: cs.outlineVariant,
+                    ),
+                    // New Session Tabs
+                    ListTile(
+                      leading: Icon(Icons.tab, color: cs.primary),
+                      title: const Text('New Session Tabs'),
+                      subtitle: Text(
+                        state.newSessionTabs.map((t) => t.label).join(', '),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => showNewSessionTabsBottomSheet(
+                        context: context,
+                        current: state.newSessionTabs,
+                        onChanged: (tabs) => context
+                            .read<SettingsCubit>()
+                            .setNewSessionTabs(tabs),
+                      ),
                     ),
                     if (FeatureFlags.current.isEnabled(
                       AppFeature.terminalAppIntegration,

@@ -23,6 +23,7 @@ import '../../services/connection_url_parser.dart';
 import '../../services/server_discovery_service.dart';
 import '../../widgets/new_session_sheet.dart';
 import '../../widgets/rename_session_dialog.dart';
+import '../settings/state/settings_cubit.dart';
 import 'state/session_list_cubit.dart';
 import 'widgets/connect_form.dart';
 import 'widgets/home_content.dart';
@@ -189,7 +190,9 @@ class _SessionListScreenState extends State<SessionListScreen>
               projectPath: msg.projectPath ?? _pendingResumeProjectPath,
               gitBranch: _pendingResumeGitBranch,
               worktreePath: msg.worktreePath,
-              provider: msg.provider == 'codex' ? Provider.codex : null,
+              provider: Provider.values
+                  .where((p) => p.value == msg.provider)
+                  .firstOrNull,
               permissionMode: msg.permissionMode,
               sandboxMode: msg.sandboxMode,
             );
@@ -483,6 +486,7 @@ class _SessionListScreenState extends State<SessionListScreen>
         context.read<SessionListCubit>().state.sessions;
     final history = context.read<ProjectHistoryCubit>().state;
     final bridge = context.read<BridgeService>();
+    final visibleTabs = context.read<SettingsCubit>().state.newSessionTabs;
     return showNewSessionSheet(
       context: context,
       recentProjects: recentProjects(sessions),
@@ -490,6 +494,7 @@ class _SessionListScreenState extends State<SessionListScreen>
       bridge: bridge,
       initialParams: initialParams,
       lockProvider: lockProvider,
+      visibleTabs: visibleTabs,
     );
   }
 
@@ -853,53 +858,38 @@ class _SessionListScreenState extends State<SessionListScreen>
     if (isPending) {
       _pendingSessionCreated.value = null;
     }
-    if (provider == Provider.codex) {
-      context.router
-          .push(
-            CodexSessionRoute(
-              sessionId: sessionId,
-              projectPath: projectPath,
-              gitBranch: gitBranch,
-              worktreePath: worktreePath,
-              isPending: isPending,
-              initialSandboxMode: sandboxMode,
-              initialPermissionMode: permissionMode,
-              pendingSessionCreated: isPending ? _pendingSessionCreated : null,
-            ),
-          )
-          .then((_) {
-            if (!mounted) return;
-            final isConnected =
-                context.read<ConnectionCubit>().state ==
-                BridgeConnectionState.connected;
-            if (isConnected) {
-              _refresh();
-            }
-          });
-    } else {
-      context.router
-          .push(
-            ClaudeSessionRoute(
-              sessionId: sessionId,
-              projectPath: projectPath,
-              gitBranch: gitBranch,
-              worktreePath: worktreePath,
-              isPending: isPending,
-              initialPermissionMode: permissionMode,
-              initialSandboxMode: sandboxMode,
-              pendingSessionCreated: isPending ? _pendingSessionCreated : null,
-            ),
-          )
-          .then((_) {
-            if (!mounted) return;
-            final isConnected =
-                context.read<ConnectionCubit>().state ==
-                BridgeConnectionState.connected;
-            if (isConnected) {
-              _refresh();
-            }
-          });
-    }
+    final pendingNotifier = isPending ? _pendingSessionCreated : null;
+    final PageRouteInfo route = switch (provider) {
+      Provider.codex => CodexSessionRoute(
+        sessionId: sessionId,
+        projectPath: projectPath,
+        gitBranch: gitBranch,
+        worktreePath: worktreePath,
+        isPending: isPending,
+        initialSandboxMode: sandboxMode,
+        initialPermissionMode: permissionMode,
+        pendingSessionCreated: pendingNotifier,
+      ),
+      _ => ClaudeSessionRoute(
+        sessionId: sessionId,
+        projectPath: projectPath,
+        gitBranch: gitBranch,
+        worktreePath: worktreePath,
+        isPending: isPending,
+        initialPermissionMode: permissionMode,
+        initialSandboxMode: sandboxMode,
+        pendingSessionCreated: pendingNotifier,
+      ),
+    };
+    context.router.push(route).then((_) {
+      if (!mounted) return;
+      final isConnected =
+          context.read<ConnectionCubit>().state ==
+          BridgeConnectionState.connected;
+      if (isConnected) {
+        _refresh();
+      }
+    });
   }
 
   void _resumeSession(RecentSession session) async {

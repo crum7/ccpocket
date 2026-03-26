@@ -6,6 +6,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/messages.dart';
+import '../models/new_session_tab.dart';
 import '../features/session_list/session_list_screen.dart'
     show recentProjects, shortenPath;
 import '../services/bridge_service.dart';
@@ -196,6 +197,7 @@ Future<NewSessionParams?> showNewSessionSheet({
   BridgeService? bridge,
   NewSessionParams? initialParams,
   bool lockProvider = false,
+  List<NewSessionTab> visibleTabs = defaultNewSessionTabs,
 }) {
   return showModalBottomSheet<NewSessionParams>(
     context: context,
@@ -210,6 +212,7 @@ Future<NewSessionParams?> showNewSessionSheet({
       bridge: bridge,
       initialParams: initialParams,
       lockProvider: lockProvider,
+      visibleTabs: visibleTabs,
     ),
   );
 }
@@ -226,6 +229,7 @@ class _NewSessionSheetContent extends StatefulWidget {
   final BridgeService? bridge;
   final NewSessionParams? initialParams;
   final bool lockProvider;
+  final List<NewSessionTab> visibleTabs;
 
   const _NewSessionSheetContent({
     required this.recentProjects,
@@ -233,6 +237,7 @@ class _NewSessionSheetContent extends StatefulWidget {
     this.bridge,
     this.initialParams,
     this.lockProvider = false,
+    this.visibleTabs = defaultNewSessionTabs,
   });
 
   @override
@@ -373,9 +378,13 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(
-      initialPage: widget.initialParams?.provider == Provider.claude ? 1 : 0,
-    );
+    final initialProvider =
+        widget.initialParams?.provider ?? widget.visibleTabs.first.toProvider();
+    final initialPage = widget.visibleTabs
+        .indexWhere((t) => t.toProvider() == initialProvider)
+        .clamp(0, widget.visibleTabs.length - 1);
+    _pageController = PageController(initialPage: initialPage);
+    _provider = initialProvider;
     // Use the latest cached recent sessions from BridgeService if available,
     // because the broadcast stream may have already fired before this listener
     // was registered.
@@ -463,7 +472,11 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     if (p == null) return;
 
     _pathController.text = p.projectPath;
-    _provider = p.provider;
+    // Validate provider is in visibleTabs; fall back to first tab if hidden.
+    final isVisible = widget.visibleTabs.any(
+      (t) => t.toProvider() == p.provider,
+    );
+    _provider = isVisible ? p.provider : widget.visibleTabs.first.toProvider();
     _executionMode = p.executionMode;
     _planMode = p.planMode;
     _useWorktree = p.useWorktree || p.existingWorktreePath != null;
@@ -669,6 +682,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
 
   Widget _buildPage(Provider pageProvider) {
     final appColors = Theme.of(context).extension<AppColors>()!;
+    final accent = providerStyleFor(context, pageProvider).foreground;
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: Column(
@@ -678,6 +692,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
           if (_effectiveProjects.isNotEmpty) ...[
             _RecentProjectsSection(
               appColors: appColors,
+              accentColor: accent,
               projects: _effectiveProjects,
               selectedPath: _pathController.text,
               onProjectSelected: _onProjectSelected,
@@ -806,7 +821,9 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
 
   void _onProviderChanged(Provider p) {
     setState(() => _provider = p);
-    final page = p == Provider.codex ? 0 : 1;
+    final page = widget.visibleTabs
+        .indexWhere((t) => t.toProvider() == p)
+        .clamp(0, widget.visibleTabs.length - 1);
     _pageController.animateToPage(
       page,
       duration: const Duration(milliseconds: 300),
@@ -818,19 +835,21 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-    // Tab: toggle provider (only when not locked and no text field focused)
+    // Tab: cycle provider (only when not locked, multiple tabs, and no text field focused)
     if (event.logicalKey == LogicalKeyboardKey.tab &&
         !HardwareKeyboard.instance.isShiftPressed &&
         !HardwareKeyboard.instance.isMetaPressed &&
-        !widget.lockProvider) {
+        !widget.lockProvider &&
+        widget.visibleTabs.length > 1) {
       // Only toggle if no text field has focus (check for primary focus)
       final focus = FocusManager.instance.primaryFocus;
       final isInTextField = focus?.context?.widget is EditableText;
       if (!isInTextField) {
-        final next = _provider == Provider.claude
-            ? Provider.codex
-            : Provider.claude;
-        _onProviderChanged(next);
+        final currentIndex = widget.visibleTabs.indexWhere(
+          (t) => t.toProvider() == _provider,
+        );
+        final nextIndex = (currentIndex + 1) % widget.visibleTabs.length;
+        _onProviderChanged(widget.visibleTabs[nextIndex].toProvider());
         return KeyEventResult.handled;
       }
     }
@@ -863,23 +882,24 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
               _SheetTitle(
                 provider: _provider,
                 lockProvider: widget.lockProvider,
+                visibleTabs: widget.visibleTabs,
                 onProviderChanged: _onProviderChanged,
               ),
               const SizedBox(height: 12),
               Expanded(
                 child: PageView(
                   controller: _pageController,
-                  physics: widget.lockProvider
+                  physics: widget.lockProvider || widget.visibleTabs.length <= 1
                       ? const NeverScrollableScrollPhysics()
                       : null,
                   onPageChanged: (index) {
                     setState(() {
-                      _provider = index == 0 ? Provider.codex : Provider.claude;
+                      _provider = widget.visibleTabs[index].toProvider();
                     });
                   },
                   children: [
-                    _buildPage(Provider.codex),
-                    _buildPage(Provider.claude),
+                    for (final tab in widget.visibleTabs)
+                      _buildPage(tab.toProvider()),
                   ],
                 ),
               ),
@@ -931,11 +951,13 @@ class _DragHandle extends StatelessWidget {
 class _SheetTitle extends StatelessWidget {
   final Provider provider;
   final bool lockProvider;
+  final List<NewSessionTab> visibleTabs;
   final ValueChanged<Provider> onProviderChanged;
 
   const _SheetTitle({
     required this.provider,
     required this.lockProvider,
+    required this.visibleTabs,
     required this.onProviderChanged,
   });
 
@@ -943,6 +965,7 @@ class _SheetTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final colorScheme = Theme.of(context).colorScheme;
+    final showToggle = visibleTabs.length > 1 && !lockProvider;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -953,45 +976,36 @@ class _SheetTitle extends StatelessWidget {
             l.newSession,
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+          if (showToggle) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                ),
+              ),
+              child: Row(
+                children: [
+                  for (final tab in visibleTabs)
+                    Expanded(
+                      child: _ProviderToggleButton(
+                        provider: tab.toProvider(),
+                        isSelected: provider == tab.toProvider(),
+                        isLocked: lockProvider,
+                        onTap: () {
+                          if (!lockProvider) {
+                            onProviderChanged(tab.toProvider());
+                          }
+                        },
+                      ),
+                    ),
+                ],
               ),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _ProviderToggleButton(
-                    provider: Provider.codex,
-                    isSelected: provider == Provider.codex,
-                    isLocked: lockProvider,
-                    onTap: () {
-                      if (!lockProvider) {
-                        onProviderChanged(Provider.codex);
-                      }
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: _ProviderToggleButton(
-                    provider: Provider.claude,
-                    isSelected: provider == Provider.claude,
-                    isLocked: lockProvider,
-                    onTap: () {
-                      if (!lockProvider) {
-                        onProviderChanged(Provider.claude);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -1000,6 +1014,7 @@ class _SheetTitle extends StatelessWidget {
 
 class _RecentProjectsSection extends StatelessWidget {
   final AppColors appColors;
+  final Color accentColor;
   final List<({String path, String name})> projects;
   final String selectedPath;
   final ValueChanged<String> onProjectSelected;
@@ -1010,6 +1025,7 @@ class _RecentProjectsSection extends StatelessWidget {
 
   const _RecentProjectsSection({
     required this.appColors,
+    required this.accentColor,
     required this.projects,
     required this.selectedPath,
     required this.onProjectSelected,
@@ -1070,6 +1086,7 @@ class _RecentProjectsSection extends StatelessWidget {
             child: _ProjectTile(
               project: project,
               appColors: appColors,
+              accentColor: accentColor,
               isSelected: selectedPath == project.path,
               onTap: () => onProjectSelected(project.path),
             ),
@@ -1104,19 +1121,20 @@ class _RecentProjectsSection extends StatelessWidget {
 class _ProjectTile extends StatelessWidget {
   final ({String path, String name}) project;
   final AppColors appColors;
+  final Color accentColor;
   final bool isSelected;
   final VoidCallback onTap;
 
   const _ProjectTile({
     required this.project,
     required this.appColors,
+    required this.accentColor,
     required this.isSelected,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       child: Material(
@@ -1129,12 +1147,12 @@ class _ProjectTile extends StatelessWidget {
             curve: Curves.easeOut,
             decoration: BoxDecoration(
               color: isSelected
-                  ? cs.primaryContainer.withValues(alpha: 0.3)
+                  ? accentColor.withValues(alpha: 0.12)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected
-                    ? cs.primary.withValues(alpha: 0.5)
+                    ? accentColor.withValues(alpha: 0.5)
                     : Colors.transparent,
               ),
             ),
@@ -1146,14 +1164,14 @@ class _ProjectTile extends StatelessWidget {
               leading: Icon(
                 Icons.folder_outlined,
                 size: 22,
-                color: isSelected ? cs.primary : appColors.subtleText,
+                color: isSelected ? accentColor : appColors.subtleText,
               ),
               title: Text(
                 project.name,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
-                  color: isSelected ? cs.primary : null,
+                  color: isSelected ? accentColor : null,
                 ),
               ),
               subtitle: Text(
@@ -1161,7 +1179,7 @@ class _ProjectTile extends StatelessWidget {
                 style: TextStyle(fontSize: 11, color: appColors.subtleText),
               ),
               trailing: isSelected
-                  ? Icon(Icons.check_circle, size: 20, color: cs.primary)
+                  ? Icon(Icons.check_circle, size: 20, color: accentColor)
                   : null,
             ),
           ),
@@ -1419,10 +1437,9 @@ class _OptionsSection extends StatelessWidget {
 
     final isClaude = provider == Provider.claude;
 
-    IconData sandboxIcon(SandboxMode mode) =>
-        mode == SandboxMode.on
-            ? Icons.shield_outlined
-            : (isClaude ? Icons.code : Icons.warning_amber);
+    IconData sandboxIcon(SandboxMode mode) => mode == SandboxMode.on
+        ? Icons.shield_outlined
+        : (isClaude ? Icons.code : Icons.warning_amber);
 
     String sandboxLabel(SandboxMode mode) => isClaude
         ? (mode == SandboxMode.on ? 'Sandbox (Safe Mode)' : 'Standard')
@@ -1445,10 +1462,7 @@ class _OptionsSection extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: InputDecorator(
           decoration: buildInputDecoration(label).copyWith(
-            suffixIcon: Icon(
-              Icons.arrow_drop_down,
-              color: cs.onSurfaceVariant,
-            ),
+            suffixIcon: Icon(Icons.arrow_drop_down, color: cs.onSurfaceVariant),
           ),
           child: Row(
             children: [
@@ -1543,7 +1557,7 @@ class _OptionsSection extends StatelessWidget {
                               iconFor(mode),
                               color: mode == currentMode
                                   ? (colorFor?.call(mode, sheetCs) ??
-                                      sheetCs.primary)
+                                        sheetCs.primary)
                                   : sheetCs.onSurfaceVariant,
                             ),
                             title: Text(labelFor(mode)),
@@ -1740,8 +1754,7 @@ class _OptionsSection extends StatelessWidget {
                 currentMode: claudeEffort,
                 iconFor: (_) => Icons.speed,
                 labelFor: (e) => e.label,
-                descriptionFor: (e) =>
-                    _claudeEffortDescription(e, l),
+                descriptionFor: (e) => _claudeEffortDescription(e, l),
                 onSelected: onClaudeEffortChanged,
               ),
             ),
@@ -1751,10 +1764,7 @@ class _OptionsSection extends StatelessWidget {
               label: l.reasoning,
               icon: Icons.psychology,
               title: modelReasoningEffort.label,
-              subtitle: _reasoningEffortDescription(
-                modelReasoningEffort,
-                l,
-              ),
+              subtitle: _reasoningEffortDescription(modelReasoningEffort, l),
               onTap: () => showModeSheet<ReasoningEffort>(
                 title: l.reasoning,
                 subtitle: l.sheetSubtitleEffort,
@@ -1762,8 +1772,7 @@ class _OptionsSection extends StatelessWidget {
                 currentMode: modelReasoningEffort,
                 iconFor: (_) => Icons.psychology,
                 labelFor: (e) => e.label,
-                descriptionFor: (e) =>
-                    _reasoningEffortDescription(e, l),
+                descriptionFor: (e) => _reasoningEffortDescription(e, l),
                 onSelected: onModelReasoningEffortChanged,
               ),
             ),
@@ -1910,10 +1919,7 @@ String _claudeEffortDescription(ClaudeEffort effort, AppLocalizations l) {
   };
 }
 
-String _reasoningEffortDescription(
-  ReasoningEffort effort,
-  AppLocalizations l,
-) {
+String _reasoningEffortDescription(ReasoningEffort effort, AppLocalizations l) {
   return switch (effort) {
     ReasoningEffort.minimal => l.reasoningEffortMinimalDesc,
     ReasoningEffort.low => l.reasoningEffortLowDesc,
