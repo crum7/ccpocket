@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.48.0+82
+version: 1.48.1+83
 
 environment:
   sdk: ^3.11.0
@@ -37,7 +37,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   web_socket_channel: ^3.0.3
-  marionette_flutter: ^0.3.0
+  marionette_flutter: ^0.4.0
   shared_preferences: ^2.5.0
   sqflite: ^2.4.2
   flutter_local_notifications: ^20.0.0
@@ -87,12 +87,6 @@ dependency_overrides:
     git:
       url: https://github.com/Sabbar-Engineering/irondash
       path: engine_context/dart
-  # Temporary: use git main for call_custom_extension support (PR #30)
-  # Remove after marionette_flutter v0.4.0 is published to pub.dev
-  marionette_flutter:
-    git:
-      url: https://github.com/leancodepl/marionette_mcp
-      path: packages/marionette_flutter
 
 dev_dependencies:
   flutter_test:

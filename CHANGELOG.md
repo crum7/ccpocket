@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.48.1] - 2026-03-27
+
+### Changed
+- Upgrade Flutter SDK from 3.41.4 to 3.41.5 (Dart 3.11.3)
+- Upgrade Shorebird from 1.6.88 to 1.6.91
+- Update marionette_flutter to ^0.4.0 and remove git dependency override
+
 ## [1.48.0] - 2026-03-24
 
 ### Added

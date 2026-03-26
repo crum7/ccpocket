@@ -1035,12 +1035,11 @@ packages:
   marionette_flutter:
     dependency: "direct main"
     description:
-      path: "packages/marionette_flutter"
-      ref: HEAD
-      resolved-ref: "1602f81ca37eaf9722edc4222f2f06f078dd3e3c"
-      url: "https://github.com/leancodepl/marionette_mcp"
-    source: git
-    version: "0.3.0"
+      name: marionette_flutter
+      sha256: "41d8222fad7d311121f7d7487f45f86004164520765417f83c4037bea057ff0a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.0"
   markdown:
     dependency: "direct main"
     description:
