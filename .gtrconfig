@@ -7,6 +7,9 @@ include = .claude/settings.local.json
 # Android SDK / Flutter SDK paths
 include = apps/mobile/android/local.properties
 
+# VS Code settings (launch.json, settings.json)
+includeDirs = .vscode
+
 # Speed up worktree setup by copying node_modules
 includeDirs = node_modules
 
