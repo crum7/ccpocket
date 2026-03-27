@@ -30,6 +30,9 @@ class ChatMessageList extends StatefulWidget {
   final String? pendingPlanToolUseId;
   final double bottomPadding;
 
+  /// Project path for file peek (reading files from Bridge).
+  final String? projectPath;
+
   /// When set (non-null), the list scrolls to the given [UserChatEntry].
   /// The notifier is reset to null after scrolling.
   final ValueNotifier<UserChatEntry?>? scrollToUserEntry;
@@ -47,6 +50,7 @@ class ChatMessageList extends StatefulWidget {
     this.pendingPlanToolUseId,
     this.scrollToUserEntry,
     this.bottomPadding = 8,
+    this.projectPath,
   });
 
   @override
@@ -214,10 +218,7 @@ class _ChatMessageListState extends State<ChatMessageList> {
             pendingPlanToolUseId: widget.pendingPlanToolUseId,
             hiddenToolUseIds: hiddenToolUseIds,
             onFileTap: (filePath) {
-              final projectPath = context
-                  .read<ChatSessionCubit>()
-                  .state
-                  .projectPath;
+              final projectPath = widget.projectPath;
               if (projectPath == null || projectPath.isEmpty) return;
               showFilePeekSheet(
                 context,

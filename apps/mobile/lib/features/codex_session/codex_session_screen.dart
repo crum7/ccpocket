@@ -827,6 +827,7 @@ class _CodexChatBody extends HookWidget {
                       sessionId: sessionId,
                       scrollController: scroll.controller,
                       httpBaseUrl: context.read<BridgeService>().httpBaseUrl,
+                      projectPath: projectPath,
                       onRetryMessage: (entry) {
                         context.read<ChatSessionCubit>().retryMessage(entry);
                       },
