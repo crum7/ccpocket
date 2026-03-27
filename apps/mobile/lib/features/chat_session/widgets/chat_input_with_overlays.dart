@@ -172,10 +172,18 @@ class ChatInputWithOverlays extends HookWidget {
           }
           if (mentionQuery != null && projectFiles.isNotEmpty) {
             final q = mentionQuery.toLowerCase();
-            final filtered = projectFiles
-                .where((f) => f.toLowerCase().contains(q))
-                .take(15)
-                .toList();
+            final scored =
+                projectFiles
+                    .map((f) => (file: f, score: _fileScore(f, q)))
+                    .where((e) => e.score >= 0)
+                    .toList()
+                  ..sort((a, b) {
+                    final cmp = a.score.compareTo(b.score);
+                    return cmp != 0
+                        ? cmp
+                        : a.file.length.compareTo(b.file.length);
+                  });
+            final filtered = scored.take(15).map((e) => e.file).toList();
             if (filtered.isNotEmpty) {
               filteredFiles.value = filtered;
               filePortalController.show();
@@ -813,6 +821,21 @@ String _detectMimeType(Uint8List bytes, String fallbackPath) {
     'webp' => 'image/webp',
     _ => 'image/jpeg',
   };
+}
+
+/// Score a file path against a query for @-mention ranking.
+/// Lower score = better match. Returns -1 if no match.
+int _fileScore(String path, String query) {
+  final lower = path.toLowerCase();
+  final fileName = lower.split('/').last;
+  final nameWithoutExt = fileName.split('.').first;
+  if (nameWithoutExt == query) return 0;
+  if (fileName.startsWith(query)) return 1;
+  if (nameWithoutExt.startsWith(query)) return 1;
+  if (fileName.contains(query)) return 2;
+  if (lower.split('/').any((s) => s.startsWith(query))) return 3;
+  if (lower.contains(query)) return 4;
+  return -1;
 }
 
 /// Extract the file query after the last '@' before cursor position.
