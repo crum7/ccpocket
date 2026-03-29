@@ -4,8 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
 
 import '../../../models/messages.dart';
+import '../../../providers/bridge_cubits.dart';
 import '../../../services/bridge_service.dart';
 import '../../../widgets/message_bubble.dart';
+import '../../file_peek/file_peek_sheet.dart';
 import '../../message_images/message_images_screen.dart';
 import '../state/chat_session_cubit.dart';
 import '../state/streaming_state.dart';
@@ -29,6 +31,9 @@ class ChatMessageList extends StatefulWidget {
   final String? pendingPlanToolUseId;
   final double bottomPadding;
 
+  /// Project path for file peek (reading files from Bridge).
+  final String? projectPath;
+
   /// When set (non-null), the list scrolls to the given [UserChatEntry].
   /// The notifier is reset to null after scrolling.
   final ValueNotifier<UserChatEntry?>? scrollToUserEntry;
@@ -46,6 +51,7 @@ class ChatMessageList extends StatefulWidget {
     this.pendingPlanToolUseId,
     this.scrollToUserEntry,
     this.bottomPadding = 8,
+    this.projectPath,
   });
 
   @override
@@ -212,6 +218,17 @@ class _ChatMessageListState extends State<ChatMessageList> {
             allowPlanEditing: widget.allowPlanEditing,
             pendingPlanToolUseId: widget.pendingPlanToolUseId,
             hiddenToolUseIds: hiddenToolUseIds,
+            onFileTap: (filePath) {
+              final projectPath = widget.projectPath;
+              if (projectPath == null || projectPath.isEmpty) return;
+              openFilePeek(
+                context,
+                bridge: context.read<BridgeService>(),
+                projectPath: projectPath,
+                filePath: filePath,
+                projectFiles: context.read<FileListCubit>().state,
+              );
+            },
             onImageTap: (user) {
               final claudeSessionId = context
                   .read<ChatSessionCubit>()

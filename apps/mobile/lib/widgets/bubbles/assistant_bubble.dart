@@ -14,6 +14,7 @@ import '../../theme/markdown_style.dart';
 import '../../utils/structured_error_inference.dart';
 import '../../utils/diff_parser.dart';
 import '../../utils/tool_categories.dart';
+import '../../features/file_peek/file_path_syntax.dart';
 import 'error_bubble.dart';
 import '../plan_detail_sheet.dart';
 import 'inline_edit_diff.dart';
@@ -33,6 +34,10 @@ class AssistantBubble extends StatefulWidget {
   /// Write tool, ExitPlanMode and Write are in separate messages, so the
   /// bubble's own [message.content] won't contain the plan text.
   final String? resolvedPlanText;
+
+  /// Callback for tapping file paths in markdown content.
+  final FilePathTapCallback? onFileTap;
+
   const AssistantBubble({
     super.key,
     required this.message,
@@ -40,6 +45,7 @@ class AssistantBubble extends StatefulWidget {
     this.resolvedPlanText,
     this.allowPlanEditing = true,
     this.pendingPlanToolUseId,
+    this.onFileTap,
   });
 
   @override
@@ -103,6 +109,7 @@ class _AssistantBubbleState extends State<AssistantBubble> {
       hasTextContent: hasTextContent,
       plainTextMode: _plainTextMode,
       allText: _allText(),
+      onFileTap: widget.onFileTap,
       onTogglePlainText: () {
         setState(() => _plainTextMode = !_plainTextMode);
       },
@@ -222,6 +229,7 @@ class _DefaultLayout extends StatelessWidget {
   final bool hasTextContent;
   final bool plainTextMode;
   final String allText;
+  final FilePathTapCallback? onFileTap;
   final VoidCallback onTogglePlainText;
 
   const _DefaultLayout({
@@ -229,6 +237,7 @@ class _DefaultLayout extends StatelessWidget {
     required this.hasTextContent,
     required this.plainTextMode,
     required this.allText,
+    this.onFileTap,
     required this.onTogglePlainText,
   });
 
@@ -254,8 +263,15 @@ class _DefaultLayout extends StatelessWidget {
                       selectable: true,
                       styleSheet: buildMarkdownStyle(context),
                       onTapLink: handleMarkdownLink,
-                      inlineSyntaxes: colorCodeInlineSyntaxes,
-                      builders: markdownBuilders,
+                      inlineSyntaxes: [
+                        if (onFileTap != null) FilePathSyntax(),
+                        ...colorCodeInlineSyntaxes,
+                      ],
+                      builders: {
+                        if (onFileTap != null)
+                          'filePath': FilePathBuilder(onTap: onFileTap),
+                        ...markdownBuilders,
+                      },
                     ),
             ),
             ToolUseContent(:final id, :final name, :final input) =>

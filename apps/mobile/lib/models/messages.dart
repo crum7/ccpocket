@@ -548,6 +548,21 @@ sealed class ServerMessage {
         diff: json['diff'] as String? ?? '',
         diffError: json['diffError'] as String?,
       ),
+      'file_content' => FileContentMessage(
+        filePath: json['filePath'] as String,
+        content: json['content'] as String? ?? '',
+        language: json['language'] as String?,
+        error: json['error'] as String?,
+        totalLines: json['totalLines'] as int?,
+        truncated: json['truncated'] as bool? ?? false,
+      ),
+      'dir_listing' => DirListingMessage(
+        dirPath: json['dirPath'] as String,
+        entries: (json['entries'] as List?)
+            ?.map((e) => DirEntry.fromJson(e as Map<String, dynamic>))
+            .toList() ?? const [],
+        error: json['error'] as String?,
+      ),
       'file_list' => FileListMessage(
         files: (json['files'] as List).cast<String>(),
       ),
@@ -1242,6 +1257,47 @@ class DebugBundleMessage implements ServerMessage {
 class FileListMessage implements ServerMessage {
   final List<String> files;
   const FileListMessage({required this.files});
+}
+
+class FileContentMessage implements ServerMessage {
+  final String filePath;
+  final String content;
+  final String? language;
+  final String? error;
+  final int? totalLines;
+  final bool truncated;
+  const FileContentMessage({
+    required this.filePath,
+    required this.content,
+    this.language,
+    this.error,
+    this.totalLines,
+    this.truncated = false,
+  });
+}
+
+class DirEntry {
+  final String name;
+  final bool isDirectory;
+  final int? size;
+  const DirEntry({required this.name, required this.isDirectory, this.size});
+
+  factory DirEntry.fromJson(Map<String, dynamic> json) => DirEntry(
+    name: json['name'] as String,
+    isDirectory: json['isDirectory'] as bool,
+    size: json['size'] as int?,
+  );
+}
+
+class DirListingMessage implements ServerMessage {
+  final String dirPath;
+  final List<DirEntry> entries;
+  final String? error;
+  const DirListingMessage({
+    required this.dirPath,
+    required this.entries,
+    this.error,
+  });
 }
 
 class ProjectHistoryMessage implements ServerMessage {
@@ -2248,6 +2304,21 @@ class ClientMessage {
         'type': 'list_gallery',
         'project': ?project,
         'sessionId': ?sessionId,
+      });
+
+  factory ClientMessage.readFile(String projectPath, String filePath, {int? maxLines}) =>
+      ClientMessage._(<String, dynamic>{
+        'type': 'read_file',
+        'projectPath': projectPath,
+        'filePath': filePath,
+        'maxLines': ?maxLines,
+      });
+
+  factory ClientMessage.listDir(String projectPath, String dirPath) =>
+      ClientMessage._({
+        'type': 'list_dir',
+        'projectPath': projectPath,
+        'dirPath': dirPath,
       });
 
   factory ClientMessage.listFiles(String projectPath) =>

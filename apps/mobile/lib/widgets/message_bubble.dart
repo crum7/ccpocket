@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../models/messages.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
+import '../features/file_peek/file_path_syntax.dart';
 import 'bubbles/assistant_bubble.dart';
 import 'bubbles/error_bubble.dart';
 import 'bubbles/permission_request_bubble.dart';
@@ -36,6 +37,9 @@ class ChatEntryWidget extends StatelessWidget {
   /// Called when the user taps the image attachment indicator.
   final void Function(UserChatEntry)? onImageTap;
 
+  /// Callback for tapping file paths in assistant messages.
+  final FilePathTapCallback? onFileTap;
+
   const ChatEntryWidget({
     super.key,
     required this.entry,
@@ -50,6 +54,7 @@ class ChatEntryWidget extends StatelessWidget {
     this.pendingPlanToolUseId,
     this.hiddenToolUseIds = const {},
     this.onImageTap,
+    this.onFileTap,
   });
 
   @override
@@ -68,6 +73,7 @@ class ChatEntryWidget extends StatelessWidget {
             allowPlanEditing: allowPlanEditing,
             pendingPlanToolUseId: pendingPlanToolUseId,
             hiddenToolUseIds: hiddenToolUseIds,
+            onFileTap: onFileTap,
           ),
           final UserChatEntry user => UserBubble(
             text: user.text,
@@ -151,6 +157,9 @@ class ServerMessageWidget extends StatelessWidget {
   /// Tool use IDs that should be hidden (replaced by a tool_use_summary).
   final Set<String> hiddenToolUseIds;
 
+  /// Callback for tapping file paths in assistant messages.
+  final FilePathTapCallback? onFileTap;
+
   const ServerMessageWidget({
     super.key,
     required this.message,
@@ -161,6 +170,7 @@ class ServerMessageWidget extends StatelessWidget {
     this.allowPlanEditing = true,
     this.pendingPlanToolUseId,
     this.hiddenToolUseIds = const {},
+    this.onFileTap,
   });
 
   @override
@@ -174,6 +184,7 @@ class ServerMessageWidget extends StatelessWidget {
         resolvedPlanText: resolvedPlanText,
         allowPlanEditing: allowPlanEditing,
         pendingPlanToolUseId: pendingPlanToolUseId,
+        onFileTap: onFileTap,
       ),
       // Hide tool results that are summarized by a tool_use_summary
       final ToolResultMessage msg =>
@@ -203,6 +214,8 @@ class ServerMessageWidget extends StatelessWidget {
       GalleryListMessage() => const SizedBox.shrink(),
       GalleryNewImageMessage() => const SizedBox.shrink(),
       FileListMessage() => const SizedBox.shrink(),
+      FileContentMessage() => const SizedBox.shrink(),
+      DirListingMessage() => const SizedBox.shrink(),
       ProjectHistoryMessage() => const SizedBox.shrink(),
       DiffResultMessage() => const SizedBox.shrink(),
       DiffImageResultMessage() => const SizedBox.shrink(),

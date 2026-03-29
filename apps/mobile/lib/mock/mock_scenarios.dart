@@ -94,6 +94,8 @@ final List<MockScenario> mockScenarios = [
   // Standalone viewers
   imageDiffScenario,
   storeDiffLineNumberScenario,
+  // File Peek
+  _filePeek,
 ];
 
 // ---------------------------------------------------------------------------
@@ -2651,4 +2653,135 @@ const imageDiffScenario = MockScenario(
   description: 'Full-screen image diff viewer with Slider / Toggle / Overlay',
   section: MockScenarioSection.chat,
   steps: [],
+);
+
+// ---------------------------------------------------------------------------
+// File Peek: tappable file paths in assistant messages
+// ---------------------------------------------------------------------------
+final _filePeek = MockScenario(
+  name: 'File Peek',
+  icon: Icons.description_outlined,
+  description: 'Tappable file paths in messages (tap to view content)',
+  steps: [
+    MockStep(
+      delay: const Duration(milliseconds: 200),
+      message: const StatusMessage(status: ProcessStatus.running),
+    ),
+    // First message: editing Dart files
+    MockStep(
+      delay: const Duration(milliseconds: 600),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-file-peek-1',
+          role: 'assistant',
+          content: [
+            const ToolUseContent(
+              id: 'tool-edit-1',
+              name: 'Edit',
+              input: {
+                'file_path': 'lib/main.dart',
+                'old_string': 'const MyApp()',
+                'new_string': 'const MyApp(title: "Hello")',
+              },
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 900),
+      message: const ToolResultMessage(
+        toolUseId: 'tool-edit-1',
+        content: 'Successfully edited lib/main.dart',
+        toolName: 'Edit',
+      ),
+    ),
+    // Second message: mentions multiple file paths in text
+    MockStep(
+      delay: const Duration(milliseconds: 1500),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-file-peek-2',
+          role: 'assistant',
+          content: [
+            const TextContent(
+              text:
+                  'I\'ve updated the app entry point. Here\'s a summary of changes:\n\n'
+                  '1. Modified `lib/main.dart` to add the title parameter\n'
+                  '2. The config is defined in `pubspec.yaml`\n'
+                  '3. Bridge server entry point is at `packages/bridge/src/index.ts`\n'
+                  '4. See `README.md` for documentation\n\n'
+                  'You can also check `package.json` for the npm scripts configuration.',
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    // Third message: read tool result with file path
+    MockStep(
+      delay: const Duration(milliseconds: 2200),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-file-peek-3',
+          role: 'assistant',
+          content: [
+            const ToolUseContent(
+              id: 'tool-read-1',
+              name: 'Read',
+              input: {'file_path': 'docs/architecture.md'},
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 2500),
+      message: const ToolResultMessage(
+        toolUseId: 'tool-read-1',
+        content:
+            '# Architecture\n\nThe app uses a Bridge Server pattern...\n'
+            '(200 lines)',
+        toolName: 'Read',
+      ),
+    ),
+    // Final summary
+    MockStep(
+      delay: const Duration(milliseconds: 3200),
+      message: AssistantServerMessage(
+        message: AssistantMessage(
+          id: 'mock-file-peek-4',
+          role: 'assistant',
+          content: [
+            const TextContent(
+              text:
+                  'The architecture docs in `docs/architecture.md` confirm the pattern. '
+                  'I also verified the test setup in `test/widget_test.dart`.\n\n'
+                  'Everything looks good! The changes are consistent with the '
+                  'project structure defined in `pubspec.yaml`.\n\n'
+                  'I also updated the authentication configuration at '
+                  '`apps/mobile/lib/features/connection/widgets/authentication_connection_settings_dialog.dart`.',
+            ),
+          ],
+          model: 'claude-sonnet-4-20250514',
+        ),
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 3500),
+      message: ResultMessage(
+        subtype: 'success',
+        cost: 0.0156,
+        duration: 3.5,
+        inputTokens: 12500,
+        outputTokens: 850,
+      ),
+    ),
+    MockStep(
+      delay: const Duration(milliseconds: 3700),
+      message: const StatusMessage(status: ProcessStatus.idle),
+    ),
+  ],
 );

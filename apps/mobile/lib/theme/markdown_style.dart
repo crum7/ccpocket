@@ -198,7 +198,7 @@ class FencedCodeBlockBuilder extends MarkdownElementBuilder {
               child: SelectableText.rich(
                 TextSpan(
                   style: baseStyle,
-                  children: _highlightToTextSpans(
+                  children: highlightToTextSpans(
                     context: context,
                     source: source,
                     baseStyle: baseStyle,
@@ -283,7 +283,7 @@ String? _normalizeLanguage(String? language) {
   }
 }
 
-List<TextSpan> _highlightToTextSpans({
+List<TextSpan> highlightToTextSpans({
   required BuildContext context,
   required String source,
   required TextStyle baseStyle,
