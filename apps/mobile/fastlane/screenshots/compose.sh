@@ -24,17 +24,19 @@ FONT_EN_BOLD="$(resolve_font Helvetica-Bold /System/Library/Fonts/Helvetica.ttc)
 FONT_EN_REG="$(resolve_font Helvetica /System/Library/Fonts/Helvetica.ttc)"
 FONT_JA_BOLD="$(resolve_font Hiragino-Sans-W7 '/System/Library/Fonts/ヒラギノ角ゴシック W7.ttc')"
 FONT_JA_REG="$(resolve_font Hiragino-Sans-W3 '/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc')"
+FONT_ZH_BOLD="$(resolve_font PingFang-SC-Semibold /System/Library/Fonts/PingFang.ttc)"
+FONT_ZH_REG="$(resolve_font PingFang-SC-Regular /System/Library/Fonts/PingFang.ttc)"
 
-# Screenshot definitions: key, keyword_en, title_en, keyword_ja, title_ja
+# Screenshot definitions: key, keyword_en, title_en, keyword_ja, title_ja, keyword_zh, title_zh
 SCREENSHOTS=(
-  "01_session_list|Code anywhere|On the couch, on the train|どこでもコーディング|ソファーでも電車でも"
-  "02_approval_list|Multiple sessions|Approve at a glance|複数セッション一覧|まとめて承認対応"
-  "03_multi_question|Mobile-first UI|Questions, answered instantly|モバイル最適化|承認UIで素早く回答"
-  "04_markdown_input|Write rich prompts|Bullet lists made easy|リッチなプロンプト|箇条書きが簡単"
-  "05_image_attach|Attach images|From clipboard or gallery|画像を添付|クリップボードから貼り付け"
-  "06_git_diff|Review diffs|See every change at once|差分を確認|変更を一覧表示"
-  "07_new_session|Just your phone|Open the app, pick a project, go|スマホだけでOK|アプリを開いて、すぐ開発"
-  "08_dark_theme|Dark mode|Easy on the eyes|ダークモード|目に優しいダークテーマ"
+  "01_session_list|Code anywhere|On the couch, on the train|どこでもコーディング|ソファーでも電車でも|随时随地编程|沙发上、地铁里"
+  "02_approval_list|Multiple sessions|Approve at a glance|複数セッション一覧|まとめて承認対応|多会话一览|一目了然，批量审批"
+  "03_multi_question|Mobile-first UI|Questions, answered instantly|モバイル最適化|承認UIで素早く回答|移动端优化|快速回答审批请求"
+  "04_markdown_input|Write rich prompts|Bullet lists made easy|リッチなプロンプト|箇条書きが簡単|丰富的提示|轻松编写列表"
+  "05_image_attach|Attach images|From clipboard or gallery|画像を添付|クリップボードから貼り付け|附加图片|从剪贴板或相册选取"
+  "06_git_diff|Review diffs|See every change at once|差分を確認|変更を一覧表示|审查差异|一览所有代码变更"
+  "07_new_session|Just your phone|Open the app, pick a project, go|スマホだけでOK|アプリを開いて、すぐ開発|只需手机|打开应用，选择项目，开始"
+  "08_dark_theme|Dark mode|Easy on the eyes|ダークモード|目に優しいダークテーマ|深色模式|护眼深色主题"
 )
 
 compose_screenshot() {
@@ -129,7 +131,7 @@ compose_screenshot() {
 # Process English
 echo "=== English ==="
 for entry in "${SCREENSHOTS[@]}"; do
-  IFS='|' read -r key kw_en tt_en kw_ja tt_ja <<< "$entry"
+  IFS='|' read -r key kw_en tt_en kw_ja tt_ja kw_zh tt_zh <<< "$entry"
   compose_screenshot "$key" "$kw_en" "$tt_en" "en-US" "$FONT_EN_BOLD" "$FONT_EN_REG"
 done
 
@@ -138,10 +140,21 @@ echo ""
 echo "=== Japanese ==="
 mkdir -p "${SCRIPT_DIR}/ja"
 for entry in "${SCREENSHOTS[@]}"; do
-  IFS='|' read -r key kw_en tt_en kw_ja tt_ja <<< "$entry"
+  IFS='|' read -r key kw_en tt_en kw_ja tt_ja kw_zh tt_zh <<< "$entry"
   # Always copy latest source screenshot from en-US
   cp "${SCRIPT_DIR}/en-US/${key}.png" "${SCRIPT_DIR}/ja/${key}.png" 2>/dev/null || true
   compose_screenshot "$key" "$kw_ja" "$tt_ja" "ja" "$FONT_JA_BOLD" "$FONT_JA_REG"
+done
+
+# Process Chinese (Simplified)
+echo ""
+echo "=== Chinese (Simplified) ==="
+mkdir -p "${SCRIPT_DIR}/zh-CN"
+for entry in "${SCREENSHOTS[@]}"; do
+  IFS='|' read -r key kw_en tt_en kw_ja tt_ja kw_zh tt_zh <<< "$entry"
+  # Always copy latest source screenshot from en-US
+  cp "${SCRIPT_DIR}/en-US/${key}.png" "${SCRIPT_DIR}/zh-CN/${key}.png" 2>/dev/null || true
+  compose_screenshot "$key" "$kw_zh" "$tt_zh" "zh-CN" "$FONT_ZH_BOLD" "$FONT_ZH_REG"
 done
 
 # === iPad (2064x2752) ===
@@ -249,14 +262,14 @@ compose_ipad_screenshot() {
 echo ""
 echo "=== iPad English ==="
 for entry in "${SCREENSHOTS[@]}"; do
-  IFS='|' read -r key kw_en tt_en kw_ja tt_ja <<< "$entry"
+  IFS='|' read -r key kw_en tt_en kw_ja tt_ja kw_zh tt_zh <<< "$entry"
   compose_ipad_screenshot "$key" "$kw_en" "$tt_en" "en-US" "$FONT_EN_BOLD" "$FONT_EN_REG" "en-US"
 done
 
 echo ""
 echo "=== iPad Japanese ==="
 for entry in "${SCREENSHOTS[@]}"; do
-  IFS='|' read -r key kw_en tt_en kw_ja tt_ja <<< "$entry"
+  IFS='|' read -r key kw_en tt_en kw_ja tt_ja kw_zh tt_zh <<< "$entry"
   compose_ipad_screenshot "$key" "$kw_ja" "$tt_ja" "ja" "$FONT_JA_BOLD" "$FONT_JA_REG" "en-US"
 done
 
@@ -269,7 +282,7 @@ mkdir -p "$README_IMG_DIR"
 
 README_KEYS=("01_session_list" "02_approval_list" "04_markdown_input" "07_new_session")
 
-for lang_dir in en-US ja; do
+for lang_dir in en-US ja zh-CN; do
   README_INPUTS=()
   for k in "${README_KEYS[@]}"; do
     README_INPUTS+=("${SCRIPT_DIR}/${lang_dir}/${k}_framed.png")
@@ -293,23 +306,27 @@ echo "=== Store upload directories ==="
 STORE_DIR="${SCRIPT_DIR}/store"
 ANDROID_META="${SCRIPT_DIR}/../../fastlane/metadata/android"
 
-for lang_dir in en-US ja; do
-  # iOS store directory
-  store_lang_dir="${STORE_DIR}/${lang_dir}"
-  mkdir -p "$store_lang_dir"
-  rm -f "$store_lang_dir"/*.png
-  for f in "${SCRIPT_DIR}/${lang_dir}"/*_framed.png; do
-    [ -f "$f" ] || continue
-    name=$(basename "$f" | sed 's/_framed//')
-    cp "$f" "$store_lang_dir/$name"
-  done
-  echo "  iOS  -> $store_lang_dir/ ($(ls "$store_lang_dir" | wc -l | tr -d ' ') files)"
+for lang_dir in en-US ja zh-CN; do
+  # iOS store directory (skip zh-CN — not distributed in China on iOS)
+  if [ "$lang_dir" != "zh-CN" ]; then
+    store_lang_dir="${STORE_DIR}/${lang_dir}"
+    mkdir -p "$store_lang_dir"
+    rm -f "$store_lang_dir"/*.png
+    for f in "${SCRIPT_DIR}/${lang_dir}"/*_framed.png; do
+      [ -f "$f" ] || continue
+      name=$(basename "$f" | sed 's/_framed//')
+      cp "$f" "$store_lang_dir/$name"
+    done
+    echo "  iOS  -> $store_lang_dir/ ($(ls "$store_lang_dir" | wc -l | tr -d ' ') files)"
+  fi
 
   # Android metadata directory (phone screenshots only)
   if [ "$lang_dir" = "en-US" ]; then
     android_lang="en-US"
-  else
+  elif [ "$lang_dir" = "ja" ]; then
     android_lang="ja-JP"
+  else
+    android_lang="zh-CN"
   fi
   android_ss_dir="${ANDROID_META}/${android_lang}/images/phoneScreenshots"
   mkdir -p "$android_ss_dir"

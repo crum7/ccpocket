@@ -4,7 +4,7 @@ class AppConstants {
 
   /// Expected Bridge Server version (from packages/bridge/package.json)
   /// Used to check if the server needs updating
-  static const String expectedBridgeVersion = '1.29.0';
+  static const String expectedBridgeVersion = '1.29.1';
 
   /// Maximum number of machines to keep in history
   /// Favorites are always kept, non-favorites are pruned by lastConnected
@@ -26,7 +26,7 @@ class AppConstants {
 
   /// App Store URL (iOS)
   static const String appStoreUrl =
-      'https://apps.apple.com/us/app/cc-pocket-dev-agent-remote/id6759188790';
+      'https://apps.apple.com/us/app/cc-pocket-code-anywhere/id6759188790';
 
   /// Play Store URL (Android)
   static const String playStoreUrl =

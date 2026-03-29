@@ -5,7 +5,7 @@ CC Pocket 是一款可以让你只用手机就启动并完成 Claude Code / Code
 [English README](README.md) | [日本語 README](README.ja.md)
 
 <p align="center">
-  <img src="docs/images/screenshots.png" alt="CC Pocket screenshots" width="800">
+  <img src="docs/images/screenshots-zh-CN.png" alt="CC Pocket 截图" width="800">
 </p>
 
 CC Pocket 与 Anthropic 或 OpenAI 没有任何关联，也未获得其认可、赞助或官方合作。
@@ -86,7 +86,7 @@ npx @ccpocket/bridge@latest
 扫描上方横幅中的二维码，或者直接从应用商店下载：
 
 <div align="center">
-<a href="https://apps.apple.com/us/app/cc-pocket-dev-agent-remote/id6759188790"><img height="40" alt="Download on the App Store" src="docs/images/app-store-badge.svg" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=com.k9i.ccpocket"><img height="40" alt="Get it on Google Play" src="docs/images/google-play-badge-en.svg" /></a>
+<a href="https://apps.apple.com/us/app/cc-pocket-code-anywhere/id6759188790"><img height="40" alt="Download on the App Store" src="docs/images/app-store-badge.svg" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=com.k9i.ccpocket"><img height="40" alt="Get it on Google Play" src="docs/images/google-play-badge-en.svg" /></a>
 </div>
 
 ### macOS 桌面版（Beta）

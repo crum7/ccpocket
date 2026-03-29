@@ -18,6 +18,9 @@ generate() {
   if [ "$lang" = "ja" ]; then
     screenshots_dir="$SCREENSHOTS_ROOT/ja"
     output_dir="$ANDROID_META/ja-JP/images"
+  elif [ "$lang" = "zh-CN" ]; then
+    screenshots_dir="$SCREENSHOTS_ROOT/zh-CN"
+    output_dir="$ANDROID_META/zh-CN/images"
   else
     screenshots_dir="$SCREENSHOTS_ROOT/en-US"
     output_dir="$ANDROID_META/en-US/images"
@@ -46,6 +49,7 @@ echo "🎨 Generating feature graphics..."
 echo ""
 generate "en"
 generate "ja"
+generate "zh-CN"
 
 echo ""
 echo "🎉 Done!"
