@@ -23,5 +23,8 @@ abstract class BranchState with _$BranchState {
 
     /// Whether a branch creation is in progress.
     @Default(false) bool creating,
+
+    /// Branches checked out by main repo or worktrees (cannot switch to).
+    @Default([]) List<String> checkedOutBranches,
   }) = _BranchState;
 }

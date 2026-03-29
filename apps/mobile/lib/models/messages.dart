@@ -723,6 +723,7 @@ sealed class ServerMessage {
       'git_branches_result' => GitBranchesResultMessage(
         current: json['current'] as String? ?? '',
         branches: (json['branches'] as List?)?.cast<String>() ?? const [],
+        checkedOutBranches: (json['checkedOutBranches'] as List?)?.cast<String>() ?? const [],
         error: json['error'] as String?,
       ),
       'git_create_branch_result' => GitCreateBranchResultMessage(
@@ -1684,10 +1685,12 @@ class GitStatusResultMessage implements ServerMessage {
 class GitBranchesResultMessage implements ServerMessage {
   final String current;
   final List<String> branches;
+  final List<String> checkedOutBranches;
   final String? error;
   const GitBranchesResultMessage({
     required this.current,
     required this.branches,
+    this.checkedOutBranches = const [],
     this.error,
   });
 }

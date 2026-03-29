@@ -28,6 +28,7 @@ class GitViewCubit extends Cubit<GitViewState> {
   StreamSubscription<GitBranchesResultMessage>? _branchesSub;
   StreamSubscription<GitCheckoutBranchResultMessage>? _checkoutSub;
   final String? _projectPath;
+  final String? _sessionId;
 
   GitViewCubit({
     required BridgeService bridge,
@@ -35,8 +36,10 @@ class GitViewCubit extends Cubit<GitViewState> {
     String? projectPath,
     Set<String>? initialSelectedHunkKeys,
     String? worktreePath,
+    String? sessionId,
   }) : _bridge = bridge,
        _projectPath = projectPath,
+       _sessionId = sessionId,
        super(_initialState(
          initialDiff, projectPath, initialSelectedHunkKeys,
          isWorktree: worktreePath != null,
@@ -638,6 +641,10 @@ class GitViewCubit extends Cubit<GitViewState> {
       final projectPath = _projectPath;
       if (projectPath != null) {
         _bridge.send(ClientMessage.gitBranches(projectPath));
+      }
+      // Update session branch info so session list card reflects the change
+      if (_sessionId != null) {
+        _bridge.send(ClientMessage.refreshBranch(_sessionId));
       }
     }
   }

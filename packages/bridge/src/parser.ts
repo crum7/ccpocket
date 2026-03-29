@@ -296,7 +296,7 @@ export type ServerMessage =
   | { type: "git_push_result"; success: boolean; remote?: string; branch?: string; error?: string }
   | { type: "gh_pr_result"; success: boolean; prNumber?: number; url?: string; error?: string }
   | { type: "git_status_result"; staged: string[]; unstaged: string[]; untracked: string[] }
-  | { type: "git_branches_result"; current: string; branches: string[]; error?: string }
+  | { type: "git_branches_result"; current: string; branches: string[]; checkedOutBranches?: string[]; error?: string }
   | { type: "git_create_branch_result"; success: boolean; error?: string }
   | { type: "git_checkout_branch_result"; success: boolean; error?: string }
   | { type: "git_fetch_result"; success: boolean; error?: string }

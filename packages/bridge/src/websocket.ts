@@ -2124,6 +2124,7 @@ export class BridgeWebSocketServer {
             type: "git_branches_result",
             current: result.current,
             branches: result.branches,
+            checkedOutBranches: result.checkedOutBranches,
           });
         } catch (err) {
           this.send(ws, { type: "git_branches_result", current: "", branches: [], error: String(err) });

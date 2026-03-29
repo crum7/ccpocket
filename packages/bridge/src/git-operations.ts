@@ -33,6 +33,8 @@ export interface GitStatusResult {
 export interface BranchListResult {
   current: string;
   branches: string[];
+  /** Branches currently checked out by main repo or worktrees (cannot switch to). */
+  checkedOutBranches: string[];
 }
 
 // ---- Helpers ----
@@ -203,7 +205,7 @@ export function gitStatus(projectPath: string): GitStatusResult {
 
 // ---- Phase 3: Branch Operations ----
 
-/** List branches, optionally filtered by query. */
+/** List branches, optionally filtered by query. Also returns branches checked out by worktrees. */
 export function listBranches(projectPath: string, query?: string): BranchListResult {
   const cwd = resolveProject(projectPath);
   const current = git(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
@@ -211,12 +213,27 @@ export function listBranches(projectPath: string, query?: string): BranchListRes
   const output = git(["branch", "--list", "--format=%(refname:short)"], cwd);
   let branches = output ? output.split("\n").filter(Boolean) : [];
 
+  // Collect branches checked out by worktrees (+ main repo)
+  const checkedOutBranches: string[] = [];
+  try {
+    const wtOutput = execFileSync("git", ["worktree", "list", "--porcelain"], {
+      cwd,
+      encoding: "utf-8",
+    });
+    for (const line of wtOutput.split("\n")) {
+      if (line.startsWith("branch ")) {
+        const branch = line.slice("branch ".length).replace(/^refs\/heads\//, "");
+        checkedOutBranches.push(branch);
+      }
+    }
+  } catch { /* ignore if worktree command fails */ }
+
   if (query) {
     const q = query.toLowerCase();
     branches = branches.filter((b) => b.toLowerCase().includes(q));
   }
 
-  return { current, branches };
+  return { current, branches, checkedOutBranches };
 }
 
 /** Create a new branch, optionally checking it out. */

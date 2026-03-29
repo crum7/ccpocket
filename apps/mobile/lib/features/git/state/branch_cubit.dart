@@ -69,6 +69,7 @@ class BranchCubit extends Cubit<BranchState> {
       loading: false,
       current: result.current,
       branches: result.branches,
+      checkedOutBranches: result.checkedOutBranches,
     ));
   }
 

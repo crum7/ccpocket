@@ -563,6 +563,8 @@ class _CodexChatBody extends HookWidget {
                         worktreePath ?? projectPath!,
                         diffSelectionFromNav,
                         existingSelection: diffSelectionFromNav.value,
+                        sessionId: sessionId,
+                        worktreePath: worktreePath,
                       );
                     },
                   ),
@@ -841,6 +843,8 @@ class _CodexChatBody extends HookWidget {
                             worktreePath ?? projectPath!,
                             diffSelectionFromNav,
                             existingSelection: currentSelection,
+                            sessionId: sessionId,
+                            worktreePath: worktreePath,
                           )
                         : null,
                   ),
@@ -862,11 +866,15 @@ Future<void> _openGitScreen(
   String projectPath,
   ValueNotifier<DiffSelection?> diffSelectionNotifier, {
   DiffSelection? existingSelection,
+  String? sessionId,
+  String? worktreePath,
 }) async {
   final selection = await context.router.push<DiffSelection>(
     GitRoute(
       projectPath: projectPath,
       initialSelectedHunkKeys: existingSelection?.selectedHunkKeys,
+      sessionId: sessionId,
+      worktreePath: worktreePath,
     ),
   );
   if (selection != null && !selection.isEmpty) {

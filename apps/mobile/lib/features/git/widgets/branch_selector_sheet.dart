@@ -119,12 +119,23 @@ class _BranchSelectorContentState extends State<_BranchSelectorContent> {
                         itemBuilder: (context, index) {
                           final branch = filtered[index];
                           final isCurrent = branch == state.current;
+                          final isCheckedOut = !isCurrent &&
+                              state.checkedOutBranches.contains(branch);
+                          final isDisabled = isCurrent || isCheckedOut;
 
                           return ListTile(
                             key: ValueKey('branch_$branch'),
                             leading: Icon(
-                              isCurrent ? Icons.check_circle : Icons.circle_outlined,
-                              color: isCurrent ? cs.primary : cs.outline,
+                              isCurrent
+                                  ? Icons.check_circle
+                                  : isCheckedOut
+                                      ? Icons.lock_outline
+                                      : Icons.circle_outlined,
+                              color: isCurrent
+                                  ? cs.primary
+                                  : isCheckedOut
+                                      ? cs.outlineVariant
+                                      : cs.outline,
                               size: 20,
                             ),
                             title: Text(
@@ -134,11 +145,22 @@ class _BranchSelectorContentState extends State<_BranchSelectorContent> {
                                 fontSize: 13,
                                 fontWeight:
                                     isCurrent ? FontWeight.w600 : FontWeight.normal,
-                                color: isCurrent ? cs.primary : cs.onSurface,
+                                color: isDisabled
+                                    ? cs.onSurfaceVariant
+                                    : cs.onSurface,
                               ),
                             ),
+                            subtitle: isCheckedOut
+                                ? Text(
+                                    'In use by another worktree',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: cs.outlineVariant,
+                                    ),
+                                  )
+                                : null,
                             dense: true,
-                            onTap: isCurrent
+                            onTap: isDisabled
                                 ? null
                                 : () {
                                     cubit.checkout(branch);

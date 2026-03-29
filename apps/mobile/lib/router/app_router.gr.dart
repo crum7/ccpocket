@@ -344,6 +344,7 @@ class GitRoute extends PageRouteInfo<GitRouteArgs> {
     String? title,
     Set<String>? initialSelectedHunkKeys,
     String? worktreePath,
+    String? sessionId,
     List<PageRouteInfo>? children,
   }) : super(
          GitRoute.name,
@@ -354,6 +355,7 @@ class GitRoute extends PageRouteInfo<GitRouteArgs> {
            title: title,
            initialSelectedHunkKeys: initialSelectedHunkKeys,
            worktreePath: worktreePath,
+           sessionId: sessionId,
          ),
          initialChildren: children,
        );
@@ -373,6 +375,7 @@ class GitRoute extends PageRouteInfo<GitRouteArgs> {
         title: args.title,
         initialSelectedHunkKeys: args.initialSelectedHunkKeys,
         worktreePath: args.worktreePath,
+        sessionId: args.sessionId,
       );
     },
   );
@@ -386,6 +389,7 @@ class GitRouteArgs {
     this.title,
     this.initialSelectedHunkKeys,
     this.worktreePath,
+    this.sessionId,
   });
 
   final Key? key;
@@ -400,9 +404,11 @@ class GitRouteArgs {
 
   final String? worktreePath;
 
+  final String? sessionId;
+
   @override
   String toString() {
-    return 'GitRouteArgs{key: $key, initialDiff: $initialDiff, projectPath: $projectPath, title: $title, initialSelectedHunkKeys: $initialSelectedHunkKeys, worktreePath: $worktreePath}';
+    return 'GitRouteArgs{key: $key, initialDiff: $initialDiff, projectPath: $projectPath, title: $title, initialSelectedHunkKeys: $initialSelectedHunkKeys, worktreePath: $worktreePath, sessionId: $sessionId}';
   }
 
   @override
@@ -417,7 +423,8 @@ class GitRouteArgs {
           initialSelectedHunkKeys,
           other.initialSelectedHunkKeys,
         ) &&
-        worktreePath == other.worktreePath;
+        worktreePath == other.worktreePath &&
+        sessionId == other.sessionId;
   }
 
   @override
@@ -427,7 +434,8 @@ class GitRouteArgs {
       projectPath.hashCode ^
       title.hashCode ^
       const SetEquality<String>().hash(initialSelectedHunkKeys) ^
-      worktreePath.hashCode;
+      worktreePath.hashCode ^
+      sessionId.hashCode;
 }
 
 /// generated route for

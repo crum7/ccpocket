@@ -42,6 +42,9 @@ class GitScreen extends StatelessWidget {
   /// Worktree path (if the session runs in a worktree).
   final String? worktreePath;
 
+  /// Session ID (for updating session branch info after checkout).
+  final String? sessionId;
+
   const GitScreen({
     super.key,
     this.initialDiff,
@@ -49,6 +52,7 @@ class GitScreen extends StatelessWidget {
     this.title,
     this.initialSelectedHunkKeys,
     this.worktreePath,
+    this.sessionId,
   });
 
   @override
@@ -65,6 +69,7 @@ class GitScreen extends StatelessWidget {
             projectPath: projectPath,
             initialSelectedHunkKeys: initialSelectedHunkKeys,
             worktreePath: worktreePath,
+            sessionId: sessionId,
           ),
         ),
         if (isProjectMode)
@@ -657,8 +662,26 @@ class _BranchIndicator extends StatelessWidget {
               color: cs.onSurfaceVariant,
             ),
             const SizedBox(width: 4),
+            if (isWorktree) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: cs.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  'worktree',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onTertiaryContainer,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 200),
+              constraints: const BoxConstraints(maxWidth: 180),
               child: Text(
                 displayName,
                 style: TextStyle(

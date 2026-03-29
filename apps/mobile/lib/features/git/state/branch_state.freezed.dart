@@ -20,7 +20,8 @@ mixin _$BranchState {
  String get query;/// Whether a branch list request is in progress.
  bool get loading;/// Error message.
  String? get error;/// Whether a branch creation is in progress.
- bool get creating;
+ bool get creating;/// Branches checked out by main repo or worktrees (cannot switch to).
+ List<String> get checkedOutBranches;
 /// Create a copy of BranchState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,16 +32,16 @@ $BranchStateCopyWith<BranchState> get copyWith => _$BranchStateCopyWithImpl<Bran
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is BranchState&&(identical(other.current, current) || other.current == current)&&const DeepCollectionEquality().equals(other.branches, branches)&&(identical(other.query, query) || other.query == query)&&(identical(other.loading, loading) || other.loading == loading)&&(identical(other.error, error) || other.error == error)&&(identical(other.creating, creating) || other.creating == creating));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BranchState&&(identical(other.current, current) || other.current == current)&&const DeepCollectionEquality().equals(other.branches, branches)&&(identical(other.query, query) || other.query == query)&&(identical(other.loading, loading) || other.loading == loading)&&(identical(other.error, error) || other.error == error)&&(identical(other.creating, creating) || other.creating == creating)&&const DeepCollectionEquality().equals(other.checkedOutBranches, checkedOutBranches));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,current,const DeepCollectionEquality().hash(branches),query,loading,error,creating);
+int get hashCode => Object.hash(runtimeType,current,const DeepCollectionEquality().hash(branches),query,loading,error,creating,const DeepCollectionEquality().hash(checkedOutBranches));
 
 @override
 String toString() {
-  return 'BranchState(current: $current, branches: $branches, query: $query, loading: $loading, error: $error, creating: $creating)';
+  return 'BranchState(current: $current, branches: $branches, query: $query, loading: $loading, error: $error, creating: $creating, checkedOutBranches: $checkedOutBranches)';
 }
 
 
@@ -51,7 +52,7 @@ abstract mixin class $BranchStateCopyWith<$Res>  {
   factory $BranchStateCopyWith(BranchState value, $Res Function(BranchState) _then) = _$BranchStateCopyWithImpl;
 @useResult
 $Res call({
- String? current, List<String> branches, String query, bool loading, String? error, bool creating
+ String? current, List<String> branches, String query, bool loading, String? error, bool creating, List<String> checkedOutBranches
 });
 
 
@@ -68,7 +69,7 @@ class _$BranchStateCopyWithImpl<$Res>
 
 /// Create a copy of BranchState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? current = freezed,Object? branches = null,Object? query = null,Object? loading = null,Object? error = freezed,Object? creating = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? current = freezed,Object? branches = null,Object? query = null,Object? loading = null,Object? error = freezed,Object? creating = null,Object? checkedOutBranches = null,}) {
   return _then(_self.copyWith(
 current: freezed == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
 as String?,branches: null == branches ? _self.branches : branches // ignore: cast_nullable_to_non_nullable
@@ -76,7 +77,8 @@ as List<String>,query: null == query ? _self.query : query // ignore: cast_nulla
 as String,loading: null == loading ? _self.loading : loading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as String?,creating: null == creating ? _self.creating : creating // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,checkedOutBranches: null == checkedOutBranches ? _self.checkedOutBranches : checkedOutBranches // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -161,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? current,  List<String> branches,  String query,  bool loading,  String? error,  bool creating)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? current,  List<String> branches,  String query,  bool loading,  String? error,  bool creating,  List<String> checkedOutBranches)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _BranchState() when $default != null:
-return $default(_that.current,_that.branches,_that.query,_that.loading,_that.error,_that.creating);case _:
+return $default(_that.current,_that.branches,_that.query,_that.loading,_that.error,_that.creating,_that.checkedOutBranches);case _:
   return orElse();
 
 }
@@ -182,10 +184,10 @@ return $default(_that.current,_that.branches,_that.query,_that.loading,_that.err
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? current,  List<String> branches,  String query,  bool loading,  String? error,  bool creating)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? current,  List<String> branches,  String query,  bool loading,  String? error,  bool creating,  List<String> checkedOutBranches)  $default,) {final _that = this;
 switch (_that) {
 case _BranchState():
-return $default(_that.current,_that.branches,_that.query,_that.loading,_that.error,_that.creating);case _:
+return $default(_that.current,_that.branches,_that.query,_that.loading,_that.error,_that.creating,_that.checkedOutBranches);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +204,10 @@ return $default(_that.current,_that.branches,_that.query,_that.loading,_that.err
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? current,  List<String> branches,  String query,  bool loading,  String? error,  bool creating)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? current,  List<String> branches,  String query,  bool loading,  String? error,  bool creating,  List<String> checkedOutBranches)?  $default,) {final _that = this;
 switch (_that) {
 case _BranchState() when $default != null:
-return $default(_that.current,_that.branches,_that.query,_that.loading,_that.error,_that.creating);case _:
+return $default(_that.current,_that.branches,_that.query,_that.loading,_that.error,_that.creating,_that.checkedOutBranches);case _:
   return null;
 
 }
@@ -217,7 +219,7 @@ return $default(_that.current,_that.branches,_that.query,_that.loading,_that.err
 
 
 class _BranchState implements BranchState {
-  const _BranchState({this.current, final  List<String> branches = const [], this.query = '', this.loading = false, this.error, this.creating = false}): _branches = branches;
+  const _BranchState({this.current, final  List<String> branches = const [], this.query = '', this.loading = false, this.error, this.creating = false, final  List<String> checkedOutBranches = const []}): _branches = branches,_checkedOutBranches = checkedOutBranches;
   
 
 /// Current branch name.
@@ -239,6 +241,15 @@ class _BranchState implements BranchState {
 @override final  String? error;
 /// Whether a branch creation is in progress.
 @override@JsonKey() final  bool creating;
+/// Branches checked out by main repo or worktrees (cannot switch to).
+ final  List<String> _checkedOutBranches;
+/// Branches checked out by main repo or worktrees (cannot switch to).
+@override@JsonKey() List<String> get checkedOutBranches {
+  if (_checkedOutBranches is EqualUnmodifiableListView) return _checkedOutBranches;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_checkedOutBranches);
+}
+
 
 /// Create a copy of BranchState
 /// with the given fields replaced by the non-null parameter values.
@@ -250,16 +261,16 @@ _$BranchStateCopyWith<_BranchState> get copyWith => __$BranchStateCopyWithImpl<_
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BranchState&&(identical(other.current, current) || other.current == current)&&const DeepCollectionEquality().equals(other._branches, _branches)&&(identical(other.query, query) || other.query == query)&&(identical(other.loading, loading) || other.loading == loading)&&(identical(other.error, error) || other.error == error)&&(identical(other.creating, creating) || other.creating == creating));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _BranchState&&(identical(other.current, current) || other.current == current)&&const DeepCollectionEquality().equals(other._branches, _branches)&&(identical(other.query, query) || other.query == query)&&(identical(other.loading, loading) || other.loading == loading)&&(identical(other.error, error) || other.error == error)&&(identical(other.creating, creating) || other.creating == creating)&&const DeepCollectionEquality().equals(other._checkedOutBranches, _checkedOutBranches));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,current,const DeepCollectionEquality().hash(_branches),query,loading,error,creating);
+int get hashCode => Object.hash(runtimeType,current,const DeepCollectionEquality().hash(_branches),query,loading,error,creating,const DeepCollectionEquality().hash(_checkedOutBranches));
 
 @override
 String toString() {
-  return 'BranchState(current: $current, branches: $branches, query: $query, loading: $loading, error: $error, creating: $creating)';
+  return 'BranchState(current: $current, branches: $branches, query: $query, loading: $loading, error: $error, creating: $creating, checkedOutBranches: $checkedOutBranches)';
 }
 
 
@@ -270,7 +281,7 @@ abstract mixin class _$BranchStateCopyWith<$Res> implements $BranchStateCopyWith
   factory _$BranchStateCopyWith(_BranchState value, $Res Function(_BranchState) _then) = __$BranchStateCopyWithImpl;
 @override @useResult
 $Res call({
- String? current, List<String> branches, String query, bool loading, String? error, bool creating
+ String? current, List<String> branches, String query, bool loading, String? error, bool creating, List<String> checkedOutBranches
 });
 
 
@@ -287,7 +298,7 @@ class __$BranchStateCopyWithImpl<$Res>
 
 /// Create a copy of BranchState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? current = freezed,Object? branches = null,Object? query = null,Object? loading = null,Object? error = freezed,Object? creating = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? current = freezed,Object? branches = null,Object? query = null,Object? loading = null,Object? error = freezed,Object? creating = null,Object? checkedOutBranches = null,}) {
   return _then(_BranchState(
 current: freezed == current ? _self.current : current // ignore: cast_nullable_to_non_nullable
 as String?,branches: null == branches ? _self._branches : branches // ignore: cast_nullable_to_non_nullable
@@ -295,7 +306,8 @@ as List<String>,query: null == query ? _self.query : query // ignore: cast_nulla
 as String,loading: null == loading ? _self.loading : loading // ignore: cast_nullable_to_non_nullable
 as bool,error: freezed == error ? _self.error : error // ignore: cast_nullable_to_non_nullable
 as String?,creating: null == creating ? _self.creating : creating // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,checkedOutBranches: null == checkedOutBranches ? _self._checkedOutBranches : checkedOutBranches // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
