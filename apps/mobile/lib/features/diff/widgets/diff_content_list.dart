@@ -23,6 +23,12 @@ class DiffContentList extends StatelessWidget {
   final ValueChanged<int>? onLoadImage;
   final Set<int> loadingImageIndices;
 
+  /// Swipe-to-stage callback (file index). Null disables swipe.
+  final ValueChanged<int>? onSwipeStage;
+
+  /// Swipe-to-unstage callback (file index). Null disables swipe.
+  final ValueChanged<int>? onSwipeUnstage;
+
   const DiffContentList({
     super.key,
     required this.files,
@@ -38,6 +44,8 @@ class DiffContentList extends StatelessWidget {
     this.isFilePartiallySelected,
     this.onLoadImage,
     this.loadingImageIndices = const {},
+    this.onSwipeStage,
+    this.onSwipeUnstage,
   });
 
   @override
@@ -141,6 +149,8 @@ class DiffContentList extends StatelessWidget {
         isFilePartiallySelected: isFilePartiallySelected,
         onLoadImage: onLoadImage,
         loadingImageIndices: loadingImageIndices,
+        onSwipeStage: onSwipeStage,
+        onSwipeUnstage: onSwipeUnstage,
       ),
     );
   }
@@ -176,6 +186,8 @@ class _DiffListItem extends StatelessWidget {
   final bool Function(int fileIdx)? isFilePartiallySelected;
   final ValueChanged<int>? onLoadImage;
   final Set<int> loadingImageIndices;
+  final ValueChanged<int>? onSwipeStage;
+  final ValueChanged<int>? onSwipeUnstage;
 
   const _DiffListItem({
     required this.index,
@@ -192,6 +204,8 @@ class _DiffListItem extends StatelessWidget {
     this.isFilePartiallySelected,
     this.onLoadImage,
     this.loadingImageIndices = const {},
+    this.onSwipeStage,
+    this.onSwipeUnstage,
   });
 
   @override
@@ -210,7 +224,7 @@ class _DiffListItem extends StatelessWidget {
       if (index < offset + sectionSize) {
         final localIdx = index - offset;
         if (localIdx == 0) {
-          return DiffFileHeader(
+          final header = DiffFileHeader(
             file: file,
             collapsed: collapsed,
             onToggleCollapse: () => onToggleCollapse(fileIdx),
@@ -221,6 +235,17 @@ class _DiffListItem extends StatelessWidget {
                 ? () => onToggleFileSelection!(fileIdx)
                 : null,
           );
+          // Wrap with swipe-to-stage/unstage when callbacks are provided
+          if (onSwipeStage != null || onSwipeUnstage != null) {
+            return _SwipeStageDismissible(
+              fileIdx: fileIdx,
+              filePath: file.filePath,
+              onSwipeStage: onSwipeStage,
+              onSwipeUnstage: onSwipeUnstage,
+              child: header,
+            );
+          }
+          return header;
         }
         if (file.isBinary) {
           if (file.isImage && file.imageData != null) {
@@ -258,5 +283,82 @@ class _DiffListItem extends StatelessWidget {
       }
     }
     return const SizedBox.shrink();
+  }
+}
+
+/// Wraps a file header with swipe-to-stage (right) / swipe-to-unstage (left).
+/// Like swiping emails in Mail.app.
+class _SwipeStageDismissible extends StatelessWidget {
+  final int fileIdx;
+  final String filePath;
+  final ValueChanged<int>? onSwipeStage;
+  final ValueChanged<int>? onSwipeUnstage;
+  final Widget child;
+
+  const _SwipeStageDismissible({
+    required this.fileIdx,
+    required this.filePath,
+    this.onSwipeStage,
+    this.onSwipeUnstage,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Dismissible(
+      key: ValueKey('swipe_stage_$filePath'),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          onSwipeStage?.call(fileIdx);
+        } else {
+          onSwipeUnstage?.call(fileIdx);
+        }
+        // Always return false to prevent removal from the list
+        return false;
+      },
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20),
+        color: cs.primary.withValues(alpha: 0.15),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add_circle_outline, color: cs.primary, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Stage',
+              style: TextStyle(
+                color: cs.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        color: cs.error.withValues(alpha: 0.15),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Unstage',
+              style: TextStyle(
+                color: cs.error,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.remove_circle_outline, color: cs.error, size: 20),
+          ],
+        ),
+      ),
+      child: child,
+    );
   }
 }

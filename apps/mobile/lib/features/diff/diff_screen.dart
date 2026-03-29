@@ -162,6 +162,8 @@ class _DiffScreenBody extends StatelessWidget {
               isFilePartiallySelected: cubit.isFilePartiallySelected,
               onLoadImage: cubit.loadImage,
               loadingImageIndices: state.loadingImageIndices,
+              onSwipeStage: isProjectMode ? cubit.stageFile : null,
+              onSwipeUnstage: isProjectMode ? cubit.unstageFile : null,
             ),
     );
   }

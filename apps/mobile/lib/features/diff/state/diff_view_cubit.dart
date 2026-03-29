@@ -472,6 +472,16 @@ class DiffViewCubit extends Cubit<DiffViewState> {
     );
   }
 
+  /// Unstage a single file by index.
+  void unstageFile(int fileIdx) {
+    final projectPath = _projectPath;
+    if (projectPath == null || fileIdx >= state.files.length) return;
+    emit(state.copyWith(staging: true));
+    _bridge.send(
+      ClientMessage.gitUnstage(projectPath, files: [state.files[fileIdx].filePath]),
+    );
+  }
+
   /// Stage all files.
   void stageAll() {
     final projectPath = _projectPath;
