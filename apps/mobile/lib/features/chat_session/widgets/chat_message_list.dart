@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
 
 import '../../../models/messages.dart';
+import '../../../providers/bridge_cubits.dart';
 import '../../../services/bridge_service.dart';
 import '../../../widgets/message_bubble.dart';
 import '../../file_peek/file_peek_sheet.dart';
@@ -220,11 +221,12 @@ class _ChatMessageListState extends State<ChatMessageList> {
             onFileTap: (filePath) {
               final projectPath = widget.projectPath;
               if (projectPath == null || projectPath.isEmpty) return;
-              showFilePeekSheet(
+              openFilePeek(
                 context,
                 bridge: context.read<BridgeService>(),
                 projectPath: projectPath,
                 filePath: filePath,
+                projectFiles: context.read<FileListCubit>().state,
               );
             },
             onImageTap: (user) {

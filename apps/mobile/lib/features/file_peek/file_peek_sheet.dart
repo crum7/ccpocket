@@ -10,6 +10,158 @@ import '../../services/bridge_service.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/markdown_style.dart';
 
+/// Resolves a potentially partial file path against the project's file list,
+/// then shows the file peek sheet.
+///
+/// If the path matches exactly or resolves to a single candidate, opens
+/// directly. If multiple candidates match, shows a picker first.
+Future<void> openFilePeek(
+  BuildContext context, {
+  required BridgeService bridge,
+  required String projectPath,
+  required String filePath,
+  required List<String> projectFiles,
+}) async {
+  final resolved = _resolveFilePath(filePath, projectFiles);
+
+  switch (resolved.length) {
+    case 1:
+      // Single match — open directly.
+      return showFilePeekSheet(
+        context,
+        bridge: bridge,
+        projectPath: projectPath,
+        filePath: resolved.first,
+      );
+    case 0:
+      // No match — try the original path as-is (Bridge may still find it).
+      return showFilePeekSheet(
+        context,
+        bridge: bridge,
+        projectPath: projectPath,
+        filePath: filePath,
+      );
+    default:
+      // Multiple matches — let the user pick.
+      final picked = await _showFilePickerSheet(context, filePath, resolved);
+      if (picked != null && context.mounted) {
+        return showFilePeekSheet(
+          context,
+          bridge: bridge,
+          projectPath: projectPath,
+          filePath: picked,
+        );
+      }
+  }
+}
+
+/// Returns project file paths whose suffix matches [filePath].
+List<String> _resolveFilePath(String filePath, List<String> projectFiles) {
+  // Exact match first.
+  if (projectFiles.contains(filePath)) return [filePath];
+
+  // Suffix match: e.g. "lib/main.dart" matches "apps/mobile/lib/main.dart".
+  final suffix = filePath.startsWith('/') ? filePath : '/$filePath';
+  final candidates =
+      projectFiles.where((f) => '/$f'.endsWith(suffix)).toList();
+
+  return candidates;
+}
+
+/// Bottom sheet that lists candidate file paths for the user to pick from.
+Future<String?> _showFilePickerSheet(
+  BuildContext context,
+  String originalPath,
+  List<String> candidates,
+) {
+  final appColors = Theme.of(context).extension<AppColors>()!;
+
+  return showModalBottomSheet<String>(
+    context: context,
+    useSafeArea: true,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: appColors.subtleText.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: Row(
+              children: [
+                Icon(Icons.help_outline, size: 18, color: appColors.subtleText),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$originalPath — ${candidates.length} files found',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: appColors.subtleText,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Flexible(
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: candidates.length,
+              itemBuilder: (context, index) {
+                final path = candidates[index];
+                final fileName = path.split('/').last;
+                final dir = path.contains('/')
+                    ? path.substring(0, path.lastIndexOf('/'))
+                    : '';
+                return ListTile(
+                  leading: Icon(
+                    Icons.description_outlined,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: Text(
+                    fileName,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  subtitle: dir.isNotEmpty
+                      ? Text(
+                          dir,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: appColors.subtleText,
+                            fontFamily: 'monospace',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : null,
+                  dense: true,
+                  onTap: () => Navigator.of(context).pop(path),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 /// Shows a bottom sheet that loads and displays file content from Bridge.
 ///
 /// [projectPath] is the project root on the server.
