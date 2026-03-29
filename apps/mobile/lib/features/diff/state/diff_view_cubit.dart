@@ -18,6 +18,8 @@ class DiffViewCubit extends Cubit<DiffViewState> {
   final BridgeService _bridge;
   StreamSubscription<DiffResultMessage>? _diffSub;
   StreamSubscription<DiffImageResultMessage>? _diffImageSub;
+  StreamSubscription<GitStageResultMessage>? _stageSub;
+  StreamSubscription<GitUnstageResultMessage>? _unstageSub;
   final String? _projectPath;
 
   DiffViewCubit({
@@ -31,6 +33,8 @@ class DiffViewCubit extends Cubit<DiffViewState> {
     if (projectPath != null) {
       _requestDiff(projectPath, initialSelectedHunkKeys);
       _diffImageSub = _bridge.diffImageResults.listen(_onDiffImageResult);
+      _stageSub = _bridge.gitStageResults.listen(_onStageResult);
+      _unstageSub = _bridge.gitUnstageResults.listen(_onUnstageResult);
     }
   }
 
@@ -83,7 +87,8 @@ class DiffViewCubit extends Cubit<DiffViewState> {
         );
       }
     });
-    _bridge.send(ClientMessage.getDiff(projectPath));
+    final staged = state.viewMode == DiffViewMode.staged ? true : null;
+    _bridge.send(ClientMessage.getDiff(projectPath, staged: staged));
   }
 
   /// Whether this cubit supports refresh (projectPath mode).
@@ -94,7 +99,8 @@ class DiffViewCubit extends Cubit<DiffViewState> {
     final projectPath = _projectPath;
     if (projectPath == null) return;
     emit(state.copyWith(loading: true, error: null));
-    _bridge.send(ClientMessage.getDiff(projectPath));
+    final staged = state.viewMode == DiffViewMode.staged ? true : null;
+    _bridge.send(ClientMessage.getDiff(projectPath, staged: staged));
   }
 
   /// Merge image change data from the server into parsed diff files.
@@ -392,10 +398,130 @@ class DiffViewCubit extends Cubit<DiffViewState> {
     return (files: fullFiles, hunks: partialHunks);
   }
 
+  // ---------------------------------------------------------------------------
+  // Staging operations
+  // ---------------------------------------------------------------------------
+
+  /// Switch between unstaged (working-tree) and staged (index) diff view.
+  void switchMode(DiffViewMode mode) {
+    if (mode == state.viewMode) return;
+    emit(state.copyWith(viewMode: mode, loading: true, error: null, files: []));
+    final projectPath = _projectPath;
+    if (projectPath != null) {
+      final staged = mode == DiffViewMode.staged ? true : null;
+      _bridge.send(ClientMessage.getDiff(projectPath, staged: staged));
+    }
+  }
+
+  /// Stage the currently selected hunks.
+  void stageSelectedHunks() {
+    final projectPath = _projectPath;
+    if (projectPath == null || state.selectedHunkKeys.isEmpty) return;
+
+    emit(state.copyWith(staging: true));
+
+    // Group selected hunk keys by file
+    final fileHunks = <String, List<int>>{};
+    for (final key in state.selectedHunkKeys) {
+      final parts = key.split(':');
+      if (parts.length != 2) continue;
+      final fileIdx = int.tryParse(parts[0]);
+      final hunkIdx = int.tryParse(parts[1]);
+      if (fileIdx == null || hunkIdx == null) continue;
+      if (fileIdx >= state.files.length) continue;
+      final filePath = state.files[fileIdx].filePath;
+      (fileHunks[filePath] ??= []).add(hunkIdx);
+    }
+
+    final hunks = <Map<String, dynamic>>[];
+    for (final entry in fileHunks.entries) {
+      for (final idx in entry.value) {
+        hunks.add({'file': entry.key, 'hunkIndex': idx});
+      }
+    }
+
+    _bridge.send(ClientMessage.gitStage(projectPath, hunks: hunks));
+  }
+
+  /// Unstage the currently selected hunks (unstage files).
+  void unstageSelectedHunks() {
+    final projectPath = _projectPath;
+    if (projectPath == null || state.selectedHunkKeys.isEmpty) return;
+
+    emit(state.copyWith(staging: true));
+
+    // Collect unique file paths from selection
+    final filePaths = <String>{};
+    for (final key in state.selectedHunkKeys) {
+      final fileIdx = int.tryParse(key.split(':').first);
+      if (fileIdx != null && fileIdx < state.files.length) {
+        filePaths.add(state.files[fileIdx].filePath);
+      }
+    }
+
+    _bridge.send(ClientMessage.gitUnstage(projectPath, files: filePaths.toList()));
+  }
+
+  /// Stage a single file by index.
+  void stageFile(int fileIdx) {
+    final projectPath = _projectPath;
+    if (projectPath == null || fileIdx >= state.files.length) return;
+    emit(state.copyWith(staging: true));
+    _bridge.send(
+      ClientMessage.gitStage(projectPath, files: [state.files[fileIdx].filePath]),
+    );
+  }
+
+  /// Stage all files.
+  void stageAll() {
+    final projectPath = _projectPath;
+    if (projectPath == null || state.files.isEmpty) return;
+    emit(state.copyWith(staging: true));
+    _bridge.send(
+      ClientMessage.gitStage(
+        projectPath,
+        files: state.files.map((f) => f.filePath).toList(),
+      ),
+    );
+  }
+
+  /// Unstage all files.
+  void unstageAll() {
+    final projectPath = _projectPath;
+    if (projectPath == null || state.files.isEmpty) return;
+    emit(state.copyWith(staging: true));
+    _bridge.send(
+      ClientMessage.gitUnstage(
+        projectPath,
+        files: state.files.map((f) => f.filePath).toList(),
+      ),
+    );
+  }
+
+  void _onStageResult(GitStageResultMessage result) {
+    if (result.success) {
+      emit(state.copyWith(staging: false, selectedHunkKeys: const {}));
+      refresh();
+    } else {
+      emit(state.copyWith(staging: false, error: result.error));
+    }
+  }
+
+  void _onUnstageResult(GitUnstageResultMessage result) {
+    if (result.success) {
+      emit(state.copyWith(staging: false, selectedHunkKeys: const {}));
+      refresh();
+    } else {
+      emit(state.copyWith(staging: false, error: result.error));
+    }
+  }
+
   @override
   Future<void> close() {
     _diffSub?.cancel();
     _diffImageSub?.cancel();
+    _stageSub?.cancel();
+    _unstageSub?.cancel();
     return super.close();
   }
 }

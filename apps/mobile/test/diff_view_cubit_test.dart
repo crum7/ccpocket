@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,13 +79,24 @@ diff --git a/e.dart b/e.dart
 +ee
 ''';
 
-/// Mock BridgeService that exposes a controllable diffResults stream.
+/// Mock BridgeService that exposes controllable streams for diff + staging.
 class MockDiffBridgeService extends BridgeService {
   final _diffController = StreamController<DiffResultMessage>.broadcast();
+  final _stageController = StreamController<GitStageResultMessage>.broadcast();
+  final _unstageController =
+      StreamController<GitUnstageResultMessage>.broadcast();
   final sentMessages = <ClientMessage>[];
 
   @override
   Stream<DiffResultMessage> get diffResults => _diffController.stream;
+
+  @override
+  Stream<GitStageResultMessage> get gitStageResults =>
+      _stageController.stream;
+
+  @override
+  Stream<GitUnstageResultMessage> get gitUnstageResults =>
+      _unstageController.stream;
 
   @override
   void send(ClientMessage message) {
@@ -92,9 +104,16 @@ class MockDiffBridgeService extends BridgeService {
   }
 
   void emitDiff(DiffResultMessage msg) => _diffController.add(msg);
+  void emitStageResult(GitStageResultMessage msg) => _stageController.add(msg);
+  void emitUnstageResult(GitUnstageResultMessage msg) =>
+      _unstageController.add(msg);
 
   @override
-  void dispose() => _diffController.close();
+  void dispose() {
+    _diffController.close();
+    _stageController.close();
+    _unstageController.close();
+  }
 }
 
 DiffViewCubit _createCubit({String? initialDiff}) {
@@ -356,6 +375,205 @@ void main() {
 
       expect(cubit.state.collapsedFileIndices, {0});
       expect(cubit.state.hiddenFileIndices, isEmpty);
+    });
+  });
+
+  group('DiffViewCubit - staging mode', () {
+    test('switchMode emits viewMode change and requests staged diff', () async {
+      final mockBridge = MockDiffBridgeService();
+      final cubit = DiffViewCubit(
+        bridge: mockBridge,
+        projectPath: '/home/user/project',
+      );
+      addTearDown(() {
+        cubit.close();
+        mockBridge.dispose();
+      });
+
+      // Initial getDiff for unstaged
+      expect(mockBridge.sentMessages, hasLength(1));
+
+      cubit.switchMode(DiffViewMode.staged);
+
+      expect(cubit.state.viewMode, DiffViewMode.staged);
+      expect(cubit.state.loading, isTrue);
+      // Should send a second getDiff with staged
+      expect(mockBridge.sentMessages, hasLength(2));
+      final json = jsonDecode(mockBridge.sentMessages.last.toJson())
+          as Map<String, dynamic>;
+      expect(json['staged'], isTrue);
+    });
+
+    test('switchMode to same mode is a no-op', () {
+      final mockBridge = MockDiffBridgeService();
+      final cubit = DiffViewCubit(
+        bridge: mockBridge,
+        projectPath: '/home/user/project',
+      );
+      addTearDown(() {
+        cubit.close();
+        mockBridge.dispose();
+      });
+
+      cubit.switchMode(DiffViewMode.unstaged); // same as default
+      // Should not send additional message
+      expect(mockBridge.sentMessages, hasLength(1));
+    });
+
+    test('stageFile sends git_stage with file path', () async {
+      final mockBridge = MockDiffBridgeService();
+      final cubit = DiffViewCubit(
+        bridge: mockBridge,
+        projectPath: '/home/user/project',
+      );
+      addTearDown(() {
+        cubit.close();
+        mockBridge.dispose();
+      });
+
+      // Simulate diff result to populate files
+      mockBridge.emitDiff(const DiffResultMessage(diff: _multiFileDiff));
+      await Future.microtask(() {});
+
+      cubit.stageFile(1); // file_b.dart
+      expect(cubit.state.staging, isTrue);
+
+      final json = jsonDecode(mockBridge.sentMessages.last.toJson())
+          as Map<String, dynamic>;
+      expect(json['type'], 'git_stage');
+      expect(json['files'], ['file_b.dart']);
+    });
+
+    test('stageAll sends git_stage with all file paths', () async {
+      final mockBridge = MockDiffBridgeService();
+      final cubit = DiffViewCubit(
+        bridge: mockBridge,
+        projectPath: '/home/user/project',
+      );
+      addTearDown(() {
+        cubit.close();
+        mockBridge.dispose();
+      });
+
+      mockBridge.emitDiff(const DiffResultMessage(diff: _multiFileDiff));
+      await Future.microtask(() {});
+
+      cubit.stageAll();
+      expect(cubit.state.staging, isTrue);
+
+      final json = jsonDecode(mockBridge.sentMessages.last.toJson())
+          as Map<String, dynamic>;
+      expect(json['type'], 'git_stage');
+      expect(
+        (json['files'] as List).cast<String>().toSet(),
+        {'file_a.dart', 'file_b.dart', 'file_c.dart'},
+      );
+    });
+
+    test('stageSelectedHunks sends git_stage with selected hunks', () async {
+      final mockBridge = MockDiffBridgeService();
+      final cubit = DiffViewCubit(
+        bridge: mockBridge,
+        projectPath: '/home/user/project',
+      );
+      addTearDown(() {
+        cubit.close();
+        mockBridge.dispose();
+      });
+
+      mockBridge.emitDiff(const DiffResultMessage(diff: _multiFileDiff));
+      await Future.microtask(() {});
+
+      // Select hunk 0 of file_a.dart (index 0) and hunk 0 of file_b.dart (index 1)
+      cubit.toggleSelectionMode();
+      cubit.toggleHunkSelection(0, 0);
+      cubit.toggleHunkSelection(1, 0);
+      cubit.stageSelectedHunks();
+
+      expect(cubit.state.staging, isTrue);
+      final json = jsonDecode(mockBridge.sentMessages.last.toJson())
+          as Map<String, dynamic>;
+      expect(json['type'], 'git_stage');
+      expect(json['hunks'], hasLength(2));
+    });
+
+    test('successful stage result triggers refresh', () async {
+      final mockBridge = MockDiffBridgeService();
+      final cubit = DiffViewCubit(
+        bridge: mockBridge,
+        projectPath: '/home/user/project',
+      );
+      addTearDown(() {
+        cubit.close();
+        mockBridge.dispose();
+      });
+
+      mockBridge.emitDiff(const DiffResultMessage(diff: _multiFileDiff));
+      await Future.microtask(() {});
+
+      cubit.stageAll();
+      mockBridge.emitStageResult(
+        const GitStageResultMessage(success: true),
+      );
+      await Future.microtask(() {});
+
+      expect(cubit.state.staging, isFalse);
+      expect(cubit.state.selectedHunkKeys, isEmpty);
+      // Should have sent a refresh getDiff
+      expect(
+        mockBridge.sentMessages.where((m) => m.type == 'get_diff').length,
+        greaterThanOrEqualTo(2),
+      );
+    });
+
+    test('failed stage result shows error', () async {
+      final mockBridge = MockDiffBridgeService();
+      final cubit = DiffViewCubit(
+        bridge: mockBridge,
+        projectPath: '/home/user/project',
+      );
+      addTearDown(() {
+        cubit.close();
+        mockBridge.dispose();
+      });
+
+      mockBridge.emitDiff(const DiffResultMessage(diff: _multiFileDiff));
+      await Future.microtask(() {});
+
+      cubit.stageFile(0);
+      mockBridge.emitStageResult(
+        const GitStageResultMessage(success: false, error: 'staging failed'),
+      );
+      await Future.microtask(() {});
+
+      expect(cubit.state.staging, isFalse);
+      expect(cubit.state.error, 'staging failed');
+    });
+
+    test('unstageAll sends git_unstage with all file paths', () async {
+      final mockBridge = MockDiffBridgeService();
+      final cubit = DiffViewCubit(
+        bridge: mockBridge,
+        projectPath: '/home/user/project',
+      );
+      addTearDown(() {
+        cubit.close();
+        mockBridge.dispose();
+      });
+
+      mockBridge.emitDiff(const DiffResultMessage(diff: _multiFileDiff));
+      await Future.microtask(() {});
+
+      cubit.unstageAll();
+      expect(cubit.state.staging, isTrue);
+
+      final json = jsonDecode(mockBridge.sentMessages.last.toJson())
+          as Map<String, dynamic>;
+      expect(json['type'], 'git_unstage');
+      expect(
+        (json['files'] as List).cast<String>().toSet(),
+        {'file_a.dart', 'file_b.dart', 'file_c.dart'},
+      );
     });
   });
 }

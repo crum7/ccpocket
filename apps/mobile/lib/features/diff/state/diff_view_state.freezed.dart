@@ -23,7 +23,9 @@ mixin _$DiffViewState {
  String? get errorCode;/// Whether selection mode is active.
  bool get selectionMode;/// Selected hunk keys in the format "$fileIdx:$hunkIdx".
  Set<String> get selectedHunkKeys;/// Indices of image files currently loading on demand.
- Set<int> get loadingImageIndices;
+ Set<int> get loadingImageIndices;/// Current diff view mode: unstaged (working-tree) or staged (index).
+ DiffViewMode get viewMode;/// Whether a stage/unstage operation is in progress.
+ bool get staging;
 /// Create a copy of DiffViewState
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -34,16 +36,16 @@ $DiffViewStateCopyWith<DiffViewState> get copyWith => _$DiffViewStateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiffViewState&&const DeepCollectionEquality().equals(other.files, files)&&const DeepCollectionEquality().equals(other.hiddenFileIndices, hiddenFileIndices)&&const DeepCollectionEquality().equals(other.collapsedFileIndices, collapsedFileIndices)&&(identical(other.loading, loading) || other.loading == loading)&&(identical(other.error, error) || other.error == error)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode)&&(identical(other.selectionMode, selectionMode) || other.selectionMode == selectionMode)&&const DeepCollectionEquality().equals(other.selectedHunkKeys, selectedHunkKeys)&&const DeepCollectionEquality().equals(other.loadingImageIndices, loadingImageIndices));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DiffViewState&&const DeepCollectionEquality().equals(other.files, files)&&const DeepCollectionEquality().equals(other.hiddenFileIndices, hiddenFileIndices)&&const DeepCollectionEquality().equals(other.collapsedFileIndices, collapsedFileIndices)&&(identical(other.loading, loading) || other.loading == loading)&&(identical(other.error, error) || other.error == error)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode)&&(identical(other.selectionMode, selectionMode) || other.selectionMode == selectionMode)&&const DeepCollectionEquality().equals(other.selectedHunkKeys, selectedHunkKeys)&&const DeepCollectionEquality().equals(other.loadingImageIndices, loadingImageIndices)&&(identical(other.viewMode, viewMode) || other.viewMode == viewMode)&&(identical(other.staging, staging) || other.staging == staging));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(files),const DeepCollectionEquality().hash(hiddenFileIndices),const DeepCollectionEquality().hash(collapsedFileIndices),loading,error,errorCode,selectionMode,const DeepCollectionEquality().hash(selectedHunkKeys),const DeepCollectionEquality().hash(loadingImageIndices));
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(files),const DeepCollectionEquality().hash(hiddenFileIndices),const DeepCollectionEquality().hash(collapsedFileIndices),loading,error,errorCode,selectionMode,const DeepCollectionEquality().hash(selectedHunkKeys),const DeepCollectionEquality().hash(loadingImageIndices),viewMode,staging);
 
 @override
 String toString() {
-  return 'DiffViewState(files: $files, hiddenFileIndices: $hiddenFileIndices, collapsedFileIndices: $collapsedFileIndices, loading: $loading, error: $error, errorCode: $errorCode, selectionMode: $selectionMode, selectedHunkKeys: $selectedHunkKeys, loadingImageIndices: $loadingImageIndices)';
+  return 'DiffViewState(files: $files, hiddenFileIndices: $hiddenFileIndices, collapsedFileIndices: $collapsedFileIndices, loading: $loading, error: $error, errorCode: $errorCode, selectionMode: $selectionMode, selectedHunkKeys: $selectedHunkKeys, loadingImageIndices: $loadingImageIndices, viewMode: $viewMode, staging: $staging)';
 }
 
 
@@ -54,7 +56,7 @@ abstract mixin class $DiffViewStateCopyWith<$Res>  {
   factory $DiffViewStateCopyWith(DiffViewState value, $Res Function(DiffViewState) _then) = _$DiffViewStateCopyWithImpl;
 @useResult
 $Res call({
- List<DiffFile> files, Set<int> hiddenFileIndices, Set<int> collapsedFileIndices, bool loading, String? error, String? errorCode, bool selectionMode, Set<String> selectedHunkKeys, Set<int> loadingImageIndices
+ List<DiffFile> files, Set<int> hiddenFileIndices, Set<int> collapsedFileIndices, bool loading, String? error, String? errorCode, bool selectionMode, Set<String> selectedHunkKeys, Set<int> loadingImageIndices, DiffViewMode viewMode, bool staging
 });
 
 
@@ -71,7 +73,7 @@ class _$DiffViewStateCopyWithImpl<$Res>
 
 /// Create a copy of DiffViewState
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? files = null,Object? hiddenFileIndices = null,Object? collapsedFileIndices = null,Object? loading = null,Object? error = freezed,Object? errorCode = freezed,Object? selectionMode = null,Object? selectedHunkKeys = null,Object? loadingImageIndices = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? files = null,Object? hiddenFileIndices = null,Object? collapsedFileIndices = null,Object? loading = null,Object? error = freezed,Object? errorCode = freezed,Object? selectionMode = null,Object? selectedHunkKeys = null,Object? loadingImageIndices = null,Object? viewMode = null,Object? staging = null,}) {
   return _then(_self.copyWith(
 files: null == files ? _self.files : files // ignore: cast_nullable_to_non_nullable
 as List<DiffFile>,hiddenFileIndices: null == hiddenFileIndices ? _self.hiddenFileIndices : hiddenFileIndices // ignore: cast_nullable_to_non_nullable
@@ -82,7 +84,9 @@ as String?,errorCode: freezed == errorCode ? _self.errorCode : errorCode // igno
 as String?,selectionMode: null == selectionMode ? _self.selectionMode : selectionMode // ignore: cast_nullable_to_non_nullable
 as bool,selectedHunkKeys: null == selectedHunkKeys ? _self.selectedHunkKeys : selectedHunkKeys // ignore: cast_nullable_to_non_nullable
 as Set<String>,loadingImageIndices: null == loadingImageIndices ? _self.loadingImageIndices : loadingImageIndices // ignore: cast_nullable_to_non_nullable
-as Set<int>,
+as Set<int>,viewMode: null == viewMode ? _self.viewMode : viewMode // ignore: cast_nullable_to_non_nullable
+as DiffViewMode,staging: null == staging ? _self.staging : staging // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -167,10 +171,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<DiffFile> files,  Set<int> hiddenFileIndices,  Set<int> collapsedFileIndices,  bool loading,  String? error,  String? errorCode,  bool selectionMode,  Set<String> selectedHunkKeys,  Set<int> loadingImageIndices)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( List<DiffFile> files,  Set<int> hiddenFileIndices,  Set<int> collapsedFileIndices,  bool loading,  String? error,  String? errorCode,  bool selectionMode,  Set<String> selectedHunkKeys,  Set<int> loadingImageIndices,  DiffViewMode viewMode,  bool staging)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DiffViewState() when $default != null:
-return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_that.loading,_that.error,_that.errorCode,_that.selectionMode,_that.selectedHunkKeys,_that.loadingImageIndices);case _:
+return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_that.loading,_that.error,_that.errorCode,_that.selectionMode,_that.selectedHunkKeys,_that.loadingImageIndices,_that.viewMode,_that.staging);case _:
   return orElse();
 
 }
@@ -188,10 +192,10 @@ return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<DiffFile> files,  Set<int> hiddenFileIndices,  Set<int> collapsedFileIndices,  bool loading,  String? error,  String? errorCode,  bool selectionMode,  Set<String> selectedHunkKeys,  Set<int> loadingImageIndices)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( List<DiffFile> files,  Set<int> hiddenFileIndices,  Set<int> collapsedFileIndices,  bool loading,  String? error,  String? errorCode,  bool selectionMode,  Set<String> selectedHunkKeys,  Set<int> loadingImageIndices,  DiffViewMode viewMode,  bool staging)  $default,) {final _that = this;
 switch (_that) {
 case _DiffViewState():
-return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_that.loading,_that.error,_that.errorCode,_that.selectionMode,_that.selectedHunkKeys,_that.loadingImageIndices);case _:
+return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_that.loading,_that.error,_that.errorCode,_that.selectionMode,_that.selectedHunkKeys,_that.loadingImageIndices,_that.viewMode,_that.staging);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -208,10 +212,10 @@ return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<DiffFile> files,  Set<int> hiddenFileIndices,  Set<int> collapsedFileIndices,  bool loading,  String? error,  String? errorCode,  bool selectionMode,  Set<String> selectedHunkKeys,  Set<int> loadingImageIndices)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( List<DiffFile> files,  Set<int> hiddenFileIndices,  Set<int> collapsedFileIndices,  bool loading,  String? error,  String? errorCode,  bool selectionMode,  Set<String> selectedHunkKeys,  Set<int> loadingImageIndices,  DiffViewMode viewMode,  bool staging)?  $default,) {final _that = this;
 switch (_that) {
 case _DiffViewState() when $default != null:
-return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_that.loading,_that.error,_that.errorCode,_that.selectionMode,_that.selectedHunkKeys,_that.loadingImageIndices);case _:
+return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_that.loading,_that.error,_that.errorCode,_that.selectionMode,_that.selectedHunkKeys,_that.loadingImageIndices,_that.viewMode,_that.staging);case _:
   return null;
 
 }
@@ -223,7 +227,7 @@ return $default(_that.files,_that.hiddenFileIndices,_that.collapsedFileIndices,_
 
 
 class _DiffViewState implements DiffViewState {
-  const _DiffViewState({final  List<DiffFile> files = const [], final  Set<int> hiddenFileIndices = const {}, final  Set<int> collapsedFileIndices = const {}, this.loading = false, this.error, this.errorCode, this.selectionMode = false, final  Set<String> selectedHunkKeys = const {}, final  Set<int> loadingImageIndices = const {}}): _files = files,_hiddenFileIndices = hiddenFileIndices,_collapsedFileIndices = collapsedFileIndices,_selectedHunkKeys = selectedHunkKeys,_loadingImageIndices = loadingImageIndices;
+  const _DiffViewState({final  List<DiffFile> files = const [], final  Set<int> hiddenFileIndices = const {}, final  Set<int> collapsedFileIndices = const {}, this.loading = false, this.error, this.errorCode, this.selectionMode = false, final  Set<String> selectedHunkKeys = const {}, final  Set<int> loadingImageIndices = const {}, this.viewMode = DiffViewMode.unstaged, this.staging = false}): _files = files,_hiddenFileIndices = hiddenFileIndices,_collapsedFileIndices = collapsedFileIndices,_selectedHunkKeys = selectedHunkKeys,_loadingImageIndices = loadingImageIndices;
   
 
 /// Parsed diff files.
@@ -279,6 +283,10 @@ class _DiffViewState implements DiffViewState {
   return EqualUnmodifiableSetView(_loadingImageIndices);
 }
 
+/// Current diff view mode: unstaged (working-tree) or staged (index).
+@override@JsonKey() final  DiffViewMode viewMode;
+/// Whether a stage/unstage operation is in progress.
+@override@JsonKey() final  bool staging;
 
 /// Create a copy of DiffViewState
 /// with the given fields replaced by the non-null parameter values.
@@ -290,16 +298,16 @@ _$DiffViewStateCopyWith<_DiffViewState> get copyWith => __$DiffViewStateCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiffViewState&&const DeepCollectionEquality().equals(other._files, _files)&&const DeepCollectionEquality().equals(other._hiddenFileIndices, _hiddenFileIndices)&&const DeepCollectionEquality().equals(other._collapsedFileIndices, _collapsedFileIndices)&&(identical(other.loading, loading) || other.loading == loading)&&(identical(other.error, error) || other.error == error)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode)&&(identical(other.selectionMode, selectionMode) || other.selectionMode == selectionMode)&&const DeepCollectionEquality().equals(other._selectedHunkKeys, _selectedHunkKeys)&&const DeepCollectionEquality().equals(other._loadingImageIndices, _loadingImageIndices));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DiffViewState&&const DeepCollectionEquality().equals(other._files, _files)&&const DeepCollectionEquality().equals(other._hiddenFileIndices, _hiddenFileIndices)&&const DeepCollectionEquality().equals(other._collapsedFileIndices, _collapsedFileIndices)&&(identical(other.loading, loading) || other.loading == loading)&&(identical(other.error, error) || other.error == error)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode)&&(identical(other.selectionMode, selectionMode) || other.selectionMode == selectionMode)&&const DeepCollectionEquality().equals(other._selectedHunkKeys, _selectedHunkKeys)&&const DeepCollectionEquality().equals(other._loadingImageIndices, _loadingImageIndices)&&(identical(other.viewMode, viewMode) || other.viewMode == viewMode)&&(identical(other.staging, staging) || other.staging == staging));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_files),const DeepCollectionEquality().hash(_hiddenFileIndices),const DeepCollectionEquality().hash(_collapsedFileIndices),loading,error,errorCode,selectionMode,const DeepCollectionEquality().hash(_selectedHunkKeys),const DeepCollectionEquality().hash(_loadingImageIndices));
+int get hashCode => Object.hash(runtimeType,const DeepCollectionEquality().hash(_files),const DeepCollectionEquality().hash(_hiddenFileIndices),const DeepCollectionEquality().hash(_collapsedFileIndices),loading,error,errorCode,selectionMode,const DeepCollectionEquality().hash(_selectedHunkKeys),const DeepCollectionEquality().hash(_loadingImageIndices),viewMode,staging);
 
 @override
 String toString() {
-  return 'DiffViewState(files: $files, hiddenFileIndices: $hiddenFileIndices, collapsedFileIndices: $collapsedFileIndices, loading: $loading, error: $error, errorCode: $errorCode, selectionMode: $selectionMode, selectedHunkKeys: $selectedHunkKeys, loadingImageIndices: $loadingImageIndices)';
+  return 'DiffViewState(files: $files, hiddenFileIndices: $hiddenFileIndices, collapsedFileIndices: $collapsedFileIndices, loading: $loading, error: $error, errorCode: $errorCode, selectionMode: $selectionMode, selectedHunkKeys: $selectedHunkKeys, loadingImageIndices: $loadingImageIndices, viewMode: $viewMode, staging: $staging)';
 }
 
 
@@ -310,7 +318,7 @@ abstract mixin class _$DiffViewStateCopyWith<$Res> implements $DiffViewStateCopy
   factory _$DiffViewStateCopyWith(_DiffViewState value, $Res Function(_DiffViewState) _then) = __$DiffViewStateCopyWithImpl;
 @override @useResult
 $Res call({
- List<DiffFile> files, Set<int> hiddenFileIndices, Set<int> collapsedFileIndices, bool loading, String? error, String? errorCode, bool selectionMode, Set<String> selectedHunkKeys, Set<int> loadingImageIndices
+ List<DiffFile> files, Set<int> hiddenFileIndices, Set<int> collapsedFileIndices, bool loading, String? error, String? errorCode, bool selectionMode, Set<String> selectedHunkKeys, Set<int> loadingImageIndices, DiffViewMode viewMode, bool staging
 });
 
 
@@ -327,7 +335,7 @@ class __$DiffViewStateCopyWithImpl<$Res>
 
 /// Create a copy of DiffViewState
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? files = null,Object? hiddenFileIndices = null,Object? collapsedFileIndices = null,Object? loading = null,Object? error = freezed,Object? errorCode = freezed,Object? selectionMode = null,Object? selectedHunkKeys = null,Object? loadingImageIndices = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? files = null,Object? hiddenFileIndices = null,Object? collapsedFileIndices = null,Object? loading = null,Object? error = freezed,Object? errorCode = freezed,Object? selectionMode = null,Object? selectedHunkKeys = null,Object? loadingImageIndices = null,Object? viewMode = null,Object? staging = null,}) {
   return _then(_DiffViewState(
 files: null == files ? _self._files : files // ignore: cast_nullable_to_non_nullable
 as List<DiffFile>,hiddenFileIndices: null == hiddenFileIndices ? _self._hiddenFileIndices : hiddenFileIndices // ignore: cast_nullable_to_non_nullable
@@ -338,7 +346,9 @@ as String?,errorCode: freezed == errorCode ? _self.errorCode : errorCode // igno
 as String?,selectionMode: null == selectionMode ? _self.selectionMode : selectionMode // ignore: cast_nullable_to_non_nullable
 as bool,selectedHunkKeys: null == selectedHunkKeys ? _self._selectedHunkKeys : selectedHunkKeys // ignore: cast_nullable_to_non_nullable
 as Set<String>,loadingImageIndices: null == loadingImageIndices ? _self._loadingImageIndices : loadingImageIndices // ignore: cast_nullable_to_non_nullable
-as Set<int>,
+as Set<int>,viewMode: null == viewMode ? _self.viewMode : viewMode // ignore: cast_nullable_to_non_nullable
+as DiffViewMode,staging: null == staging ? _self.staging : staging // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
