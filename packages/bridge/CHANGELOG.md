@@ -2,6 +2,14 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.30.0] - 2026-03-29
+
+### Added
+- File Peek: `read_file` handler for viewing file contents from the mobile app
+
+### Removed
+- Unused `list_dir` handler (directory browsing handled client-side via file list)
+
 ## [1.29.1] - 2026-03-27
 
 ### Fixed
