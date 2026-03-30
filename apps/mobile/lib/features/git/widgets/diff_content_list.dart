@@ -408,7 +408,9 @@ class _SwipeStageDismissible extends StatelessWidget {
                 ],
               ),
             )
-          : null,
+          : hasLeftAction
+              ? const SizedBox.shrink()
+              : null,
       secondaryBackground: hasLeftAction
           ? Container(
               alignment: Alignment.centerRight,
