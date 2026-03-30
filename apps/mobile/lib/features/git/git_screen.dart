@@ -205,11 +205,16 @@ class _GitScreenBody extends StatelessWidget {
               isFilePartiallySelected: cubit.isFilePartiallySelected,
               onLoadImage: cubit.loadImage,
               loadingImageIndices: state.loadingImageIndices,
-              // Staged tab: only unstage swipe. Changes tab: both.
+              // Staged tab: only unstage swipe. Changes tab: stage + revert.
               onSwipeStage: isProjectMode && state.viewMode != GitViewMode.staged
                   ? cubit.stageFile
                   : null,
-              onSwipeUnstage: isProjectMode ? cubit.unstageFile : null,
+              onSwipeUnstage: isProjectMode && state.viewMode == GitViewMode.staged
+                  ? cubit.unstageFile
+                  : null,
+              onSwipeRevert: isProjectMode && state.viewMode != GitViewMode.staged
+                  ? cubit.revertFile
+                  : null,
               // Long-press to enter selection mode
               onLongPressFile: isProjectMode && !state.selectionMode
                   ? (fileIdx) {

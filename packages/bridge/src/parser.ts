@@ -146,6 +146,7 @@ export type ClientMessage =
   | { type: "git_branches"; projectPath: string; query?: string }
   | { type: "git_create_branch"; projectPath: string; name: string; checkout?: boolean }
   | { type: "git_checkout_branch"; projectPath: string; branch: string }
+  | { type: "git_revert_file"; projectPath: string; files: string[] }
   | { type: "git_fetch"; projectPath: string }
   | { type: "git_pull"; projectPath: string }
   | { type: "git_remote_status"; projectPath: string };
@@ -299,6 +300,7 @@ export type ServerMessage =
   | { type: "git_branches_result"; current: string; branches: string[]; checkedOutBranches?: string[]; error?: string }
   | { type: "git_create_branch_result"; success: boolean; error?: string }
   | { type: "git_checkout_branch_result"; success: boolean; error?: string }
+  | { type: "git_revert_file_result"; success: boolean; error?: string }
   | { type: "git_fetch_result"; success: boolean; error?: string }
   | { type: "git_pull_result"; success: boolean; message?: string; error?: string }
   | { type: "git_remote_status_result"; ahead: number; behind: number; branch: string; hasUpstream: boolean };
@@ -574,6 +576,10 @@ export function parseClientMessage(data: string): ClientMessage | null {
       case "git_checkout_branch":
         if (typeof msg.projectPath !== "string") return null;
         if (typeof msg.branch !== "string") return null;
+        break;
+      case "git_revert_file":
+        if (typeof msg.projectPath !== "string") return null;
+        if (!Array.isArray(msg.files)) return null;
         break;
       case "git_fetch":
         if (typeof msg.projectPath !== "string") return null;

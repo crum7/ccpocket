@@ -734,6 +734,10 @@ sealed class ServerMessage {
         success: json['success'] as bool? ?? false,
         error: json['error'] as String?,
       ),
+      'git_revert_file_result' => GitRevertFileResultMessage(
+        success: json['success'] as bool? ?? false,
+        error: json['error'] as String?,
+      ),
       'git_fetch_result' => GitFetchResultMessage(
         success: json['success'] as bool? ?? false,
         error: json['error'] as String?,
@@ -1707,6 +1711,12 @@ class GitCheckoutBranchResultMessage implements ServerMessage {
   const GitCheckoutBranchResultMessage({required this.success, this.error});
 }
 
+class GitRevertFileResultMessage implements ServerMessage {
+  final bool success;
+  final String? error;
+  const GitRevertFileResultMessage({required this.success, this.error});
+}
+
 class GitFetchResultMessage implements ServerMessage {
   final bool success;
   final String? error;
@@ -2665,6 +2675,13 @@ class ClientMessage {
         'type': 'git_checkout_branch',
         'projectPath': projectPath,
         'branch': branch,
+      });
+
+  factory ClientMessage.gitRevertFile(String projectPath, List<String> files) =>
+      ClientMessage._({
+        'type': 'git_revert_file',
+        'projectPath': projectPath,
+        'files': files,
       });
 
   factory ClientMessage.gitFetch(String projectPath) =>

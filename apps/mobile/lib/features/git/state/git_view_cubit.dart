@@ -25,6 +25,7 @@ class GitViewCubit extends Cubit<GitViewState> {
   StreamSubscription<GitPushResultMessage>? _pushResultSub;
   StreamSubscription<GitCommitResultMessage>? _commitResultSub;
   StreamSubscription<GitRemoteStatusResultMessage>? _remoteStatusSub;
+  StreamSubscription<GitRevertFileResultMessage>? _revertSub;
   StreamSubscription<GitBranchesResultMessage>? _branchesSub;
   StreamSubscription<GitCheckoutBranchResultMessage>? _checkoutSub;
   final String? _projectPath;
@@ -53,6 +54,7 @@ class GitViewCubit extends Cubit<GitViewState> {
       _pullSub = _bridge.gitPullResults.listen(_onPullResult);
       _pushResultSub = _bridge.gitPushResults.listen(_onPushResult);
       _commitResultSub = _bridge.gitCommitResults.listen(_onCommitResult);
+      _revertSub = _bridge.gitRevertFileResults.listen(_onRevertResult);
       _remoteStatusSub = _bridge.gitRemoteStatusResults.listen(_onRemoteStatus);
       _branchesSub = _bridge.gitBranchesResults.listen(_onBranchesResult);
       _checkoutSub = _bridge.gitCheckoutBranchResults.listen(_onCheckoutResult);
@@ -512,6 +514,16 @@ class GitViewCubit extends Cubit<GitViewState> {
     );
   }
 
+  /// Revert (discard) changes for a single file.
+  void revertFile(int fileIdx) {
+    final projectPath = _projectPath;
+    if (projectPath == null || fileIdx >= state.files.length) return;
+    emit(state.copyWith(staging: true));
+    _bridge.send(
+      ClientMessage.gitRevertFile(projectPath, [state.files[fileIdx].filePath]),
+    );
+  }
+
   /// Stage all files.
   void stageAll() {
     final projectPath = _projectPath;
@@ -541,6 +553,15 @@ class GitViewCubit extends Cubit<GitViewState> {
   void _onStageResult(GitStageResultMessage result) {
     if (result.success) {
       emit(state.copyWith(staging: false, selectedHunkKeys: const {}));
+      refresh();
+    } else {
+      emit(state.copyWith(staging: false, error: result.error));
+    }
+  }
+
+  void _onRevertResult(GitRevertFileResultMessage result) {
+    if (result.success) {
+      emit(state.copyWith(staging: false));
       refresh();
     } else {
       emit(state.copyWith(staging: false, error: result.error));
@@ -655,6 +676,7 @@ class GitViewCubit extends Cubit<GitViewState> {
     _diffImageSub?.cancel();
     _stageSub?.cancel();
     _unstageSub?.cancel();
+    _revertSub?.cancel();
     _fetchSub?.cancel();
     _pullSub?.cancel();
     _pushResultSub?.cancel();

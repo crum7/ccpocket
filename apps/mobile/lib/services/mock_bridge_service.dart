@@ -98,6 +98,12 @@ class MockBridgeService extends BridgeService {
           .cast<GitCheckoutBranchResultMessage>();
 
   @override
+  Stream<GitRevertFileResultMessage> get gitRevertFileResults =>
+      _mockMessageController.stream
+          .where((m) => m is GitRevertFileResultMessage)
+          .cast<GitRevertFileResultMessage>();
+
+  @override
   Stream<GitFetchResultMessage> get gitFetchResults =>
       _mockMessageController.stream
           .where((m) => m is GitFetchResultMessage)
@@ -299,6 +305,14 @@ class MockBridgeService extends BridgeService {
         _scheduleMessage(
           const Duration(milliseconds: 300),
           const GitCheckoutBranchResultMessage(success: true),
+        );
+      case 'git_revert_file':
+        // In mock, "revert" removes the file from the diff
+        // (simulated by clearing the mock diff for those files, but for simplicity
+        //  we just return success and let the diff refresh handle it)
+        _scheduleMessage(
+          const Duration(milliseconds: 200),
+          const GitRevertFileResultMessage(success: true),
         );
       case 'git_fetch':
         _scheduleMessage(

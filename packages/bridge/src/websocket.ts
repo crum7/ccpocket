@@ -20,7 +20,7 @@ import {
   stageFiles, stageHunks, unstageFiles,
   gitCommit, gitPush, ghPrCreate, gitStatus,
   listBranches, createBranch, checkoutBranch,
-  gitFetch, gitPull, gitRemoteStatus,
+  revertFiles, gitFetch, gitPull, gitRemoteStatus,
 } from "./git-operations.js";
 import { listWindows, takeScreenshot } from "./screenshot.js";
 import { DebugTraceStore } from "./debug-trace-store.js";
@@ -2156,6 +2156,20 @@ export class BridgeWebSocketServer {
           this.send(ws, { type: "git_checkout_branch_result", success: true });
         } catch (err) {
           this.send(ws, { type: "git_checkout_branch_result", success: false, error: String(err) });
+        }
+        break;
+      }
+
+      case "git_revert_file": {
+        if (!this.isPathAllowed(msg.projectPath)) {
+          this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
+          break;
+        }
+        try {
+          revertFiles(msg.projectPath, msg.files);
+          this.send(ws, { type: "git_revert_file_result", success: true });
+        } catch (err) {
+          this.send(ws, { type: "git_revert_file_result", success: false, error: String(err) });
         }
         break;
       }

@@ -249,6 +249,7 @@ class ServerMessageWidget extends StatelessWidget {
       GitBranchesResultMessage() => const SizedBox.shrink(),
       GitCreateBranchResultMessage() => const SizedBox.shrink(),
       GitCheckoutBranchResultMessage() => const SizedBox.shrink(),
+      GitRevertFileResultMessage() => const SizedBox.shrink(),
       GitFetchResultMessage() => const SizedBox.shrink(),
       GitPullResultMessage() => const SizedBox.shrink(),
       GitRemoteStatusResultMessage() => const SizedBox.shrink(),

@@ -256,6 +256,12 @@ export function checkoutBranch(projectPath: string, branch: string): void {
   execFileSync("git", ["checkout", branch], { cwd, encoding: "utf-8" });
 }
 
+/** Revert (discard) unstaged changes for specific files. */
+export function revertFiles(projectPath: string, files: string[]): void {
+  const cwd = resolveProject(projectPath);
+  execFileSync("git", ["checkout", "--", ...files], { cwd, encoding: "utf-8" });
+}
+
 // ---- Remote Operations ----
 
 export interface RemoteStatusResult {

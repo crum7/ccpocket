@@ -24,6 +24,7 @@ class DiffContentList extends StatelessWidget {
   final Set<int> loadingImageIndices;
   final ValueChanged<int>? onSwipeStage;
   final ValueChanged<int>? onSwipeUnstage;
+  final ValueChanged<int>? onSwipeRevert;
   final ValueChanged<int>? onLongPressFile;
   final Set<String> stagedFilePaths;
 
@@ -44,6 +45,7 @@ class DiffContentList extends StatelessWidget {
     this.loadingImageIndices = const {},
     this.onSwipeStage,
     this.onSwipeUnstage,
+    this.onSwipeRevert,
     this.onLongPressFile,
     this.stagedFilePaths = const {},
   });
@@ -146,6 +148,7 @@ class DiffContentList extends StatelessWidget {
         loadingImageIndices: loadingImageIndices,
         onSwipeStage: onSwipeStage,
         onSwipeUnstage: onSwipeUnstage,
+        onSwipeRevert: onSwipeRevert,
         onLongPressFile: onLongPressFile,
         stagedFilePaths: stagedFilePaths,
       ),
@@ -168,12 +171,13 @@ class DiffContentList extends StatelessWidget {
           ? () => onLongPressFile!(fileIdx)
           : null,
     );
-    if (onSwipeStage != null || onSwipeUnstage != null) {
+    if (onSwipeStage != null || onSwipeUnstage != null || onSwipeRevert != null) {
       return _SwipeStageDismissible(
         fileIdx: fileIdx,
         filePath: file.filePath,
         onSwipeStage: onSwipeStage,
         onSwipeUnstage: onSwipeUnstage,
+        onSwipeRevert: onSwipeRevert,
         child: header,
       );
     }
@@ -213,6 +217,7 @@ class _DiffListItem extends StatelessWidget {
   final Set<int> loadingImageIndices;
   final ValueChanged<int>? onSwipeStage;
   final ValueChanged<int>? onSwipeUnstage;
+  final ValueChanged<int>? onSwipeRevert;
   final ValueChanged<int>? onLongPressFile;
   final Set<String> stagedFilePaths;
 
@@ -233,6 +238,7 @@ class _DiffListItem extends StatelessWidget {
     this.loadingImageIndices = const {},
     this.onSwipeStage,
     this.onSwipeUnstage,
+    this.onSwipeRevert,
     this.onLongPressFile,
     this.stagedFilePaths = const {},
   });
@@ -275,12 +281,13 @@ class _DiffListItem extends StatelessWidget {
                 ? () => onLongPressFile!(fileIdx)
                 : null,
           );
-          if (onSwipeStage != null || onSwipeUnstage != null) {
+          if (onSwipeStage != null || onSwipeUnstage != null || onSwipeRevert != null) {
             return _SwipeStageDismissible(
               fileIdx: fileIdx,
               filePath: file.filePath,
               onSwipeStage: onSwipeStage,
               onSwipeUnstage: onSwipeUnstage,
+              onSwipeRevert: onSwipeRevert,
               child: header,
             );
           }
@@ -325,12 +332,15 @@ class _DiffListItem extends StatelessWidget {
   }
 }
 
-/// Wraps a file header with swipe-to-stage (right) / swipe-to-unstage (left).
+/// Wraps a file header with swipe gestures:
+/// - Right swipe → Stage (green)
+/// - Left swipe → Unstage (amber) or Revert/Discard (red)
 class _SwipeStageDismissible extends StatelessWidget {
   final int fileIdx;
   final String filePath;
   final ValueChanged<int>? onSwipeStage;
   final ValueChanged<int>? onSwipeUnstage;
+  final ValueChanged<int>? onSwipeRevert;
   final Widget child;
 
   const _SwipeStageDismissible({
@@ -338,6 +348,7 @@ class _SwipeStageDismissible extends StatelessWidget {
     required this.filePath,
     this.onSwipeStage,
     this.onSwipeUnstage,
+    this.onSwipeRevert,
     required this.child,
   });
 
@@ -345,56 +356,81 @@ class _SwipeStageDismissible extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
+    // Determine left swipe action: Revert takes priority, then Unstage
+    final hasLeftAction = onSwipeRevert != null || onSwipeUnstage != null;
+    final isRevert = onSwipeRevert != null;
+    final leftLabel = isRevert ? 'Revert' : 'Unstage';
+    final leftColor = isRevert ? cs.error : cs.tertiary;
+    final leftIcon = isRevert ? Icons.undo : Icons.remove_circle_outline;
+
+    // Determine swipe direction
+    final direction = onSwipeStage != null && hasLeftAction
+        ? DismissDirection.horizontal
+        : onSwipeStage != null
+            ? DismissDirection.startToEnd
+            : hasLeftAction
+                ? DismissDirection.endToStart
+                : DismissDirection.none;
+
     return Dismissible(
       key: ValueKey('swipe_stage_$filePath'),
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
+      direction: direction,
+      confirmDismiss: (dir) async {
+        if (dir == DismissDirection.startToEnd) {
           onSwipeStage?.call(fileIdx);
         } else {
-          onSwipeUnstage?.call(fileIdx);
+          if (onSwipeRevert != null) {
+            onSwipeRevert!.call(fileIdx);
+          } else {
+            onSwipeUnstage?.call(fileIdx);
+          }
         }
         return false;
       },
-      background: Container(
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        color: cs.primary.withValues(alpha: 0.15),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.add_circle_outline, color: cs.primary, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Stage',
-              style: TextStyle(
-                color: cs.primary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+      background: onSwipeStage != null
+          ? Container(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 20),
+              color: cs.primary.withValues(alpha: 0.15),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.add_circle_outline, color: cs.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Stage',
+                    style: TextStyle(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-      ),
-      secondaryBackground: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        color: cs.error.withValues(alpha: 0.15),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Unstage',
-              style: TextStyle(
-                color: cs.error,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+            )
+          : null,
+      secondaryBackground: hasLeftAction
+          ? Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              color: leftColor.withValues(alpha: 0.15),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    leftLabel,
+                    style: TextStyle(
+                      color: leftColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(leftIcon, color: leftColor, size: 20),
+                ],
               ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.remove_circle_outline, color: cs.error, size: 20),
-          ],
-        ),
-      ),
+            )
+          : null,
       child: child,
     );
   }

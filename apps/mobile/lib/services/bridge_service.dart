@@ -70,6 +70,8 @@ class BridgeService implements BridgeServiceBase {
       StreamController<GitCreateBranchResultMessage>.broadcast();
   final _gitCheckoutBranchResultController =
       StreamController<GitCheckoutBranchResultMessage>.broadcast();
+  final _gitRevertFileResultController =
+      StreamController<GitRevertFileResultMessage>.broadcast();
   final _gitFetchResultController =
       StreamController<GitFetchResultMessage>.broadcast();
   final _gitPullResultController =
@@ -161,6 +163,8 @@ class BridgeService implements BridgeServiceBase {
       _gitCreateBranchResultController.stream;
   Stream<GitCheckoutBranchResultMessage> get gitCheckoutBranchResults =>
       _gitCheckoutBranchResultController.stream;
+  Stream<GitRevertFileResultMessage> get gitRevertFileResults =>
+      _gitRevertFileResultController.stream;
   Stream<GitFetchResultMessage> get gitFetchResults =>
       _gitFetchResultController.stream;
   Stream<GitPullResultMessage> get gitPullResults =>
@@ -312,6 +316,8 @@ class BridgeService implements BridgeServiceBase {
                 _gitCreateBranchResultController.add(msg);
               case GitCheckoutBranchResultMessage():
                 _gitCheckoutBranchResultController.add(msg);
+              case GitRevertFileResultMessage():
+                _gitRevertFileResultController.add(msg);
               case GitFetchResultMessage():
                 _gitFetchResultController.add(msg);
               case GitPullResultMessage():
@@ -1117,6 +1123,7 @@ class BridgeService implements BridgeServiceBase {
     _gitBranchesResultController.close();
     _gitCreateBranchResultController.close();
     _gitCheckoutBranchResultController.close();
+    _gitRevertFileResultController.close();
     _gitFetchResultController.close();
     _gitPullResultController.close();
     _gitRemoteStatusResultController.close();
