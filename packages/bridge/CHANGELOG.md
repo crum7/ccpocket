@@ -10,6 +10,10 @@ All notable changes to `@ccpocket/bridge` will be documented in this file.
 ### Changed
 - `git_commit` now requires `sessionId` when `autoGenerate=true`
 
+### Fixed
+- Use Codex Mini for commit message auto-generation
+- Support current Codex exec CLI interface
+
 ### Removed
 - Unused post-1.30.0 git API surface: `git_status`, `git_status_result`, `git_branches.query`, `git_push.forceLease`, `git_push_result.remote`, `git_push_result.branch`
 
