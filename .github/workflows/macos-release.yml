@@ -38,6 +38,19 @@ jobs:
       - run: flutter test
         working-directory: apps/mobile
 
+      - name: Install Codemagic CLI Tools
+        run: |
+          pipx install codemagic-cli-tools
+          pipx ensurepath
+
+      - name: Fetch Developer ID signing files
+        run: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type MAC_APP_DIRECT \
+            --platform MAC_OS --create
+        env:
+          BUNDLE_ID: com.k9i.ccpocket
+
       # --- Code Signing (p12 direct import) ---
       - name: Import Developer ID certificate
         run: |
@@ -68,6 +81,9 @@ jobs:
           # Verify certificate is available
           security find-identity -v -p codesigning
           echo "keychain_path=$KEYCHAIN_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Set up code signing
+        run: xcode-project use-profiles
 
       # --- Build ---
       - name: Build macOS app
