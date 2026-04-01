@@ -34,6 +34,7 @@ ccpocket-bridge
 | `BRIDGE_PORT` | `8765` | WebSocket port |
 | `BRIDGE_HOST` | `0.0.0.0` | Bind address |
 | `BRIDGE_API_KEY` | (none) | API key authentication (enabled when set) |
+| `BRIDGE_PUBLIC_WS_URL` | (none) | Public `ws://` / `wss://` URL used for startup deep link and QR code |
 | `BRIDGE_DEMO_MODE` | (none) | Demo mode: hide Tailscale IPs and API key from QR code / logs |
 | `BRIDGE_RECORDING` | (none) | Enable session recording for debugging (enabled when set) |
 | `HTTPS_PROXY` | (none) | Proxy for outgoing fetch requests (`http://`, `socks5://`) |
@@ -41,7 +42,20 @@ ccpocket-bridge
 ```bash
 # Example: custom port with API key
 BRIDGE_PORT=9000 BRIDGE_API_KEY=my-secret npx @ccpocket/bridge@latest
+
+# Example: expose Bridge through a reverse proxy / ngrok
+BRIDGE_PUBLIC_WS_URL=wss://example.ngrok-free.app npx @ccpocket/bridge@latest
+
+# Example: same setting via CLI flag
+ccpocket-bridge --public-ws-url wss://example.ngrok-free.app
 ```
+
+When `BRIDGE_PUBLIC_WS_URL` is set, the startup deep link and terminal QR code
+use that public URL instead of the LAN address. This is useful when the Bridge
+is reachable through a reverse proxy, tunnel, or public domain.
+
+Without it, the printed QR code is LAN-oriented by default and typically encodes
+something like `ws://192.168.x.x:8765`.
 
 ## Requirements
 

@@ -28,12 +28,15 @@ interface SetupOptions {
   port?: string;
   host?: string;
   apiKey?: string;
+  publicWsUrl?: string;
 }
 
 export function setupLaunchd(opts: SetupOptions): void {
   const port = opts.port ?? process.env.BRIDGE_PORT ?? "8765";
   const host = opts.host ?? process.env.BRIDGE_HOST ?? "0.0.0.0";
   const apiKey = opts.apiKey ?? process.env.BRIDGE_API_KEY ?? "";
+  const publicWsUrl =
+    opts.publicWsUrl ?? process.env.BRIDGE_PUBLIC_WS_URL ?? "";
   const plistPath = getPlistPath();
 
   // Resolve the npx binary path
@@ -56,6 +59,12 @@ export function setupLaunchd(opts: SetupOptions): void {
     envBlock += `
         <key>BRIDGE_API_KEY</key>
         <string>${apiKey}</string>`;
+  }
+
+  if (publicWsUrl) {
+    envBlock += `
+        <key>BRIDGE_PUBLIC_WS_URL</key>
+        <string>${publicWsUrl}</string>`;
   }
 
   // Generate plist

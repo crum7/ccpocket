@@ -45,6 +45,7 @@ if (subcommand === "doctor") {
     port: parseFlag("port"),
     host: parseFlag("host"),
     apiKey: parseFlag("api-key"),
+    publicWsUrl: parseFlag("public-ws-url"),
   };
 
   if (platform() === "darwin") {
@@ -76,10 +77,12 @@ if (subcommand === "doctor") {
   const port = parseFlag("port");
   const host = parseFlag("host");
   const apiKey = parseFlag("api-key");
+  const publicWsUrl = parseFlag("public-ws-url");
 
   if (port) process.env.BRIDGE_PORT = port;
   if (host) process.env.BRIDGE_HOST = host;
   if (apiKey) process.env.BRIDGE_API_KEY = apiKey;
+  if (publicWsUrl) process.env.BRIDGE_PUBLIC_WS_URL = publicWsUrl;
 
   startServer();
 }

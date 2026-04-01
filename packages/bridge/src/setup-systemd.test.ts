@@ -76,6 +76,27 @@ describe("setup-systemd", () => {
       expect(content).toContain("Environment=BRIDGE_API_KEY=my-secret");
     });
 
+    it("includes BRIDGE_PUBLIC_WS_URL when publicWsUrl is provided", () => {
+      setupSystemd({ publicWsUrl: "wss://example.com/ws" });
+
+      const content = mockWriteFileSync.mock.calls[0]![1] as string;
+      expect(content).toContain(
+        "Environment=BRIDGE_PUBLIC_WS_URL=wss://example.com/ws",
+      );
+    });
+
+    it("prefers explicit publicWsUrl over environment", () => {
+      process.env.BRIDGE_PUBLIC_WS_URL = "wss://env.example.com";
+
+      setupSystemd({ publicWsUrl: "wss://flag.example.com" });
+
+      const content = mockWriteFileSync.mock.calls[0]![1] as string;
+      expect(content).toContain(
+        "Environment=BRIDGE_PUBLIC_WS_URL=wss://flag.example.com",
+      );
+      expect(content).not.toContain("wss://env.example.com");
+    });
+
     it("omits BRIDGE_API_KEY when apiKey is empty", () => {
       setupSystemd({ apiKey: "" });
 

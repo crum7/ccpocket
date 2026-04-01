@@ -6,6 +6,24 @@ interface NetworkAddress {
   label: string;
 }
 
+export function validatePublicWsUrl(rawUrl?: string): string | undefined {
+  const trimmed = rawUrl?.trim();
+  if (!trimmed) return undefined;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    return undefined;
+  }
+
+  if ((parsed.protocol !== "ws:" && parsed.protocol !== "wss:") || !parsed.host) {
+    return undefined;
+  }
+
+  return trimmed;
+}
+
 export function getReachableAddresses(): NetworkAddress[] {
   const interfaces = os.networkInterfaces();
   const addresses: NetworkAddress[] = [];
@@ -32,11 +50,9 @@ export function getReachableAddresses(): NetworkAddress[] {
 }
 
 export function buildConnectionUrl(
-  ip: string,
-  port: number,
+  wsUrl: string,
   apiKey?: string,
 ): string {
-  const wsUrl = `ws://${ip}:${port}`;
   const params = new URLSearchParams({ url: wsUrl });
   if (apiKey) {
     params.set("token", apiKey);
@@ -50,16 +66,22 @@ export async function printStartupInfo(
   apiKey?: string,
 ): Promise<void> {
   const addresses = getReachableAddresses();
-  if (addresses.length === 0) return;
-
   const demoMode = !!process.env.BRIDGE_DEMO_MODE;
+  const rawPublicWsUrl = process.env.BRIDGE_PUBLIC_WS_URL;
+  const publicWsUrl = validatePublicWsUrl(rawPublicWsUrl);
+
+  if (rawPublicWsUrl && !publicWsUrl) {
+    console.warn(
+      `[bridge] Warning: ignoring invalid BRIDGE_PUBLIC_WS_URL: ${rawPublicWsUrl}`,
+    );
+  }
 
   // Demo mode: exclude Tailscale addresses for video recording
   const displayAddresses = demoMode
     ? addresses.filter((a) => a.label !== "Tailscale")
     : addresses;
 
-  if (displayAddresses.length === 0) return;
+  if (displayAddresses.length === 0 && !publicWsUrl) return;
 
   const lines: string[] = [];
   lines.push("");
@@ -84,16 +106,19 @@ export async function printStartupInfo(
     }
   }
 
-  // Use first LAN address, fallback to first address
-  const primaryAddr =
-    displayAddresses.find((a) => a.label === "LAN")?.ip ??
-    displayAddresses[0].ip;
+  if (publicWsUrl) {
+    lines.push(`[bridge]   ${"Public:".padEnd(12)} ${publicWsUrl}`);
+  }
+
+  const fallbackWsUrl = displayAddresses.length > 0
+    ? `ws://${displayAddresses.find((a) => a.label === "LAN")?.ip ?? displayAddresses[0].ip}:${port}`
+    : undefined;
+
+  const connectWsUrl = publicWsUrl ?? fallbackWsUrl;
+  if (!connectWsUrl) return;
+
   // Demo mode: omit API key from deep link
-  const deepLink = buildConnectionUrl(
-    primaryAddr,
-    port,
-    demoMode ? undefined : apiKey,
-  );
+  const deepLink = buildConnectionUrl(connectWsUrl, demoMode ? undefined : apiKey);
 
   lines.push("");
   lines.push(`[bridge]   Deep Link: ${deepLink}`);

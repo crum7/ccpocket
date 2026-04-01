@@ -47,12 +47,15 @@ interface SetupOptions {
   port?: string;
   host?: string;
   apiKey?: string;
+  publicWsUrl?: string;
 }
 
 export function setupSystemd(opts: SetupOptions): void {
   const port = opts.port ?? process.env.BRIDGE_PORT ?? "8765";
   const host = opts.host ?? process.env.BRIDGE_HOST ?? "0.0.0.0";
   const apiKey = opts.apiKey ?? process.env.BRIDGE_API_KEY ?? "";
+  const publicWsUrl =
+    opts.publicWsUrl ?? process.env.BRIDGE_PUBLIC_WS_URL ?? "";
   const servicePath = getServicePath();
 
   // Resolve the npx binary path
@@ -78,6 +81,9 @@ Environment=BRIDGE_HOST=${host}`;
 
   if (apiKey) {
     envLines += `\nEnvironment=BRIDGE_API_KEY=${apiKey}`;
+  }
+  if (publicWsUrl) {
+    envLines += `\nEnvironment=BRIDGE_PUBLIC_WS_URL=${publicWsUrl}`;
   }
 
   // Generate systemd user service unit
