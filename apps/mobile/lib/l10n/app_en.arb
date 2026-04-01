@@ -201,6 +201,19 @@
       }
     }
   },
+  "changeApprovalPolicyTitle": "Change Approval Policy",
+  "changeApprovalPolicyBody": "Switching to {mode} will restart the session. Your conversation will be preserved.",
+  "@changeApprovalPolicyBody": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "codexApprovalUntrustedDescription": "Auto-run only trusted commands; ask for everything else",
+  "codexApprovalOnRequestDescription": "Ask only when the agent decides approval is needed",
+  "codexApprovalOnFailureDescription": "Run without asking first; ask only when a command fails (Deprecated)",
+  "codexApprovalNeverDescription": "Never ask for approval; failures are returned immediately",
   "enablePlanModeTitle": "Enable Plan Mode",
   "disablePlanModeTitle": "Disable Plan Mode",
   "enablePlanModeBody": "Enabling Plan Mode will restart the session. Your conversation will be preserved.",

@@ -73,6 +73,7 @@ class SessionModeBar extends StatelessWidget {
                   ),
                   ExecutionModeChip(
                     currentMode: executionMode,
+                    codexApprovalPolicy: chatCubit.state.codexApprovalPolicy,
                     provider: chatCubit.provider,
                     onTap: () => showExecutionModeMenu(
                       context,
@@ -304,92 +305,94 @@ void showExecutionModeMenu(
     );
     return;
   }
-  final currentMode = chatCubit.state.executionMode;
+  final currentPolicy = chatCubit.state.codexApprovalPolicy;
   final l = AppLocalizations.of(context);
-
-  const purple = Color(0xFFBB86FC);
-
-  final modeDetails =
-      <ExecutionMode, ({IconData icon, String description, Color color})>{
-        ExecutionMode.defaultMode: (
-          icon: Icons.tune,
-          description: l.executionDefaultDescription,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
-        ExecutionMode.acceptEdits: (
-          icon: Icons.edit_note,
-          description: l.executionAcceptEditsDescription,
-          color: purple,
-        ),
-        ExecutionMode.fullAccess: (
-          icon: Icons.flash_on,
-          description: l.executionFullAccessDescription,
-          color: Theme.of(context).colorScheme.error,
-        ),
-      };
 
   showModalBottomSheet(
     context: context,
     builder: (sheetContext) {
       final sheetCs = Theme.of(sheetContext).colorScheme;
       return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Execution',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: sheetCs.onSurface,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    l.approval,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: sheetCs.onSurface,
+                    ),
                   ),
                 ),
               ),
-            ),
-            for (final mode
-                in chatCubit.isCodex
-                    ? const [
-                        ExecutionMode.defaultMode,
-                        ExecutionMode.fullAccess,
-                      ]
-                    : ExecutionMode.values)
-              ListTile(
-                leading: Icon(
-                  modeDetails[mode]!.icon,
-                  color: mode == currentMode
-                      ? modeDetails[mode]!.color
-                      : sheetCs.onSurfaceVariant,
+              for (final policy in CodexApprovalPolicy.values)
+                ListTile(
+                  leading: Icon(
+                    switch (policy) {
+                      CodexApprovalPolicy.untrusted =>
+                        Icons.verified_user_outlined,
+                      CodexApprovalPolicy.onRequest => Icons.tune,
+                      CodexApprovalPolicy.onFailure =>
+                        Icons.auto_mode_outlined,
+                      CodexApprovalPolicy.never => Icons.flash_on,
+                    },
+                    color: policy == currentPolicy
+                        ? (policy == CodexApprovalPolicy.never
+                            ? sheetCs.error
+                            : sheetCs.primary)
+                        : sheetCs.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    switch (policy) {
+                      CodexApprovalPolicy.untrusted => 'Untrusted',
+                      CodexApprovalPolicy.onRequest => 'On Request',
+                      CodexApprovalPolicy.onFailure => 'On Failure',
+                      CodexApprovalPolicy.never => 'Never Ask',
+                    },
+                  ),
+                  subtitle: Text(
+                    switch (policy) {
+                      CodexApprovalPolicy.untrusted =>
+                        l.codexApprovalUntrustedDescription,
+                      CodexApprovalPolicy.onRequest =>
+                        l.codexApprovalOnRequestDescription,
+                      CodexApprovalPolicy.onFailure =>
+                        l.codexApprovalOnFailureDescription,
+                      CodexApprovalPolicy.never =>
+                        l.codexApprovalNeverDescription,
+                    },
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: policy == currentPolicy
+                      ? Icon(
+                          Icons.check,
+                          color: policy == CodexApprovalPolicy.never
+                              ? sheetCs.error
+                              : sheetCs.primary,
+                          size: 20,
+                        )
+                      : null,
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    if (policy == currentPolicy) return;
+                    HapticFeedback.lightImpact();
+                    _confirmExecutionModeChange(
+                      context,
+                      chatCubit,
+                      policy,
+                      onBeforeRestart: onBeforeRestart,
+                    );
+                  },
                 ),
-                title: Text(mode.label),
-                subtitle: Text(
-                  modeDetails[mode]!.description,
-                  style: const TextStyle(fontSize: 12),
-                ),
-                trailing: mode == currentMode
-                    ? Icon(
-                        Icons.check,
-                        color: modeDetails[mode]!.color,
-                        size: 20,
-                      )
-                    : null,
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  if (mode == currentMode) return;
-                  HapticFeedback.lightImpact();
-                  _confirmExecutionModeChange(
-                    context,
-                    chatCubit,
-                    mode,
-                    onBeforeRestart: onBeforeRestart,
-                  );
-                },
-              ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       );
     },
@@ -401,17 +404,23 @@ void showExecutionModeMenu(
 Future<void> _confirmExecutionModeChange(
   BuildContext context,
   ChatSessionCubit chatCubit,
-  ExecutionMode mode, {
+  CodexApprovalPolicy policy, {
   Future<void> Function()? onBeforeRestart,
 }) async {
   final l = AppLocalizations.of(context);
+  final policyLabel = switch (policy) {
+    CodexApprovalPolicy.untrusted => 'Untrusted',
+    CodexApprovalPolicy.onRequest => 'On Request',
+    CodexApprovalPolicy.onFailure => 'On Failure',
+    CodexApprovalPolicy.never => 'Never Ask',
+  };
   final confirmed = await showDialog<bool>(
     context: context,
     builder: (dialogContext) {
       final cs = Theme.of(dialogContext).colorScheme;
       return AlertDialog(
-        title: Text(l.changeExecutionModeTitle),
-        content: Text(l.changeExecutionModeBody(mode.label)),
+        title: Text(l.changeApprovalPolicyTitle),
+        content: Text(l.changeApprovalPolicyBody(policyLabel)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -419,7 +428,7 @@ Future<void> _confirmExecutionModeChange(
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: mode == ExecutionMode.fullAccess
+            style: policy == CodexApprovalPolicy.never
                 ? FilledButton.styleFrom(backgroundColor: cs.error)
                 : null,
             child: Text(l.restart),
@@ -430,7 +439,7 @@ Future<void> _confirmExecutionModeChange(
   );
   if (confirmed == true) {
     await onBeforeRestart?.call();
-    chatCubit.setSessionModes(executionMode: mode);
+    chatCubit.setCodexApprovalPolicy(policy);
   }
 }
 
@@ -832,12 +841,14 @@ class PermissionModeChip extends StatelessWidget {
 
 class ExecutionModeChip extends StatelessWidget {
   final ExecutionMode currentMode;
+  final CodexApprovalPolicy? codexApprovalPolicy;
   final Provider? provider;
   final VoidCallback onTap;
 
   const ExecutionModeChip({
     super.key,
     required this.currentMode,
+    this.codexApprovalPolicy,
     this.provider,
     required this.onTap,
   });
@@ -849,11 +860,35 @@ class ExecutionModeChip extends StatelessWidget {
     // Colors aligned with Claude Code CLI
     const purple = Color(0xFFBB86FC);
 
-    final (IconData icon, String label, Color fg) = switch (currentMode) {
-      ExecutionMode.defaultMode => (Icons.tune, 'Default', cs.onSurfaceVariant),
-      ExecutionMode.acceptEdits => (Icons.edit_note, 'Edits', purple),
-      ExecutionMode.fullAccess => (Icons.flash_on, 'Full', cs.error),
-    };
+    final (IconData icon, String label, Color fg) =
+        provider == Provider.codex && codexApprovalPolicy != null
+        ? switch (codexApprovalPolicy!) {
+            CodexApprovalPolicy.untrusted => (
+              Icons.verified_user_outlined,
+              'Untrusted',
+              cs.primary,
+            ),
+            CodexApprovalPolicy.onRequest => (
+              Icons.tune,
+              'On Request',
+              cs.onSurfaceVariant,
+            ),
+            CodexApprovalPolicy.onFailure => (
+              Icons.auto_mode_outlined,
+              'On Failure',
+              purple,
+            ),
+            CodexApprovalPolicy.never => (Icons.flash_on, 'Never', cs.error),
+          }
+        : switch (currentMode) {
+            ExecutionMode.defaultMode => (
+              Icons.tune,
+              'Default',
+              cs.onSurfaceVariant,
+            ),
+            ExecutionMode.acceptEdits => (Icons.edit_note, 'Edits', purple),
+            ExecutionMode.fullAccess => (Icons.flash_on, 'Full', cs.error),
+          };
 
     return Material(
       color: Colors.transparent,

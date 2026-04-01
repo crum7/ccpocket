@@ -526,6 +526,9 @@ class _SessionListScreenState extends State<SessionListScreen>
         result.projectPath,
         permissionMode: result.permissionMode.value,
         executionMode: result.executionMode.value,
+        approvalPolicy: result.provider == Provider.codex
+            ? result.codexApprovalPolicy.value
+            : null,
         planMode: result.planMode,
         effort: result.provider == Provider.claude
             ? result.claudeEffort?.value
@@ -669,6 +672,11 @@ class _SessionListScreenState extends State<SessionListScreen>
         permissionMode: sessionSettings?['permissionMode'] as String?,
         approvalPolicy: session.codexApprovalPolicy,
       ),
+      codexApprovalPolicy:
+          codexApprovalPolicyFromRaw(session.codexApprovalPolicy) ??
+          codexApprovalPolicyFromLegacyExecutionMode(
+            sessionSettings?['executionMode'] as String?,
+          ),
       planMode: derivePlanMode(
         planMode: sessionSettings?['planMode'] as bool?,
         permissionMode: sessionSettings?['permissionMode'] as String?,
@@ -974,6 +982,7 @@ class _SessionListScreenState extends State<SessionListScreen>
               executionMode: sessionSettings?['executionMode'] as String?,
               permissionMode: permissionMode,
             ).value,
+      approvalPolicy: isCodex ? session.codexApprovalPolicy : null,
       planMode: isCodex
           ? session.planMode
           : derivePlanMode(
@@ -1037,6 +1046,7 @@ class _SessionListScreenState extends State<SessionListScreen>
       resumeProjectPath,
       permissionMode: edited.permissionMode.value,
       executionMode: edited.executionMode.value,
+      approvalPolicy: isCodex ? edited.codexApprovalPolicy.value : null,
       planMode: edited.planMode,
       effort: !isCodex ? edited.claudeEffort?.value : null,
       maxTurns: !isCodex ? edited.claudeMaxTurns : null,

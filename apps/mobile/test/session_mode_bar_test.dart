@@ -141,7 +141,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     final plan = tester.getCenter(find.text('Plan Off')).dx;
-    final execution = tester.getCenter(find.text('Default')).dx;
+    final execution = tester.getCenter(find.text('On Request')).dx;
     final sandbox = tester.getCenter(find.text('Sandbox')).dx;
 
     expect(plan, lessThan(execution));
@@ -197,14 +197,14 @@ void main() {
     await tester.pumpWidget(_wrap(cubit));
     await tester.pump(const Duration(milliseconds: 100));
 
-    await tester.tap(find.text('Default'));
+    await tester.tap(find.text('On Request'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Full Access'));
+    await tester.tap(find.text('Never Ask'));
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('Change Execution Mode'), findsOneWidget);
+    expect(find.text('Change Approval Policy'), findsOneWidget);
     expect(find.textContaining('will restart the session'), findsOneWidget);
   });
 

@@ -518,6 +518,29 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get changeApprovalPolicyTitle => '更改 Approval Policy';
+
+  @override
+  String changeApprovalPolicyBody(String mode) {
+    return '切换到 $mode 会重启当前会话。你的对话会被保留。';
+  }
+
+  @override
+  String get codexApprovalUntrustedDescription =>
+      '仅自动运行受信任命令，其他操作都需要确认';
+
+  @override
+  String get codexApprovalOnRequestDescription =>
+      '仅在代理判断需要时请求确认';
+
+  @override
+  String get codexApprovalOnFailureDescription =>
+      '默认直接执行，仅在失败时请求额外权限（已弃用）';
+
+  @override
+  String get codexApprovalNeverDescription => '永不请求确认，失败会立即返回';
+
+  @override
   String get enablePlanModeTitle => '启用 Plan Mode';
 
   @override

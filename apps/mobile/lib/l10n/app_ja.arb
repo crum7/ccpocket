@@ -229,6 +229,19 @@
       }
     }
   },
+  "changeApprovalPolicyTitle": "Approval Policy を変更",
+  "changeApprovalPolicyBody": "{mode} に切り替えるとセッションが再起動します。会話は保持されます。",
+  "@changeApprovalPolicyBody": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
+  "codexApprovalUntrustedDescription": "trusted コマンドだけ自動実行し、それ以外は確認します",
+  "codexApprovalOnRequestDescription": "必要だと判断した操作だけ確認します",
+  "codexApprovalOnFailureDescription": "通常は確認せず実行し、失敗時だけ追加権限を確認します（非推奨）",
+  "codexApprovalNeverDescription": "確認せず実行し、失敗時も承認を求めません",
   "enablePlanModeTitle": "Plan Mode を有効化",
   "disablePlanModeTitle": "Plan Mode を無効化",
   "enablePlanModeBody": "Plan Mode を有効化するとセッションが再起動します。会話は保持されます。",

@@ -1078,6 +1078,23 @@ abstract class AppLocalizations {
   /// **'{mode} に切り替えるとセッションが再起動します。会話は保持されます。'**
   String changeExecutionModeBody(String mode);
 
+  /// No description provided for @changeApprovalPolicyTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Approval Policy を変更'**
+  String get changeApprovalPolicyTitle;
+
+  /// No description provided for @changeApprovalPolicyBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'{mode} に切り替えるとセッションが再起動します。会話は保持されます。'**
+  String changeApprovalPolicyBody(String mode);
+
+  String get codexApprovalUntrustedDescription;
+  String get codexApprovalOnRequestDescription;
+  String get codexApprovalOnFailureDescription;
+  String get codexApprovalNeverDescription;
+
   /// No description provided for @enablePlanModeTitle.
   ///
   /// In ja, this message translates to:

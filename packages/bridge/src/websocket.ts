@@ -93,6 +93,22 @@ function permissionModeToApprovalPolicy(mode?: string): "never" | "on-request" {
   return mode === "bypassPermissions" ? "never" : "on-request";
 }
 
+function normalizeCodexApprovalPolicy(
+  value?: string,
+): "never" | "on-request" | "on-failure" | "untrusted" {
+  switch (value) {
+    case "untrusted":
+      return "untrusted";
+    case "on-failure":
+      return "on-failure";
+    case "never":
+      return "never";
+    case "on-request":
+    default:
+      return "on-request";
+  }
+}
+
 function deriveExecutionMode(params: {
   permissionMode?: string;
   executionMode?: string;
@@ -558,10 +574,22 @@ export class BridgeWebSocketServer {
         }
         try {
           const provider = msg.provider ?? "claude";
+          const codexApprovalPolicy =
+            provider === "codex"
+                ? normalizeCodexApprovalPolicy(
+                    msg.approvalPolicy ??
+                        (msg.executionMode == null
+                            ? undefined
+                            : msg.executionMode === "fullAccess"
+                            ? "never"
+                            : "on-request"),
+                  )
+                : undefined;
           const executionMode = deriveExecutionMode({
             provider,
             permissionMode: msg.permissionMode,
             executionMode: msg.executionMode,
+            approvalPolicy: codexApprovalPolicy,
           });
           const planMode = derivePlanMode({
             permissionMode: msg.permissionMode,
@@ -609,7 +637,10 @@ export class BridgeWebSocketServer {
             provider === "codex"
               ? {
                   approvalPolicy:
-                    executionMode === "fullAccess" ? "never" : "on-request",
+                    codexApprovalPolicy ??
+                    normalizeCodexApprovalPolicy(
+                      executionMode === "fullAccess" ? "never" : "on-request",
+                    ),
                   sandboxMode: sandboxModeToInternal(msg.sandboxMode),
                   model: msg.model,
                   modelReasoningEffort:
@@ -973,10 +1004,19 @@ export class BridgeWebSocketServer {
           // Permission mode for Codex requires a session restart (like sandbox mode).
           // approvalPolicy and collaborationMode are thread-level settings that
           // only take effect reliably at thread/start or thread/resume time.
+          const explicitApproval = normalizeCodexApprovalPolicy(
+            msg.approvalPolicy ??
+                (msg.executionMode == null
+                    ? undefined
+                    : msg.executionMode === "fullAccess"
+                    ? "never"
+                    : "on-request"),
+          );
           const executionMode = deriveExecutionMode({
             provider: "codex",
             permissionMode: msg.mode,
             executionMode: msg.executionMode,
+            approvalPolicy: explicitApproval,
           });
           const planMode = derivePlanMode({
             permissionMode: msg.mode,
@@ -987,8 +1027,7 @@ export class BridgeWebSocketServer {
             executionMode,
             planMode,
           );
-          const newApproval: "never" | "on-request" =
-            executionMode === "fullAccess" ? "never" : "on-request";
+          const newApproval = explicitApproval;
           const newCollaboration: "plan" | "default" = planMode
             ? "plan"
             : "default";
@@ -1019,6 +1058,7 @@ export class BridgeWebSocketServer {
               sessionId: session.id,
               permissionMode: legacyPermissionMode,
               executionMode,
+              approvalPolicy: newApproval,
               planMode,
             });
             this.broadcastSessionList();
@@ -1933,10 +1973,22 @@ export class BridgeWebSocketServer {
           break;
         }
         const provider = msg.provider ?? "claude";
+        const codexApprovalPolicy =
+          provider === "codex"
+              ? normalizeCodexApprovalPolicy(
+                  msg.approvalPolicy ??
+                      (msg.executionMode == null
+                          ? undefined
+                          : msg.executionMode === "fullAccess"
+                          ? "never"
+                          : "on-request"),
+                )
+              : undefined;
         const executionMode = deriveExecutionMode({
           provider,
           permissionMode: msg.permissionMode,
           executionMode: msg.executionMode,
+          approvalPolicy: codexApprovalPolicy,
         });
         const planMode = derivePlanMode({
           permissionMode: msg.permissionMode,
@@ -1986,7 +2038,10 @@ export class BridgeWebSocketServer {
                 {
                   threadId: sessionRefId,
                   approvalPolicy:
-                    executionMode === "fullAccess" ? "never" : "on-request",
+                    codexApprovalPolicy ??
+                    normalizeCodexApprovalPolicy(
+                      executionMode === "fullAccess" ? "never" : "on-request",
+                    ),
                   sandboxMode: sandboxModeToInternal(msg.sandboxMode),
                   model: msg.model,
                   modelReasoningEffort:

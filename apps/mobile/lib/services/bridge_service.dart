@@ -550,6 +550,7 @@ class BridgeService implements BridgeServiceBase {
     String projectPath, {
     String? permissionMode,
     String? executionMode,
+    String? approvalPolicy,
     bool? planMode,
     String? effort,
     int? maxTurns,
@@ -570,6 +571,7 @@ class BridgeService implements BridgeServiceBase {
         projectPath,
         permissionMode: permissionMode,
         executionMode: executionMode,
+        approvalPolicy: approvalPolicy,
         planMode: planMode,
         effort: effort,
         maxTurns: maxTurns,
@@ -790,12 +792,14 @@ class BridgeService implements BridgeServiceBase {
     required String permissionMode,
     required String executionMode,
     required bool planMode,
+    String? approvalPolicy,
   }) {
     _patchSessionModes(
       sessionId,
       permissionMode: permissionMode,
       executionMode: executionMode,
       planMode: planMode,
+      approvalPolicy: approvalPolicy,
     );
   }
 
@@ -804,6 +808,7 @@ class BridgeService implements BridgeServiceBase {
     required String permissionMode,
     required String executionMode,
     required bool planMode,
+    String? approvalPolicy,
   }) {
     final idx = _sessions.indexWhere((s) => s.id == sessionId);
     if (idx < 0) return;
@@ -818,6 +823,7 @@ class BridgeService implements BridgeServiceBase {
         permissionMode: permissionMode,
         executionMode: executionMode,
         planMode: planMode,
+        codexApprovalPolicy: approvalPolicy ?? current.codexApprovalPolicy,
       );
     _sessionListController.add(_sessions);
   }
@@ -833,8 +839,10 @@ class BridgeService implements BridgeServiceBase {
         executionMode: message.executionMode ?? current.executionMode,
         planMode: message.planMode ?? current.planMode,
         model: message.provider == Provider.claude.value ? message.model : null,
-        codexApprovalPolicy:
-            message.approvalPolicy ?? current.codexApprovalPolicy,
+        codexApprovalPolicy: resolveCodexApprovalPolicy(
+          approvalPolicy: message.approvalPolicy ?? current.codexApprovalPolicy,
+          executionMode: message.executionMode ?? current.executionMode,
+        ),
         codexSandboxMode: message.provider == Provider.codex.value
             ? (message.sandboxMode ?? current.codexSandboxMode)
             : current.codexSandboxMode,

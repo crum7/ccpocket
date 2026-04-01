@@ -61,6 +61,14 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
              provider: provider?.value,
              permissionMode: initialPermissionMode?.value,
            ),
+           codexApprovalPolicy: provider == Provider.codex
+               ? codexApprovalPolicyFromLegacyExecutionMode(
+                   deriveExecutionMode(
+                     provider: provider?.value,
+                     permissionMode: initialPermissionMode?.value,
+                   ).value,
+                 )
+               : CodexApprovalPolicy.onRequest,
            planMode: initialPermissionMode == PermissionMode.plan,
            sandboxMode:
                initialSandboxMode ??
@@ -399,6 +407,8 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
         inPlanMode: update.inPlanMode ?? current.inPlanMode,
         permissionMode: update.permissionMode ?? current.permissionMode,
         executionMode: update.executionMode ?? current.executionMode,
+        codexApprovalPolicy:
+            update.codexApprovalPolicy ?? current.codexApprovalPolicy,
         planMode: update.planMode ?? current.planMode,
         slashCommands: update.slashCommands ?? current.slashCommands,
         claudeSessionId: newClaudeSessionId,
@@ -731,6 +741,44 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
         'planMode': nextPlanMode,
       });
     }
+  }
+
+  void setCodexApprovalPolicy(CodexApprovalPolicy policy) {
+    logger.info('[session:$sessionId] setCodexApprovalPolicy=${policy.value}');
+    _pendingPermissionRollback = state.permissionMode;
+    _pendingExecutionRollback = state.executionMode;
+    _pendingPlanRollback = state.planMode;
+
+    const legacyMode = PermissionMode.acceptEdits;
+    final derivedExecution = policy == CodexApprovalPolicy.never
+        ? ExecutionMode.fullAccess
+        : ExecutionMode.defaultMode;
+
+    emit(
+      state.copyWith(
+        permissionMode: legacyMode,
+        executionMode: derivedExecution,
+        codexApprovalPolicy: policy,
+        planMode: false,
+        inPlanMode: false,
+      ),
+    );
+    _bridge.patchSessionModes(
+      sessionId,
+      permissionMode: legacyMode.value,
+      executionMode: derivedExecution.value,
+      planMode: false,
+      approvalPolicy: policy.value,
+    );
+    _bridge.send(
+      ClientMessage.setSessionMode(
+        legacyMode: legacyMode.value,
+        executionMode: derivedExecution.value,
+        approvalPolicy: policy.value,
+        planMode: false,
+        sessionId: sessionId,
+      ),
+    );
   }
 
   /// Change sandbox mode (Claude & Codex).

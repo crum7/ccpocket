@@ -133,11 +133,24 @@
       }
     }
   },
+  "changeApprovalPolicyTitle": "更改 Approval Policy",
+  "changeApprovalPolicyBody": "切换到 {mode} 会重启当前会话。你的对话会被保留。",
+  "@changeApprovalPolicyBody": {
+    "placeholders": {
+      "mode": {
+        "type": "String"
+      }
+    }
+  },
   "permissionChipAcceptEdits": "编辑",
   "permissionChipBypass": "绕过",
   "executionDefaultDescription": "标准权限提示",
   "executionAcceptEditsDescription": "自动批准文件编辑",
   "executionFullAccessDescription": "跳过大多数审批提示",
+  "codexApprovalUntrustedDescription": "仅自动运行受信任命令，其他操作都需要确认",
+  "codexApprovalOnRequestDescription": "仅在代理判断需要时请求确认",
+  "codexApprovalOnFailureDescription": "默认直接执行，仅在失败时请求额外权限（已弃用）",
+  "codexApprovalNeverDescription": "永不请求确认，失败会立即返回",
   "codexPlanModeDescription": "先起草计划，再等待批准后执行",
   "enablePlanModeTitle": "启用 Plan Mode",
   "disablePlanModeTitle": "关闭 Plan Mode",

@@ -25,8 +25,6 @@ class SystemChip extends StatelessWidget {
                   model: message.model,
                   reasoningEffort: message.modelReasoningEffort,
                   approvalPolicy: message.approvalPolicy,
-                  permissionMode: message.permissionMode,
-                  executionMode: message.executionMode,
                   sandboxMode: message.sandboxMode,
                   showDefaultReasoning: true,
                 )

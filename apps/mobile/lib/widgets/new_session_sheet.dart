@@ -18,6 +18,7 @@ class NewSessionParams {
   final String projectPath;
   final Provider provider;
   final ExecutionMode executionMode;
+  final CodexApprovalPolicy codexApprovalPolicy;
   final bool planMode;
   final bool useWorktree;
   final String? worktreeBranch;
@@ -39,6 +40,7 @@ class NewSessionParams {
     required this.projectPath,
     this.provider = Provider.codex,
     ExecutionMode? executionMode,
+    CodexApprovalPolicy? codexApprovalPolicy,
     bool? planMode,
     PermissionMode? permissionMode,
     this.useWorktree = false,
@@ -62,6 +64,11 @@ class NewSessionParams {
              provider: provider.value,
              permissionMode: permissionMode?.value,
            ),
+       codexApprovalPolicy =
+           codexApprovalPolicy ??
+           (provider == Provider.codex
+               ? CodexApprovalPolicy.onRequest
+               : CodexApprovalPolicy.onRequest),
        planMode = planMode ?? (permissionMode == PermissionMode.plan);
 
   PermissionMode get permissionMode => legacyPermissionModeFromModes(
@@ -126,6 +133,7 @@ Map<String, dynamic> sessionStartDefaultsToJson(NewSessionParams params) {
     'projectPath': params.projectPath,
     'provider': params.provider.value,
     'executionMode': params.executionMode.value,
+    'codexApprovalPolicy': params.codexApprovalPolicy.value,
     'planMode': params.planMode,
     'permissionMode': params.permissionMode.value,
     // NOTE: useWorktree, worktreeBranch, existingWorktreePath are
@@ -157,6 +165,12 @@ NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
       provider: json['provider'] as String?,
       permissionMode: json['permissionMode'] as String?,
     ),
+    codexApprovalPolicy: codexApprovalPolicyFromRaw(
+          json['codexApprovalPolicy'] as String?,
+        ) ??
+        codexApprovalPolicyFromLegacyExecutionMode(
+          json['executionMode'] as String?,
+        ),
     planMode: derivePlanMode(
       planMode: json['planMode'] as bool?,
       permissionMode: json['permissionMode'] as String?,
@@ -279,6 +293,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   late final PageController _pageController;
   var _provider = Provider.codex;
   var _executionMode = ExecutionMode.defaultMode;
+  var _codexApprovalPolicy = CodexApprovalPolicy.onRequest;
   var _planMode = false;
   var _useWorktree = false;
   var _worktreeMode = _WorktreeMode.createNew;
@@ -478,6 +493,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     );
     _provider = isVisible ? p.provider : widget.visibleTabs.first.toProvider();
     _executionMode = p.executionMode;
+    _codexApprovalPolicy = p.codexApprovalPolicy;
     _planMode = p.planMode;
     _useWorktree = p.useWorktree || p.existingWorktreePath != null;
     _branchController.text = p.worktreeBranch ?? "";
@@ -614,6 +630,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
       projectPath: path,
       provider: _provider,
       executionMode: _executionMode,
+      codexApprovalPolicy: _codexApprovalPolicy,
       planMode: isCodex ? false : _planMode,
       useWorktree: useExisting ? false : _useWorktree,
       worktreeBranch: useExisting
@@ -735,6 +752,10 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
             executionMode: _executionMode,
             onExecutionModeChanged: (value) {
               setState(() => _executionMode = value);
+            },
+            codexApprovalPolicy: _codexApprovalPolicy,
+            onCodexApprovalPolicyChanged: (value) {
+              setState(() => _codexApprovalPolicy = value);
             },
             planMode: _planMode,
             onPlanModeChanged: (value) {
@@ -1279,6 +1300,8 @@ class _OptionsSection extends StatelessWidget {
   final Provider provider;
   final ExecutionMode executionMode;
   final ValueChanged<ExecutionMode> onExecutionModeChanged;
+  final CodexApprovalPolicy codexApprovalPolicy;
+  final ValueChanged<CodexApprovalPolicy> onCodexApprovalPolicyChanged;
   final bool planMode;
   final ValueChanged<bool> onPlanModeChanged;
   final bool useWorktree;
@@ -1334,6 +1357,8 @@ class _OptionsSection extends StatelessWidget {
     required this.provider,
     required this.executionMode,
     required this.onExecutionModeChanged,
+    required this.codexApprovalPolicy,
+    required this.onCodexApprovalPolicyChanged,
     required this.planMode,
     required this.onPlanModeChanged,
     required this.useWorktree,
@@ -1386,14 +1411,6 @@ class _OptionsSection extends StatelessWidget {
 
     // -- Description helpers --
 
-    String executionDescription(ExecutionMode mode) {
-      return switch (mode) {
-        ExecutionMode.defaultMode => l.executionDefaultDescription,
-        ExecutionMode.acceptEdits => l.executionAcceptEditsDescription,
-        ExecutionMode.fullAccess => l.executionFullAccessDescription,
-      };
-    }
-
     String permissionDescription(PermissionMode mode) {
       return switch (mode) {
         PermissionMode.defaultMode => l.permissionDefaultDescription,
@@ -1417,16 +1434,28 @@ class _OptionsSection extends StatelessWidget {
 
     // -- Icon helpers --
 
-    IconData executionIcon(ExecutionMode mode) => switch (mode) {
-      ExecutionMode.defaultMode => Icons.tune,
-      ExecutionMode.acceptEdits => Icons.edit_note,
-      ExecutionMode.fullAccess => Icons.flash_on,
+    IconData codexApprovalIcon(CodexApprovalPolicy policy) => switch (policy) {
+      CodexApprovalPolicy.untrusted => Icons.verified_user_outlined,
+      CodexApprovalPolicy.onRequest => Icons.tune,
+      CodexApprovalPolicy.onFailure => Icons.auto_mode_outlined,
+      CodexApprovalPolicy.never => Icons.flash_on,
     };
 
-    String executionLabel(ExecutionMode mode) => switch (mode) {
-      ExecutionMode.fullAccess => 'Full Access',
-      _ => mode.label,
+    String codexApprovalLabel(CodexApprovalPolicy policy) => switch (policy) {
+      CodexApprovalPolicy.untrusted => 'Untrusted',
+      CodexApprovalPolicy.onRequest => 'On Request',
+      CodexApprovalPolicy.onFailure => 'On Failure',
+      CodexApprovalPolicy.never => 'Never Ask',
     };
+
+    String codexApprovalDescription(CodexApprovalPolicy policy) {
+      return switch (policy) {
+        CodexApprovalPolicy.untrusted => l.codexApprovalUntrustedDescription,
+        CodexApprovalPolicy.onRequest => l.codexApprovalOnRequestDescription,
+        CodexApprovalPolicy.onFailure => l.codexApprovalOnFailureDescription,
+        CodexApprovalPolicy.never => l.codexApprovalNeverDescription,
+      };
+    }
 
     IconData permissionIcon(PermissionMode mode) => switch (mode) {
       PermissionMode.defaultMode => Icons.tune,
@@ -1591,11 +1620,6 @@ class _OptionsSection extends StatelessWidget {
       );
     }
 
-    // -- Execution mode (Codex) effective value --
-    final effectiveExecutionMode = executionMode == ExecutionMode.acceptEdits
-        ? ExecutionMode.defaultMode
-        : executionMode;
-
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -1615,25 +1639,28 @@ class _OptionsSection extends StatelessWidget {
           ),
           provider == Provider.codex
               ? modeSelectorField(
-                  key: const ValueKey('dialog_codex_execution_mode'),
+                  key: const ValueKey('dialog_codex_approval_policy'),
                   label: l.approval,
-                  icon: executionIcon(effectiveExecutionMode),
-                  title: executionLabel(effectiveExecutionMode),
-                  subtitle: executionDescription(effectiveExecutionMode),
-                  onTap: () => showModeSheet<ExecutionMode>(
+                  icon: codexApprovalIcon(codexApprovalPolicy),
+                  title: codexApprovalLabel(codexApprovalPolicy),
+                  subtitle: codexApprovalDescription(codexApprovalPolicy),
+                  onTap: () => showModeSheet<CodexApprovalPolicy>(
                     title: l.approval,
                     subtitle: l.sheetSubtitleApproval,
                     modes: const [
-                      ExecutionMode.defaultMode,
-                      ExecutionMode.fullAccess,
+                      CodexApprovalPolicy.untrusted,
+                      CodexApprovalPolicy.onRequest,
+                      CodexApprovalPolicy.onFailure,
+                      CodexApprovalPolicy.never,
                     ],
-                    currentMode: effectiveExecutionMode,
-                    iconFor: executionIcon,
-                    labelFor: executionLabel,
-                    descriptionFor: executionDescription,
-                    onSelected: onExecutionModeChanged,
+                    currentMode: codexApprovalPolicy,
+                    iconFor: codexApprovalIcon,
+                    labelFor: codexApprovalLabel,
+                    descriptionFor: codexApprovalDescription,
+                    onSelected: onCodexApprovalPolicyChanged,
                     colorFor: (mode, cs) => switch (mode) {
-                      ExecutionMode.fullAccess => cs.error,
+                      CodexApprovalPolicy.never => cs.error,
+                      CodexApprovalPolicy.onFailure => cs.tertiary,
                       _ => cs.primary,
                     },
                   ),

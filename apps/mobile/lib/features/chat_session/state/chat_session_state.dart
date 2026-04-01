@@ -34,6 +34,8 @@ abstract class ChatSessionState with _$ChatSessionState {
 
     // Canonical session modes
     @Default(ExecutionMode.defaultMode) ExecutionMode executionMode,
+    @Default(CodexApprovalPolicy.onRequest)
+    CodexApprovalPolicy codexApprovalPolicy,
     @Default(false) bool planMode,
 
     // Sandbox mode — Freezed default is .on but Cubit constructor overrides

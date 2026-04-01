@@ -533,6 +533,30 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get changeApprovalPolicyTitle => 'Change Approval Policy';
+
+  @override
+  String changeApprovalPolicyBody(String mode) {
+    return 'Switching to $mode will restart the session. Your conversation will be preserved.';
+  }
+
+  @override
+  String get codexApprovalUntrustedDescription =>
+      'Auto-run only trusted commands; ask for everything else';
+
+  @override
+  String get codexApprovalOnRequestDescription =>
+      'Ask only when the agent decides approval is needed';
+
+  @override
+  String get codexApprovalOnFailureDescription =>
+      'Run without asking first; ask only when a command fails (Deprecated)';
+
+  @override
+  String get codexApprovalNeverDescription =>
+      'Never ask for approval; failures are returned immediately';
+
+  @override
   String get enablePlanModeTitle => 'Enable Plan Mode';
 
   @override

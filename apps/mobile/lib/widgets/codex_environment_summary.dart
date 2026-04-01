@@ -7,8 +7,6 @@ class CodexEnvironmentSummary extends StatelessWidget {
   final String? model;
   final String? reasoningEffort;
   final String? approvalPolicy;
-  final String? permissionMode;
-  final String? executionMode;
   final String? sandboxMode;
   final bool showDefaultReasoning;
   final bool compact;
@@ -19,8 +17,6 @@ class CodexEnvironmentSummary extends StatelessWidget {
     this.model,
     this.reasoningEffort,
     this.approvalPolicy,
-    this.permissionMode,
-    this.executionMode,
     this.sandboxMode,
     this.showDefaultReasoning = false,
     this.compact = false,
@@ -47,15 +43,11 @@ class CodexEnvironmentSummary extends StatelessWidget {
           case final modelText?)
         Text(modelText, style: textStyle, overflow: TextOverflow.ellipsis),
       if (_executionLabel(
-            executionMode: executionMode,
-            permissionMode: permissionMode,
             approvalPolicy: approvalPolicy,
           )
           case final executionLabel?)
         _EnvironmentMeta(
           icon: _executionIcon(
-            executionMode: executionMode,
-            permissionMode: permissionMode,
             approvalPolicy: approvalPolicy,
           ),
           label: executionLabel,
@@ -136,65 +128,27 @@ String? _displayModelSummary(
 }
 
 IconData _executionIcon({
-  String? executionMode,
-  String? permissionMode,
   String? approvalPolicy,
 }) {
-  final effective = _effectiveExecutionMode(
-    executionMode: executionMode,
-    permissionMode: permissionMode,
-    approvalPolicy: approvalPolicy,
-  );
-  return switch (effective) {
-    'fullAccess' => Icons.flash_on,
-    'acceptEdits' => Icons.edit_note,
-    'default' || null => Icons.tune,
+  return switch (approvalPolicy) {
+    'never' => Icons.flash_on,
+    'on-failure' => Icons.auto_mode_outlined,
+    'untrusted' => Icons.verified_user_outlined,
+    'on-request' || null || '' => Icons.tune,
     _ => Icons.tune,
   };
 }
 
 String? _executionLabel({
-  String? executionMode,
-  String? permissionMode,
   String? approvalPolicy,
 }) {
-  final effective = _effectiveExecutionMode(
-    executionMode: executionMode,
-    permissionMode: permissionMode,
-    approvalPolicy: approvalPolicy,
-  );
-  return switch (effective) {
-    'fullAccess' => 'Full Access',
-    'acceptEdits' => 'Edits',
-    'default' => 'Default',
-    null => null,
-    final other => other,
-  };
-}
-
-String? _effectiveExecutionMode({
-  String? executionMode,
-  String? permissionMode,
-  String? approvalPolicy,
-}) {
-  if (executionMode != null && executionMode.isNotEmpty) {
-    return executionMode;
-  }
-  if (permissionMode == PermissionMode.bypassPermissions.value) {
-    return ExecutionMode.fullAccess.value;
-  }
-  if (permissionMode == PermissionMode.acceptEdits.value) {
-    return ExecutionMode.acceptEdits.value;
-  }
-  if (permissionMode == PermissionMode.defaultMode.value ||
-      permissionMode == PermissionMode.plan.value) {
-    return ExecutionMode.defaultMode.value;
-  }
   return switch (approvalPolicy) {
-    'never' => ExecutionMode.fullAccess.value,
-    'on-request' || 'unless-allow-listed' => ExecutionMode.defaultMode.value,
+    'untrusted' => 'Untrusted',
+    'on-request' => 'On Request',
+    'on-failure' => 'On Failure',
+    'never' => 'Never Ask',
     null || '' => null,
-    _ => null,
+    final other => other,
   };
 }
 

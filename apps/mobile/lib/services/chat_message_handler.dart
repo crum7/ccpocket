@@ -21,6 +21,7 @@ class ChatStateUpdate {
   final ProcessStatus? status;
   final PermissionMode? permissionMode;
   final ExecutionMode? executionMode;
+  final CodexApprovalPolicy? codexApprovalPolicy;
   final bool? planMode;
   final List<ChatEntry> entriesToAdd;
   final List<ChatEntry> entriesToPrepend;
@@ -62,6 +63,7 @@ class ChatStateUpdate {
     this.status,
     this.permissionMode,
     this.executionMode,
+    this.codexApprovalPolicy,
     this.planMode,
     this.entriesToAdd = const [],
     this.entriesToPrepend = const [],
@@ -588,6 +590,7 @@ class ChatMessageHandler {
     List<SlashCommand>? commands;
     PermissionMode? permissionMode;
     ExecutionMode? executionMode;
+    CodexApprovalPolicy? codexApprovalPolicy;
     bool? inPlanMode;
     bool? planMode;
     bool hasExecutionSignals(SystemMessage message) =>
@@ -614,6 +617,13 @@ class ChatMessageHandler {
           permissionMode: msg.permissionMode,
           approvalPolicy: msg.approvalPolicy,
         );
+        codexApprovalPolicy = codexApprovalPolicyFromRaw(
+              resolveCodexApprovalPolicy(
+                approvalPolicy: msg.approvalPolicy,
+                executionMode: msg.executionMode,
+              ),
+            ) ??
+            codexApprovalPolicyFromLegacyExecutionMode(msg.executionMode);
       }
       if (hasPlanSignals(msg)) {
         planMode = derivePlanMode(
@@ -662,6 +672,7 @@ class ChatMessageHandler {
       entriesToAdd: addEntry ? [ServerChatEntry(msg)] : [],
       permissionMode: permissionMode,
       executionMode: executionMode,
+      codexApprovalPolicy: codexApprovalPolicy,
       planMode: planMode,
       inPlanMode: inPlanMode,
       slashCommands: commands,

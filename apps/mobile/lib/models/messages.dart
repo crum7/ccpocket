@@ -150,6 +150,33 @@ ExecutionMode? executionModeFromRaw(String? raw) {
   return null;
 }
 
+enum CodexApprovalPolicy {
+  untrusted('untrusted'),
+  onRequest('on-request'),
+  onFailure('on-failure'),
+  never('never');
+
+  final String value;
+  const CodexApprovalPolicy(this.value);
+}
+
+CodexApprovalPolicy? codexApprovalPolicyFromRaw(String? raw) {
+  if (raw == null || raw.isEmpty) return null;
+  for (final value in CodexApprovalPolicy.values) {
+    if (value.value == raw) return value;
+  }
+  return null;
+}
+
+CodexApprovalPolicy codexApprovalPolicyFromLegacyExecutionMode(String? raw) {
+  return executionModeFromRaw(raw) == ExecutionMode.fullAccess
+      ? CodexApprovalPolicy.never
+      : CodexApprovalPolicy.onRequest;
+}
+
+String codexApprovalPolicyFromLegacyExecutionModeValue(String? raw) =>
+    codexApprovalPolicyFromLegacyExecutionMode(raw).value;
+
 bool derivePlanMode({bool? planMode, String? permissionMode}) {
   return planMode ?? (permissionMode == PermissionMode.plan.value);
 }
@@ -173,6 +200,17 @@ ExecutionMode deriveExecutionMode({
   }
   if (approvalPolicy == 'never') return ExecutionMode.fullAccess;
   return ExecutionMode.defaultMode;
+}
+
+String? resolveCodexApprovalPolicy({
+  String? approvalPolicy,
+  String? executionMode,
+}) {
+  return approvalPolicy?.isNotEmpty == true
+      ? approvalPolicy
+      : (executionMode?.isNotEmpty == true
+            ? codexApprovalPolicyFromLegacyExecutionModeValue(executionMode)
+            : null);
 }
 
 PermissionMode legacyPermissionModeFromModes(
@@ -1947,7 +1985,10 @@ class RecentSession {
       projectPath: json['projectPath'] as String? ?? '',
       resumeCwd: json['resumeCwd'] as String?,
       isSidechain: json['isSidechain'] as bool? ?? false,
-      codexApprovalPolicy: codexSettings?['approvalPolicy'] as String?,
+      codexApprovalPolicy: resolveCodexApprovalPolicy(
+        approvalPolicy: codexSettings?['approvalPolicy'] as String?,
+        executionMode: json['executionMode'] as String?,
+      ),
       executionMode:
           json['executionMode'] as String? ??
           deriveExecutionMode(
@@ -2170,7 +2211,10 @@ class SessionInfo {
         permissionMode: json['permissionMode'] as String?,
       ),
       model: json['model'] as String?,
-      codexApprovalPolicy: codexSettings?['approvalPolicy'] as String?,
+      codexApprovalPolicy: resolveCodexApprovalPolicy(
+        approvalPolicy: codexSettings?['approvalPolicy'] as String?,
+        executionMode: json['executionMode'] as String?,
+      ),
       codexSandboxMode: codexSettings?['sandboxMode'] as String?,
       codexModel: sanitizeCodexModelName(codexSettings?['model'] as String?),
       codexModelReasoningEffort:
@@ -2203,6 +2247,7 @@ class ClientMessage {
     bool? continueMode,
     String? permissionMode,
     String? executionMode,
+    String? approvalPolicy,
     bool? planMode,
     String? effort,
     int? maxTurns,
@@ -2227,6 +2272,7 @@ class ClientMessage {
       if (continueMode == true) 'continue': true,
       'permissionMode': ?permissionMode,
       'executionMode': ?executionMode,
+      'approvalPolicy': ?approvalPolicy,
       'planMode': ?planMode,
       'effort': ?effort,
       'maxTurns': ?maxTurns,
@@ -2290,6 +2336,7 @@ class ClientMessage {
   factory ClientMessage.setSessionMode({
     required String legacyMode,
     String? executionMode,
+    String? approvalPolicy,
     bool? planMode,
     String? sessionId,
   }) {
@@ -2297,6 +2344,7 @@ class ClientMessage {
       'type': 'set_permission_mode',
       'mode': legacyMode,
       'executionMode': ?executionMode,
+      'approvalPolicy': ?approvalPolicy,
       'planMode': ?planMode,
       'sessionId': ?sessionId,
     });
@@ -2427,6 +2475,7 @@ class ClientMessage {
     String projectPath, {
     String? permissionMode,
     String? executionMode,
+    String? approvalPolicy,
     bool? planMode,
     String? effort,
     int? maxTurns,
@@ -2447,6 +2496,7 @@ class ClientMessage {
       'projectPath': projectPath,
       'permissionMode': ?permissionMode,
       'executionMode': ?executionMode,
+      'approvalPolicy': ?approvalPolicy,
       'planMode': ?planMode,
       'effort': ?effort,
       'maxTurns': ?maxTurns,

@@ -47,6 +47,11 @@ export type PermissionMode =
   | "plan";
 
 export type ExecutionMode = "default" | "acceptEdits" | "fullAccess";
+export type CodexApprovalPolicy =
+  | "untrusted"
+  | "on-request"
+  | "on-failure"
+  | "never";
 
 export type Provider = "claude" | "codex";
 
@@ -59,6 +64,7 @@ export type ClientMessage =
       continue?: boolean;
       permissionMode?: PermissionMode;
       executionMode?: ExecutionMode;
+      approvalPolicy?: CodexApprovalPolicy;
       planMode?: boolean;
       sandboxMode?: string;
       model?: string;
@@ -97,6 +103,7 @@ export type ClientMessage =
       type: "set_permission_mode";
       mode: PermissionMode;
       executionMode?: ExecutionMode;
+      approvalPolicy?: CodexApprovalPolicy;
       planMode?: boolean;
       sessionId?: string;
     }
@@ -137,6 +144,7 @@ export type ClientMessage =
       projectPath: string;
       permissionMode?: PermissionMode;
       executionMode?: ExecutionMode;
+      approvalPolicy?: CodexApprovalPolicy;
       planMode?: boolean;
       provider?: Provider;
       sandboxMode?: string;
@@ -622,6 +630,13 @@ export function parseClientMessage(data: string): ClientMessage | null {
           )
         )
           return null;
+        if (
+          msg.approvalPolicy !== undefined &&
+          !["untrusted", "on-request", "on-failure", "never"].includes(
+            String(msg.approvalPolicy),
+          )
+        )
+          return null;
         if (msg.planMode !== undefined && typeof msg.planMode !== "boolean")
           return null;
         if (
@@ -670,6 +685,13 @@ export function parseClientMessage(data: string): ClientMessage | null {
           msg.executionMode !== undefined &&
           !["default", "acceptEdits", "fullAccess"].includes(
             String(msg.executionMode),
+          )
+        )
+          return null;
+        if (
+          msg.approvalPolicy !== undefined &&
+          !["untrusted", "on-request", "on-failure", "never"].includes(
+            String(msg.approvalPolicy),
           )
         )
           return null;
@@ -767,6 +789,13 @@ export function parseClientMessage(data: string): ClientMessage | null {
           msg.executionMode !== undefined &&
           !["default", "acceptEdits", "fullAccess"].includes(
             String(msg.executionMode),
+          )
+        )
+          return null;
+        if (
+          msg.approvalPolicy !== undefined &&
+          !["untrusted", "on-request", "on-failure", "never"].includes(
+            String(msg.approvalPolicy),
           )
         )
           return null;

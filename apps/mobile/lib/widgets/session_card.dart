@@ -459,7 +459,7 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                           : null,
                       model: session.codexModel,
                       reasoningEffort: session.codexModelReasoningEffort,
-                      executionMode: session.resolvedExecutionMode.value,
+                      approvalPolicy: session.codexApprovalPolicy,
                       sandboxMode: session.codexSandboxMode,
                       showDefaultReasoning: true,
                       compact: true,
@@ -2465,7 +2465,7 @@ class RecentSessionCard extends StatelessWidget {
                     CodexEnvironmentSummary(
                       model: session.codexModel,
                       reasoningEffort: session.codexModelReasoningEffort,
-                      executionMode: session.resolvedExecutionMode.value,
+                      approvalPolicy: session.codexApprovalPolicy,
                       sandboxMode: session.codexSandboxMode,
                       showDefaultReasoning: true,
                       compact: true,

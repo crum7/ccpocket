@@ -522,6 +522,30 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get changeApprovalPolicyTitle => 'Approval Policy を変更';
+
+  @override
+  String changeApprovalPolicyBody(String mode) {
+    return '$mode に切り替えるとセッションが再起動します。会話は保持されます。';
+  }
+
+  @override
+  String get codexApprovalUntrustedDescription =>
+      'trusted コマンドだけ自動実行し、それ以外は確認します';
+
+  @override
+  String get codexApprovalOnRequestDescription =>
+      '必要だと判断した操作だけ確認します';
+
+  @override
+  String get codexApprovalOnFailureDescription =>
+      '通常は確認せず実行し、失敗時だけ追加権限を確認します（非推奨）';
+
+  @override
+  String get codexApprovalNeverDescription =>
+      '確認せず実行し、失敗時も承認を求めません';
+
+  @override
   String get enablePlanModeTitle => 'Plan Mode を有効化';
 
   @override
