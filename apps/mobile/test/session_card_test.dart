@@ -239,7 +239,7 @@ void main() {
       );
 
       expect(find.text('gpt-5.3-codex Default'), findsOneWidget);
-      expect(find.text('Default'), findsOneWidget);
+      expect(find.text('On Request'), findsOneWidget);
       expect(find.text('Sandbox'), findsOneWidget);
       expect(find.byIcon(Icons.tune), findsOneWidget);
       expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
@@ -709,8 +709,8 @@ void main() {
       );
 
       expect(find.text('gpt-5-codex Default'), findsOneWidget);
-      expect(find.byIcon(Icons.tune), findsOneWidget);
-      expect(find.text('Default'), findsOneWidget);
+      expect(find.byIcon(Icons.auto_mode_outlined), findsOneWidget);
+      expect(find.text('On Failure'), findsOneWidget);
       expect(find.text('Sandbox Off'), findsOneWidget);
       expect(find.byIcon(Icons.warning_amber), findsOneWidget);
     });
