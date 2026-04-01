@@ -2,6 +2,11 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.33.0] - 2026-04-02
+
+### Added
+- `BRIDGE_DISABLE_MDNS` environment variable and `--no-mdns` CLI flag to disable mDNS auto-discovery advertisement (#34)
+
 ## [1.32.0] - 2026-04-02
 
 ### Added
