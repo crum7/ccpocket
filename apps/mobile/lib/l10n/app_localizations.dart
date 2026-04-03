@@ -2551,13 +2551,13 @@ abstract class AppLocalizations {
   /// No description provided for @apiKeyRequiredTitle.
   ///
   /// In ja, this message translates to:
-  /// **'APIキーが必要です'**
+  /// **'ConsoleログインまたはAPIキーが必要です'**
   String get apiKeyRequiredTitle;
 
   /// No description provided for @apiKeyRequiredBody.
   ///
   /// In ja, this message translates to:
-  /// **'サブスクリプション認証は規約上の懸念から現在制限されています。APIキーをご利用ください。'**
+  /// **'Claude のサブスクリプションログインはブロックされています。Anthropic Console 課金のログイン（2番）または API キーをご利用ください。'**
   String get apiKeyRequiredBody;
 
   /// No description provided for @apiKeyRequiredHint.

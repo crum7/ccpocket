@@ -7,6 +7,12 @@ All notable changes to `@ccpocket/bridge` will be documented in this file.
 ### Added
 - `BRIDGE_DISABLE_MDNS` environment variable and `--no-mdns` CLI flag to disable mDNS auto-discovery advertisement (#34)
 
+### Changed
+- Upgrade `@anthropic-ai/claude-agent-sdk` from `0.2.74` to `0.2.90`
+
+### Fixed
+- Distinguish Claude subscription OAuth from Anthropic Console OAuth so Console-billed OAuth sessions are no longer blocked
+
 ## [1.32.0] - 2026-04-02
 
 ### Added

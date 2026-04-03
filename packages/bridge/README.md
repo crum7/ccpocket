@@ -14,7 +14,7 @@ A QR code will appear in your terminal. Scan it with the ccpocket mobile app to 
 
 > Warning
 > Versions older than `1.25.0` are deprecated and should not be used for new installs due to potential Anthropic policy concerns around OAuth-based usage.
-> Upgrade to `>=1.25.0` and use `ANTHROPIC_API_KEY` instead of OAuth.
+> Upgrade to `>=1.25.0`. Claude subscription OAuth remains blocked, but Anthropic Console OAuth and `ANTHROPIC_API_KEY` are supported.
 
 ## Installation
 

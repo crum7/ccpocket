@@ -31,9 +31,9 @@ void main() {
         ),
       );
 
-      expect(find.text('APIキーが必要です'), findsOneWidget);
+      expect(find.text('ConsoleログインまたはAPIキーが必要です'), findsOneWidget);
       expect(
-        find.text('サブスクリプション認証は規約上の懸念から現在制限されています。APIキーをご利用ください。'),
+        find.text('Claude のサブスクリプションログインはブロックされています。Anthropic Console 課金のログイン（2番）または API キーをご利用ください。'),
         findsOneWidget,
       );
       expect(find.text('APIキーの取得:'), findsOneWidget);

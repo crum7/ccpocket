@@ -8,6 +8,8 @@ import {
   isFileEditToolName,
   sdkMessageToServerMessage,
   buildAuthError,
+  buildSubscriptionAuthBlockedMessage,
+  isBlockedClaudeSubscriptionAuth,
   SdkProcess,
 } from "./sdk-process.js";
 import type { ServerMessage } from "./parser.js";
@@ -72,6 +74,71 @@ describe("buildAuthError", () => {
   it("message mentions where to run the fix (Bridge machine)", () => {
     const result = buildAuthError("no_credentials");
     expect(result.message).toContain("Bridge");
+  });
+});
+
+describe("isBlockedClaudeSubscriptionAuth", () => {
+  it("blocks Claude subscription OAuth sessions", () => {
+    expect(isBlockedClaudeSubscriptionAuth({
+      apiProvider: "firstParty",
+      apiKeySource: "oauth",
+      tokenSource: "claudeai",
+      subscriptionType: "pro",
+    })).toBe(true);
+  });
+
+  it("blocks Claude Pro when accountInfo uses the newer firstParty shape", () => {
+    expect(isBlockedClaudeSubscriptionAuth({
+      apiProvider: "firstParty",
+      subscriptionType: "Claude Pro",
+    })).toBe(true);
+  });
+
+  it("allows Console OAuth sessions", () => {
+    expect(isBlockedClaudeSubscriptionAuth({
+      apiProvider: "firstParty",
+      apiKeySource: "oauth",
+      tokenSource: "console",
+    })).toBe(false);
+  });
+
+  it("allows explicit API key sources", () => {
+    expect(isBlockedClaudeSubscriptionAuth({
+      apiKeySource: "user",
+      tokenSource: "claudeai",
+      subscriptionType: "max",
+    })).toBe(false);
+  });
+
+  it("does not treat init apiKeySource=none as an API key login", () => {
+    expect(isBlockedClaudeSubscriptionAuth({
+      apiProvider: "firstParty",
+      apiKeySource: "none",
+      subscriptionType: "Claude Pro",
+    })).toBe(true);
+  });
+
+  it("falls back to subscriptionType when tokenSource is unavailable", () => {
+    expect(isBlockedClaudeSubscriptionAuth({
+      apiKeySource: "oauth",
+      subscriptionType: "team",
+    })).toBe(true);
+  });
+});
+
+describe("buildSubscriptionAuthBlockedMessage", () => {
+  it("mentions Console billing as the supported OAuth path", () => {
+    const message = buildSubscriptionAuthBlockedMessage({
+      apiProvider: "firstParty",
+      apiKeySource: "oauth",
+      tokenSource: "claudeai",
+      subscriptionType: "pro",
+    });
+
+    expect(message).toContain("Anthropic Console billing");
+    expect(message).toContain("option 2");
+    expect(message).toContain("apiProvider=firstParty");
+    expect(message).toContain("subscriptionType=pro");
   });
 });
 

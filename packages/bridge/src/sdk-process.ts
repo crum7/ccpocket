@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
-import { query, type Query, type SDKMessage, type PermissionResult } from "@anthropic-ai/claude-agent-sdk";
+import { query, type Query, type SDKMessage, type PermissionResult, type AccountInfo, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import {
   normalizeToolResultContent,
   type ServerMessage,
@@ -12,8 +12,6 @@ import {
 } from "./parser.js";
 import {
   getClaudeAuthStatus,
-  getValidClaudeAccessToken,
-  validateClaudeAccessToken,
 } from "./usage.js";
 
 // Tools that are auto-approved in acceptEdits mode
@@ -132,6 +130,13 @@ export interface AuthCheckResult {
   errorCode?: AuthErrorCode;
 }
 
+export interface ClaudeAccountAuthInfo {
+  apiKeySource?: string;
+  tokenSource?: string;
+  subscriptionType?: string;
+  apiProvider?: string;
+}
+
 const AUTH_REMEDY = "Fix: Run this command in the terminal on the machine running Bridge:\n  claude auth login";
 
 /**
@@ -182,16 +187,64 @@ async function checkClaudeAuth(): Promise<AuthCheckResult> {
     return { authenticated: true };
   }
 
-  // Subscription (OAuth) authentication is temporarily disabled pending
-  // official clarification from Anthropic on third-party SDK usage policy.
-  // See: https://code.claude.com/docs/en/legal-and-compliance
-  //
-  // Users should set ANTHROPIC_API_KEY instead.
+  const status = await getClaudeAuthStatus();
+  if (status.authenticated) {
+    return { authenticated: true };
+  }
+
   return {
     authenticated: false,
-    errorCode: "auth_api_error",
-    message: "⚠ API key required\n\nSubscription-based authentication is temporarily unavailable while we await policy clarification from Anthropic.\n\nPlease set the ANTHROPIC_API_KEY environment variable on the Bridge machine.\nhttps://console.anthropic.com/settings/keys",
+    errorCode: status.errorCode ?? "auth_api_error",
+    message: status.message ?? "Claude Code authentication failed.",
   };
+}
+
+function normalizeLower(value: string | undefined): string | undefined {
+  const normalized = value?.trim().toLowerCase();
+  return normalized ? normalized : undefined;
+}
+
+function isExplicitApiKeySource(apiKeySource: string | undefined): boolean {
+  const normalized = normalizeLower(apiKeySource);
+  return normalized !== undefined && normalized !== "oauth" && normalized !== "none";
+}
+
+export function isBlockedClaudeSubscriptionAuth(account: ClaudeAccountAuthInfo): boolean {
+  const apiProvider = normalizeLower(account.apiProvider);
+  if (apiProvider && apiProvider !== "firstparty" && apiProvider !== "first_party") {
+    return false;
+  }
+
+  if (isExplicitApiKeySource(account.apiKeySource)) {
+    return false;
+  }
+
+  const tokenSource = normalizeLower(account.tokenSource);
+  if (tokenSource?.includes("console")) {
+    return false;
+  }
+  if (tokenSource?.includes("claude")) {
+    return true;
+  }
+
+  const subscriptionType = normalizeLower(account.subscriptionType);
+  if (!subscriptionType) {
+    return false;
+  }
+
+  const normalizedSubscriptionType = subscriptionType.replace(/^claude\s+/, "");
+  return new Set(["pro", "max", "team", "enterprise"]).has(normalizedSubscriptionType);
+}
+
+export function buildSubscriptionAuthBlockedMessage(account: ClaudeAccountAuthInfo): string {
+  const details = [
+    account.apiProvider ? `apiProvider=${account.apiProvider}` : null,
+    account.tokenSource ? `tokenSource=${account.tokenSource}` : null,
+    account.subscriptionType ? `subscriptionType=${account.subscriptionType}` : null,
+  ].filter(Boolean).join(", ");
+
+  const suffix = details ? `\n\nDetected account: ${details}` : "";
+  return "⚠ Claude subscription login is not supported\n\nThis Bridge blocks Claude subscription-based OAuth sessions. Please sign in with Anthropic Console billing (login option 2) or set ANTHROPIC_API_KEY on the Bridge machine.\nhttps://console.anthropic.com/settings/keys" + suffix;
 }
 
 export interface StartOptions {
@@ -246,7 +299,7 @@ export function sdkMessageToServerMessage(msg: SDKMessage): ServerMessage | null
     }
 
     case "assistant": {
-      const ast = msg as { message: Record<string, unknown>; uuid?: string };
+      const ast = msg as unknown as { message: Record<string, unknown>; uuid?: string };
       return {
         type: "assistant",
         message: ast.message as ServerMessage extends { type: "assistant" } ? ServerMessage["message"] : never,
@@ -329,7 +382,7 @@ export function sdkMessageToServerMessage(msg: SDKMessage): ServerMessage | null
     }
 
     case "stream_event": {
-      const stream = msg as { event: Record<string, unknown> };
+      const stream = msg as unknown as { event: Record<string, unknown> };
       const event = stream.event;
       if (event.type === "content_block_delta") {
         const delta = event.delta as Record<string, unknown>;
@@ -377,18 +430,19 @@ interface PendingPermission {
 // PermissionResult is imported from @anthropic-ai/claude-agent-sdk
 
 /** Image content block for SDK message */
+type SupportedImageMimeType = "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+
 interface ImageBlock {
   type: "image";
   source: {
     type: "base64";
-    media_type: string;
+    media_type: SupportedImageMimeType;
     data: string;
   };
 }
 
 /** User message type for SDK's AsyncIterable prompt */
-interface SDKUserMsg {
-  type: "user";
+interface SDKUserMsg extends SDKUserMessage {
   session_id: string;
   message: {
     role: "user";
@@ -423,6 +477,7 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
   private _projectPath: string | null = null;
   private toolCallsSinceLastResult = 0;
   private fileEditsSinceLastResult = 0;
+  private runtimeAuthValidated = false;
 
   get status(): ProcessStatus {
     return this._status;
@@ -463,6 +518,7 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
     this.sessionAllowRules.clear();
     this.toolCallsSinceLastResult = 0;
     this.fileEditsSinceLastResult = 0;
+    this.runtimeAuthValidated = false;
     if (options?.initialInput) {
       this.pendingInputQueue.push({ text: options.initialInput });
     }
@@ -521,7 +577,7 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
     }, 3000);
 
     this.queryInstance = query({
-      prompt: this.createUserMessageStream(),
+      prompt: this.createUserMessageStream() as AsyncIterable<SDKUserMessage>,
       options: {
         cwd: projectPath,
         resume: options?.sessionId,
@@ -669,7 +725,7 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
         type: "image",
         source: {
           type: "base64",
-          media_type: image.mimeType,
+          media_type: image.mimeType as SupportedImageMimeType,
           data: image.base64,
         },
       });
@@ -931,7 +987,7 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
               type: "image",
               source: {
                 type: "base64",
-                media_type: image.mimeType,
+                media_type: image.mimeType as SupportedImageMimeType,
                 data: image.base64,
               },
             });
@@ -986,21 +1042,6 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
 
       // Extract session ID and model from system/init
       if (message.type === "system" && "subtype" in message && (message as Record<string, unknown>).subtype === "init") {
-        // Guard: reject OAuth authentication even if SDK accepted it.
-        // API key (ANTHROPIC_API_KEY) is the only allowed auth source.
-        const apiKeySource = (message as Record<string, unknown>).apiKeySource;
-        if (apiKeySource === "oauth") {
-          console.log("[sdk-process] Rejected OAuth auth source at runtime");
-          this.emitMessage({
-            type: "error",
-            message: "⚠ API key required\n\nOAuth (subscription) authentication is not permitted. Please set the ANTHROPIC_API_KEY environment variable on the Bridge machine.\nhttps://console.anthropic.com/settings/keys",
-            errorCode: "auth_api_error",
-          });
-          this.stop();
-          this.emit("exit", 1);
-          return;
-        }
-
         if (this.initTimeoutId) {
           clearTimeout(this.initTimeoutId);
           this.initTimeoutId = null;
@@ -1010,6 +1051,14 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
         if (typeof initModel === "string" && initModel) {
           this._model = initModel;
         }
+
+        const runtimeAuthBlocked = await this.validateRuntimeAuth(
+          (message as Record<string, unknown>).apiKeySource,
+        );
+        if (runtimeAuthBlocked) {
+          return;
+        }
+
         this.setStatus("idle");
       }
 
@@ -1047,6 +1096,49 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
 
     this.setStatus("idle");
     this.emit("exit", 0);
+  }
+
+  private async validateRuntimeAuth(initApiKeySource: unknown): Promise<boolean> {
+    if (this.runtimeAuthValidated) return false;
+    this.runtimeAuthValidated = true;
+
+    const apiKeySource = typeof initApiKeySource === "string" ? initApiKeySource : undefined;
+    if (isExplicitApiKeySource(apiKeySource)) {
+      return false;
+    }
+
+    const accountInfo = await this.fetchAccountInfoSafe();
+    const account: ClaudeAccountAuthInfo = {
+      apiKeySource,
+      apiProvider: accountInfo?.apiProvider,
+      tokenSource: accountInfo?.tokenSource,
+      subscriptionType: accountInfo?.subscriptionType,
+    };
+
+    if (!isBlockedClaudeSubscriptionAuth(account)) {
+      console.log("[sdk-process] Runtime auth accepted", account);
+      return false;
+    }
+
+    console.log("[sdk-process] Rejected subscription auth at runtime", account);
+    this.emitMessage({
+      type: "error",
+      message: buildSubscriptionAuthBlockedMessage(account),
+      errorCode: "auth_api_error",
+    });
+    this.stop();
+    this.emit("exit", 1);
+    return true;
+  }
+
+  private async fetchAccountInfoSafe(): Promise<AccountInfo | null> {
+    if (!this.queryInstance) return null;
+    try {
+      return await this.queryInstance.accountInfo();
+    } catch (err) {
+      console.warn("[sdk-process] Failed to fetch account info:", err);
+      return null;
+    }
   }
 
   /**

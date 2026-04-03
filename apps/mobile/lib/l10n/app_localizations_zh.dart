@@ -1307,10 +1307,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authErrorAlternativeLabel => 'Shell 方式';
 
   @override
-  String get apiKeyRequiredTitle => '需要 API 密钥';
+  String get apiKeyRequiredTitle => '需要 Console 登录或 API 密钥';
 
   @override
-  String get apiKeyRequiredBody => '由于 Anthropic 策略方面的限制，目前订阅制认证受限。请改用 API 密钥。';
+  String get apiKeyRequiredBody =>
+      'Claude 订阅登录会被阻止。请改用 Anthropic Console 计费登录（选项 2）或 API 密钥。';
 
   @override
   String get apiKeyRequiredHint => '在此获取 API 密钥：';

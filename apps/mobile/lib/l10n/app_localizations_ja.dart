@@ -1321,11 +1321,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get authErrorAlternativeLabel => 'シェルから実行する場合';
 
   @override
-  String get apiKeyRequiredTitle => 'APIキーが必要です';
+  String get apiKeyRequiredTitle => 'ConsoleログインまたはAPIキーが必要です';
 
   @override
   String get apiKeyRequiredBody =>
-      'サブスクリプション認証は規約上の懸念から現在制限されています。APIキーをご利用ください。';
+      'Claude のサブスクリプションログインはブロックされています。Anthropic Console 課金のログイン（2番）または API キーをご利用ください。';
 
   @override
   String get apiKeyRequiredHint => 'APIキーの取得:';
