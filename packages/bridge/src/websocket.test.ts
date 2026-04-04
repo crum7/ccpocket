@@ -339,7 +339,10 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
       },
     ]);
 
-    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const bridge = new BridgeWebSocketServer({
+      server: httpServer,
+      platform: "darwin",
+    });
     const ws = {
       readyState: OPEN_STATE,
       send: vi.fn(),
