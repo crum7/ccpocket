@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { rm, writeFile } from "node:fs/promises";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import type { ServerMessage, ProcessStatus } from "./parser.js";
+import { resolvePlatformPath } from "./path-utils.js";
 
 export interface CodexStartOptions {
   threadId?: string;
@@ -120,6 +121,45 @@ interface CodexResolvedSettings {
   webSearchMode?: string;
 }
 
+export function buildCodexSpawnSpec(
+  projectPath: string,
+  platform: NodeJS.Platform = process.platform,
+): {
+  command: string;
+  args: string[];
+  options: {
+    cwd: string;
+    stdio: "pipe";
+    env: NodeJS.ProcessEnv;
+    windowsVerbatimArguments?: boolean;
+  };
+} {
+  const cwd = resolvePlatformPath(projectPath, platform);
+
+  if (platform === "win32") {
+    return {
+      command: "cmd.exe",
+      args: ["/d", "/s", "/c", "codex app-server --listen stdio://"],
+      options: {
+        cwd,
+        stdio: "pipe",
+        env: process.env,
+        windowsVerbatimArguments: true,
+      },
+    };
+  }
+
+  return {
+    command: "codex",
+    args: ["app-server", "--listen", "stdio://"],
+    options: {
+      cwd,
+      stdio: "pipe",
+      env: process.env,
+    },
+  };
+}
+
 export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   private child: ChildProcessWithoutNullStreams | null = null;
   private _status: ProcessStatus = "starting";
@@ -174,6 +214,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   } | null = null;
   /** Queued plan execution text when inputResolve wasn't ready at approval time. */
   private _pendingPlanInput: string | null = null;
+  private readonly platform: NodeJS.Platform;
+
+  constructor(platform: NodeJS.Platform = process.platform) {
+    super();
+    this.platform = platform;
+  }
 
   get status(): ProcessStatus {
     return this._status;
@@ -348,15 +394,16 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     projectPath: string,
     options?: CodexStartOptions,
   ): void {
+    const spawnSpec = buildCodexSpawnSpec(projectPath, this.platform);
     console.log(
-      `[codex-process] Starting app-server (cwd: ${projectPath}, sandbox: ${options?.sandboxMode ?? "workspace-write"}, approval: ${options?.approvalPolicy ?? "never"}, model: ${options?.model ?? "default"}, collaboration: ${this._collaborationMode})`,
+      `[codex-process] Starting app-server (cwd: ${spawnSpec.options.cwd}, sandbox: ${options?.sandboxMode ?? "workspace-write"}, approval: ${options?.approvalPolicy ?? "never"}, model: ${options?.model ?? "default"}, collaboration: ${this._collaborationMode})`,
     );
 
-    const child = spawn("codex", ["app-server", "--listen", "stdio://"], {
-      cwd: projectPath,
-      stdio: "pipe",
-      env: process.env,
-    });
+    const child = spawn(
+      spawnSpec.command,
+      spawnSpec.args,
+      spawnSpec.options,
+    );
     this.child = child;
 
     child.stdout.setEncoding("utf8");

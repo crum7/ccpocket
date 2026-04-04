@@ -1,6 +1,5 @@
 import { createServer } from "node:http";
 import { homedir } from "node:os";
-import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setupProxy } from "./proxy.js";
 import { BridgeWebSocketServer } from "./websocket.js";
@@ -16,6 +15,7 @@ import { DebugTraceStore } from "./debug-trace-store.js";
 import { RecordingStore } from "./recording-store.js";
 import { FirebaseAuthClient } from "./firebase-auth.js";
 import { PromptHistoryBackupStore } from "./prompt-history-backup.js";
+import { resolvePlatformPath } from "./path-utils.js";
 
 export async function startServer() {
   const PORT = parseInt(process.env.BRIDGE_PORT ?? "8765", 10);
@@ -24,7 +24,10 @@ export async function startServer() {
 
   // Parse allowed project directories (default: $HOME)
   const ALLOWED_DIRS: string[] = process.env.BRIDGE_ALLOWED_DIRS
-    ? process.env.BRIDGE_ALLOWED_DIRS.split(",").map((d) => resolve(d.trim())).filter(Boolean)
+    ? process.env.BRIDGE_ALLOWED_DIRS
+      .split(",")
+      .map((d) => resolvePlatformPath(d.trim()))
+      .filter(Boolean)
     : [homedir()];
 
   console.log("[bridge] Starting ccpocket bridge server...");

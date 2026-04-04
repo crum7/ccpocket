@@ -1,41 +1,33 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { existsSync, writeFileSync, mkdirSync, rmSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
-import { homedir } from "node:os";
+import { tmpdir } from "node:os";
 import { WorktreeStore } from "./worktree-store.js";
 
-const STORE_DIR = join(homedir(), ".ccpocket");
-const STORE_FILE = join(STORE_DIR, "worktree-sessions.json");
-
 describe("WorktreeStore", () => {
-  let backupData: string | null = null;
+  let storeDir: string;
+  let storeFile: string;
 
   beforeEach(() => {
-    // Backup existing store file if it exists
-    if (existsSync(STORE_FILE)) {
-      backupData = readFileSync(STORE_FILE, "utf-8");
-    }
-    // Start with empty store
-    mkdirSync(STORE_DIR, { recursive: true });
-    writeFileSync(STORE_FILE, "{}", "utf-8");
+    storeDir = mkdtempSync(join(tmpdir(), "ccpocket-worktree-store-"));
+    storeFile = join(storeDir, "worktree-sessions.json");
+    mkdirSync(storeDir, { recursive: true });
+    writeFileSync(storeFile, "{}", "utf-8");
   });
 
   afterEach(() => {
-    // Restore original store file
-    if (backupData !== null) {
-      writeFileSync(STORE_FILE, backupData, "utf-8");
-    } else if (existsSync(STORE_FILE)) {
-      writeFileSync(STORE_FILE, "{}", "utf-8");
+    if (existsSync(storeDir)) {
+      rmSync(storeDir, { recursive: true, force: true });
     }
   });
 
   it("returns undefined for unknown session ID", () => {
-    const store = new WorktreeStore();
+    const store = new WorktreeStore(storeFile);
     expect(store.get("nonexistent")).toBeUndefined();
   });
 
   it("stores and retrieves a mapping", () => {
-    const store = new WorktreeStore();
+    const store = new WorktreeStore(storeFile);
     const mapping = {
       worktreePath: "/tmp/project-worktrees/feature-x",
       worktreeBranch: "feature/x",
@@ -46,14 +38,14 @@ describe("WorktreeStore", () => {
   });
 
   it("persists data across instances", () => {
-    const store1 = new WorktreeStore();
+    const store1 = new WorktreeStore(storeFile);
     store1.set("session-a", {
       worktreePath: "/path/a",
       worktreeBranch: "branch-a",
       projectPath: "/project",
     });
 
-    const store2 = new WorktreeStore();
+    const store2 = new WorktreeStore(storeFile);
     expect(store2.get("session-a")).toEqual({
       worktreePath: "/path/a",
       worktreeBranch: "branch-a",
@@ -62,7 +54,7 @@ describe("WorktreeStore", () => {
   });
 
   it("deletes a mapping by session ID", () => {
-    const store = new WorktreeStore();
+    const store = new WorktreeStore(storeFile);
     store.set("to-delete", {
       worktreePath: "/path/x",
       worktreeBranch: "branch-x",
@@ -74,7 +66,7 @@ describe("WorktreeStore", () => {
   });
 
   it("deleteByWorktreePath removes all matching entries", () => {
-    const store = new WorktreeStore();
+    const store = new WorktreeStore(storeFile);
     const wtPath = "/shared/worktree/path";
     store.set("session-1", {
       worktreePath: wtPath,
@@ -100,7 +92,7 @@ describe("WorktreeStore", () => {
   });
 
   it("findByWorktreePath returns the matching entry", () => {
-    const store = new WorktreeStore();
+    const store = new WorktreeStore(storeFile);
     store.set("find-me", {
       worktreePath: "/find/this/path",
       worktreeBranch: "main",
@@ -114,13 +106,13 @@ describe("WorktreeStore", () => {
   });
 
   it("findByWorktreePath returns undefined when not found", () => {
-    const store = new WorktreeStore();
+    const store = new WorktreeStore(storeFile);
     expect(store.findByWorktreePath("/nonexistent")).toBeUndefined();
   });
 
   it("handles corrupted store file gracefully", () => {
-    writeFileSync(STORE_FILE, "not valid json!!!", "utf-8");
-    const store = new WorktreeStore();
+    writeFileSync(storeFile, "not valid json!!!", "utf-8");
+    const store = new WorktreeStore(storeFile);
     expect(store.get("anything")).toBeUndefined();
     // Should still be able to write
     store.set("new", {
@@ -132,15 +124,15 @@ describe("WorktreeStore", () => {
   });
 
   it("handles missing store file gracefully", () => {
-    if (existsSync(STORE_FILE)) {
-      rmSync(STORE_FILE);
+    if (existsSync(storeFile)) {
+      rmSync(storeFile);
     }
-    const store = new WorktreeStore();
+    const store = new WorktreeStore(storeFile);
     expect(store.get("anything")).toBeUndefined();
   });
 
   it("stores multiple independent mappings", () => {
-    const store = new WorktreeStore();
+    const store = new WorktreeStore(storeFile);
     store.set("s1", { worktreePath: "/p1", worktreeBranch: "b1", projectPath: "/proj1" });
     store.set("s2", { worktreePath: "/p2", worktreeBranch: "b2", projectPath: "/proj2" });
     store.set("s3", { worktreePath: "/p3", worktreeBranch: "b3", projectPath: "/proj3" });

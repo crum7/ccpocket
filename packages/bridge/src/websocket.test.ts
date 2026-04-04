@@ -263,6 +263,74 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     bridge.close();
   });
 
+  it("allows Windows subdirectories under BRIDGE_ALLOWED_DIRS", async () => {
+    const bridge = new BridgeWebSocketServer({
+      server: httpServer,
+      allowedDirs: ["D:\\Users\\alice"],
+      platform: "win32",
+    });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+
+    (bridge as any).handleClientMessage(
+      {
+        type: "start",
+        projectPath: "D:\\Users\\alice\\src\\ccpocket",
+        provider: "claude",
+      },
+      ws,
+    );
+
+    await Promise.resolve();
+
+    const sends = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+    const created = sends.find(
+      (m: any) => m.type === "system" && m.subtype === "session_created",
+    );
+    expect(created).toBeDefined();
+    expect(created.projectPath).toBe("D:\\Users\\alice\\src\\ccpocket");
+
+    bridge.close();
+  });
+
+  it("normalizes extended Windows project paths during resume", async () => {
+    getCodexSessionHistoryMock.mockResolvedValue([]);
+
+    const bridge = new BridgeWebSocketServer({
+      server: httpServer,
+      allowedDirs: ["D:\\Users\\alice"],
+      platform: "win32",
+    });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+
+    (bridge as any).handleClientMessage(
+      {
+        type: "resume_session",
+        sessionId: "thr-win32",
+        projectPath: "\\\\?\\D:\\Users\\alice\\src\\ccpocket",
+        provider: "codex",
+      },
+      ws,
+    );
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const sends = ws.send.mock.calls.map((c: unknown[]) => JSON.parse(c[0] as string));
+    const created = sends.find(
+      (m: any) => m.type === "system" && m.subtype === "session_created",
+    );
+    expect(created).toBeDefined();
+    expect(created.projectPath).toBe("D:\\Users\\alice\\src\\ccpocket");
+
+    bridge.close();
+  });
+
   it("sends provider=codex on codex resume_session", async () => {
     getCodexSessionHistoryMock.mockResolvedValue([
       {

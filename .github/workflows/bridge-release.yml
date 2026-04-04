@@ -10,7 +10,7 @@ permissions:
   id-token: write
 
 jobs:
-  release:
+  verify-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,6 +34,47 @@ jobs:
 
       - name: Build
         run: npm run bridge:build
+
+  verify-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test:bridge
+
+      - name: Type check
+        run: npx tsc --noEmit -p packages/bridge/tsconfig.json
+
+      - name: Build
+        run: npm run bridge:build
+
+  release:
+    needs:
+      - verify-linux
+      - verify-windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Update npm for OIDC support
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Publish to npm
         run: npm publish --workspace=packages/bridge --provenance --access public

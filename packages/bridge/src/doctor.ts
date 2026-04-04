@@ -235,11 +235,29 @@ export async function checkDependencies(): Promise<CheckResult> {
 }
 
 export async function checkPortAvailable(port: number): Promise<CheckResult> {
+  if (port === 0) {
+    return {
+      name: "Port availability",
+      status: "pass",
+      message: "An available ephemeral port can be allocated",
+    };
+  }
+
   return new Promise((resolve) => {
     let resolved = false;
+    const timeout = setTimeout(() => {
+      try { server.close(); } catch { /* ignore */ }
+      done({
+        name: "Port availability",
+        status: "warn",
+        message: `Port ${port} check timed out`,
+      });
+    }, 3000);
+
     const done = (result: CheckResult) => {
       if (resolved) return;
       resolved = true;
+      clearTimeout(timeout);
       resolve(result);
     };
 
@@ -269,15 +287,6 @@ export async function checkPortAvailable(port: number): Promise<CheckResult> {
         });
       });
     });
-    // Safety timeout
-    setTimeout(() => {
-      try { server.close(); } catch { /* ignore */ }
-      done({
-        name: "Port availability",
-        status: "warn",
-        message: `Port ${port} check timed out`,
-      });
-    }, 3000);
   });
 }
 

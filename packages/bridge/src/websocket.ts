@@ -65,6 +65,10 @@ import { type PushLocale, normalizePushLocale, t } from "./push-i18n.js";
 import { fetchAllUsage } from "./usage.js";
 import type { PromptHistoryBackupStore } from "./prompt-history-backup.js";
 import { getPackageVersion } from "./version.js";
+import {
+  isPathWithinAllowedDirectory,
+  resolvePlatformPath,
+} from "./path-utils.js";
 
 type SystemServerMessage = Extract<ServerMessage, { type: "system" }>;
 
@@ -225,6 +229,7 @@ export interface BridgeServerOptions {
   recordingStore?: RecordingStore;
   firebaseAuth?: FirebaseAuthClient;
   promptHistoryBackup?: PromptHistoryBackupStore;
+  platform?: NodeJS.Platform;
 }
 
 export class BridgeWebSocketServer {
@@ -255,6 +260,7 @@ export class BridgeWebSocketServer {
     "BRIDGE_FAIL_SET_PERMISSION_MODE",
   );
   private failSetSandboxMode = envFlagEnabled("BRIDGE_FAIL_SET_SANDBOX_MODE");
+  private platform: NodeJS.Platform;
 
   constructor(options: BridgeServerOptions) {
     const {
@@ -268,6 +274,7 @@ export class BridgeWebSocketServer {
       recordingStore,
       firebaseAuth,
       promptHistoryBackup,
+      platform,
     } = options;
     this.apiKey = apiKey ?? null;
     this.allowedDirs = allowedDirs ?? [];
@@ -279,6 +286,7 @@ export class BridgeWebSocketServer {
     this.worktreeStore = new WorktreeStore();
     this.pushRelay = new PushRelayClient({ firebaseAuth });
     this.promptHistoryBackup = promptHistoryBackup ?? null;
+    this.platform = platform ?? process.platform;
 
     this.archiveStore = new ArchiveStore();
     void this.debugTraceStore.init().catch((err) => {
@@ -345,9 +353,8 @@ export class BridgeWebSocketServer {
    */
   private isPathAllowed(path: string): boolean {
     if (this.allowedDirs.length === 0) return true;
-    const resolved = resolve(path);
     return this.allowedDirs.some(
-      (dir) => resolved === dir || resolved.startsWith(dir + "/"),
+      (dir) => isPathWithinAllowedDirectory(path, dir, this.platform),
     );
   }
 
@@ -568,7 +575,8 @@ export class BridgeWebSocketServer {
 
     switch (msg.type) {
       case "start": {
-        if (!this.isPathAllowed(msg.projectPath)) {
+        const projectPath = resolvePlatformPath(msg.projectPath, this.platform);
+        if (!this.isPathAllowed(projectPath)) {
           this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
@@ -607,10 +615,10 @@ export class BridgeWebSocketServer {
           }
           const cached =
             provider === "claude"
-              ? this.sessionManager.getCachedCommands(msg.projectPath)
+              ? this.sessionManager.getCachedCommands(projectPath)
               : undefined;
           const sessionId = this.sessionManager.create(
-            msg.projectPath,
+            projectPath,
             {
               sessionId: msg.sessionId,
               continueMode: msg.continue,
@@ -667,7 +675,7 @@ export class BridgeWebSocketServer {
           void this.loadAndSetSessionName(
             createdSession,
             provider,
-            msg.projectPath,
+            projectPath,
             msg.sessionId,
           ).then(() => {
             this.send(
@@ -675,7 +683,7 @@ export class BridgeWebSocketServer {
               this.buildSessionCreatedMessage({
                 sessionId,
                 provider,
-                projectPath: msg.projectPath,
+                projectPath,
                 session: createdSession,
                 permissionMode: legacyPermissionMode,
                 executionMode,
@@ -710,14 +718,14 @@ export class BridgeWebSocketServer {
             direction: "internal",
             channel: "bridge",
             type: "session_created",
-            detail: `provider=${provider} projectPath=${msg.projectPath}`,
+            detail: `provider=${provider} projectPath=${projectPath}`,
           });
           this.recordingStore?.saveMeta(sessionId, {
             bridgeSessionId: sessionId,
-            projectPath: msg.projectPath,
+            projectPath,
             createdAt: new Date().toISOString(),
           });
-          this.projectHistory?.addProject(msg.projectPath);
+          this.projectHistory?.addProject(projectPath);
         } catch (err) {
           console.error(`[ws] Failed to start session:`, err);
           this.send(ws, {
@@ -1968,7 +1976,11 @@ export class BridgeWebSocketServer {
         console.log(
           `[ws] resume_session: sessionId=${msg.sessionId} projectPath=${msg.projectPath} provider=${msg.provider ?? "claude"}`,
         );
-        if (!this.isPathAllowed(msg.projectPath)) {
+        const resumeProjectPath = resolvePlatformPath(
+          msg.projectPath,
+          this.platform,
+        );
+        if (!this.isPathAllowed(resumeProjectPath)) {
           this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
@@ -2005,7 +2017,10 @@ export class BridgeWebSocketServer {
         if (provider === "codex") {
           const wtMapping = this.worktreeStore.get(sessionRefId);
           const effectiveProjectPath =
-            wtMapping?.projectPath ?? msg.projectPath;
+            resolvePlatformPath(
+              wtMapping?.projectPath ?? resumeProjectPath,
+              this.platform,
+            );
           let worktreeOpts:
             | {
                 useWorktree?: boolean;
@@ -2105,7 +2120,7 @@ export class BridgeWebSocketServer {
         }
 
         const claudeSessionId = sessionRefId;
-        const cached = this.sessionManager.getCachedCommands(msg.projectPath);
+        const cached = this.sessionManager.getCachedCommands(resumeProjectPath);
 
         // Look up worktree mapping for this Claude session
         const wtMapping = this.worktreeStore.get(claudeSessionId);
@@ -2135,7 +2150,7 @@ export class BridgeWebSocketServer {
         getSessionHistory(claudeSessionId)
           .then((pastMessages) => {
             const sessionId = this.sessionManager.create(
-              msg.projectPath,
+              resumeProjectPath,
               {
                 sessionId: claudeSessionId,
                 permissionMode: legacyPermissionMode,
@@ -2157,14 +2172,14 @@ export class BridgeWebSocketServer {
             void this.loadAndSetSessionName(
               createdSession,
               "claude",
-              msg.projectPath,
+              resumeProjectPath,
               claudeSessionId,
             ).then(() => {
               this.send(ws, {
                 ...this.buildSessionCreatedMessage({
                   sessionId,
                   provider: "claude",
-                  projectPath: msg.projectPath,
+                  projectPath: resumeProjectPath,
                   session: createdSession,
                   permissionMode: legacyPermissionMode,
                   executionMode,
@@ -2191,7 +2206,7 @@ export class BridgeWebSocketServer {
               type: "session_resumed",
               detail: `provider=claude session=${claudeSessionId}`,
             });
-            this.projectHistory?.addProject(msg.projectPath);
+            this.projectHistory?.addProject(resumeProjectPath);
           })
           .catch((err) => {
             this.send(ws, {
@@ -4085,7 +4100,7 @@ export class BridgeWebSocketServer {
       } else {
         const absPath = resolve(cwd, filePath);
         // Verify resolved path stays within cwd
-        if (!absPath.startsWith(resolve(cwd) + "/")) {
+        if (!isPathWithinAllowedDirectory(absPath, cwd, this.platform)) {
           return { error: "Invalid file path" };
         }
         buf = await readFile(absPath);

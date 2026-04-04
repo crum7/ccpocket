@@ -36,7 +36,7 @@ vi.mock("node:child_process", () => ({
   spawn: spawnMock,
 }));
 
-import { CodexProcess } from "./codex-process.js";
+import { buildCodexSpawnSpec, CodexProcess } from "./codex-process.js";
 
 describe("CodexProcess (app-server)", () => {
   beforeEach(() => {
@@ -129,6 +129,38 @@ describe("CodexProcess (app-server)", () => {
     );
 
     proc.stop();
+  });
+
+  it("uses cmd.exe to launch codex app-server on Windows", () => {
+    const proc = new CodexProcess("win32");
+
+    proc.start("D:\\Users\\alice\\repo");
+
+    expect(spawnMock).toHaveBeenCalledTimes(1);
+    expect(spawnMock).toHaveBeenCalledWith(
+      "cmd.exe",
+      ["/d", "/s", "/c", "codex app-server --listen stdio://"],
+      expect.objectContaining({
+        cwd: "D:\\Users\\alice\\repo",
+        windowsVerbatimArguments: true,
+      }),
+    );
+
+    proc.stop();
+  });
+
+  it("builds a normalized Windows spawn spec", () => {
+    expect(buildCodexSpawnSpec("\\\\?\\D:\\Users\\alice\\repo", "win32")).toEqual(
+      {
+        command: "cmd.exe",
+        args: ["/d", "/s", "/c", "codex app-server --listen stdio://"],
+        options: expect.objectContaining({
+          cwd: "D:\\Users\\alice\\repo",
+          stdio: "pipe",
+          windowsVerbatimArguments: true,
+        }),
+      },
+    );
   });
 
   it("ignores placeholder codex model names from resume state", async () => {

@@ -16,8 +16,10 @@ const STORE_FILE = join(STORE_DIR, "worktree-sessions.json");
 /** Persistent mapping between Claude session IDs and worktree paths. */
 export class WorktreeStore {
   private data: StorageData;
+  private storeFile: string;
 
-  constructor() {
+  constructor(storeFile: string = STORE_FILE) {
+    this.storeFile = storeFile;
     this.data = this.load();
   }
 
@@ -59,16 +61,16 @@ export class WorktreeStore {
   }
 
   private load(): StorageData {
-    if (!existsSync(STORE_FILE)) return {};
+    if (!existsSync(this.storeFile)) return {};
     try {
-      return JSON.parse(readFileSync(STORE_FILE, "utf-8")) as StorageData;
+      return JSON.parse(readFileSync(this.storeFile, "utf-8")) as StorageData;
     } catch {
       return {};
     }
   }
 
   private save(): void {
-    mkdirSync(STORE_DIR, { recursive: true });
-    writeFileSync(STORE_FILE, JSON.stringify(this.data, null, 2), "utf-8");
+    mkdirSync(dirname(this.storeFile), { recursive: true });
+    writeFileSync(this.storeFile, JSON.stringify(this.data, null, 2), "utf-8");
   }
 }
