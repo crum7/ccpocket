@@ -2,6 +2,12 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.33.3] - 2026-04-05
+
+### Fixed
+- Handle `Revert All` and hunk/file revert actions correctly when the git diff includes untracked files
+- Allow hunk stage/revert operations to build patches for untracked files shown in the diff view
+
 ## [1.33.2] - 2026-04-05
 
 ### Changed
