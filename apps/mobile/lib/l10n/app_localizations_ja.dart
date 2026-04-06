@@ -352,6 +352,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get networkAccess => 'ネットワークアクセス';
 
   @override
+  String get sharedAppServer => '共有App Server';
+
+  @override
+  String get sharedAppServerSubtitle => 'Codex TUIからセッションに合流可能にする（実験的）';
+
+  @override
   String get worktreeNew => '新規';
 
   @override

@@ -80,6 +80,7 @@ export type ClientMessage =
       useWorktree?: boolean;
       worktreeBranch?: string;
       existingWorktreePath?: string;
+      sharedAppServer?: boolean;
     }
   | {
       type: "input";
@@ -321,6 +322,8 @@ export type ServerMessage =
       clearContext?: boolean;
       sourceSessionId?: string;
       tipCode?: string;
+      /** WebSocket URL when the session is running in shared app-server mode. */
+      remoteUrl?: string;
     }
   | { type: "assistant"; message: AssistantMessage; messageUuid?: string }
   | {

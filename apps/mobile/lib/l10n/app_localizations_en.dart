@@ -353,6 +353,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get networkAccess => 'Network Access';
 
   @override
+  String get sharedAppServer => 'Shared App Server';
+
+  @override
+  String get sharedAppServerSubtitle =>
+      'Allow Codex TUI to join this session (Experimental)';
+
+  @override
   String get worktreeNew => 'New';
 
   @override

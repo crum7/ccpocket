@@ -415,6 +415,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
         slashCommands: update.slashCommands ?? current.slashCommands,
         claudeSessionId: newClaudeSessionId,
         hiddenToolUseIds: hiddenToolUseIds,
+        remoteUrl: update.remoteUrl ?? current.remoteUrl,
       ),
     );
 

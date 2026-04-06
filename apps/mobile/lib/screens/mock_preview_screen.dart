@@ -1326,9 +1326,7 @@ class _StoreDiffWrapperState extends State<_StoreDiffWrapper> {
   Widget build(BuildContext context) {
     return RepositoryProvider<BridgeService>.value(
       value: _mockBridge,
-      child: const GitScreen(
-        projectPath: '/mock/shopify-app',
-      ),
+      child: const GitScreen(projectPath: '/mock/shopify-app'),
     );
   }
 }

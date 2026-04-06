@@ -54,6 +54,9 @@ abstract class ChatSessionState with _$ChatSessionState {
 
     // Slash commands available in this session
     @Default([]) List<SlashCommand> slashCommands,
+
+    /// WebSocket URL when the session runs in shared app-server mode.
+    String? remoteUrl,
   }) = _ChatSessionState;
 }
 

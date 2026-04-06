@@ -436,6 +436,7 @@ class _CodexChatBody extends HookWidget {
     final status = sessionState.status;
     final approval = sessionState.approval;
     final inPlanMode = sessionState.inPlanMode;
+    final remoteUrl = sessionState.remoteUrl;
 
     // Approval state pattern matching (Codex: permission + ask-user only)
     String? pendingToolUseId;
@@ -635,6 +636,21 @@ class _CodexChatBody extends HookWidget {
                         _renameSession(context, sessionId);
                       case 'terminal':
                         _openInTerminal(context, projectPath);
+                      case 'copy_remote':
+                        if (remoteUrl != null) {
+                          final command = 'codex --remote $remoteUrl';
+                          Clipboard.setData(ClipboardData(text: command));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Remote command copied to clipboard',
+                                ),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        }
                     }
                   },
                   itemBuilder: (context) {
@@ -696,6 +712,21 @@ class _CodexChatBody extends HookWidget {
                           child: ListTile(
                             leading: const Icon(Icons.terminal, size: 20),
                             title: Text(l.openInTerminal),
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      if (remoteUrl != null)
+                        const PopupMenuItem(
+                          key: ValueKey('menu_copy_remote'),
+                          value: 'copy_remote',
+                          child: ListTile(
+                            leading: Icon(Icons.copy, size: 20),
+                            title: Text('Copy Remote Command'),
+                            subtitle: Text(
+                              'Experimental',
+                              style: TextStyle(fontSize: 11),
+                            ),
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                           ),

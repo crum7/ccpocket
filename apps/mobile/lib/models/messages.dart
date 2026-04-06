@@ -459,6 +459,7 @@ sealed class ServerMessage {
         clearContext: json['clearContext'] as bool? ?? false,
         sourceSessionId: json['sourceSessionId'] as String?,
         tipCode: json['tipCode'] as String?,
+        remoteUrl: json['remoteUrl'] as String?,
       ),
       'assistant' => AssistantServerMessage(
         message: AssistantMessage.fromJson(
@@ -875,6 +876,9 @@ class SystemMessage implements ServerMessage {
   final bool clearContext;
   final String? sourceSessionId;
   final String? tipCode;
+
+  /// WebSocket URL when the session runs in shared app-server mode.
+  final String? remoteUrl;
   const SystemMessage({
     required this.subtype,
     this.sessionId,
@@ -898,6 +902,7 @@ class SystemMessage implements ServerMessage {
     this.clearContext = false,
     this.sourceSessionId,
     this.tipCode,
+    this.remoteUrl,
   });
 }
 
@@ -2264,6 +2269,7 @@ class ClientMessage {
     String? modelReasoningEffort,
     bool? networkAccessEnabled,
     String? webSearchMode,
+    bool? sharedAppServer,
   }) {
     return ClientMessage._(<String, dynamic>{
       'type': 'start',
@@ -2290,6 +2296,7 @@ class ClientMessage {
       'modelReasoningEffort': ?modelReasoningEffort,
       'networkAccessEnabled': ?networkAccessEnabled,
       'webSearchMode': ?webSearchMode,
+      if (sharedAppServer == true) 'sharedAppServer': true,
     });
   }
 

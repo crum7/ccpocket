@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { rm, writeFile } from "node:fs/promises";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { WebSocket } from "ws";
 import type { ServerMessage, ProcessStatus } from "./parser.js";
 import { resolvePlatformPath } from "./path-utils.js";
 
@@ -16,6 +17,9 @@ export interface CodexStartOptions {
   networkAccessEnabled?: boolean;
   webSearchMode?: "disabled" | "cached" | "live";
   collaborationMode?: "plan" | "default";
+  /** Launch app-server in WebSocket mode so external clients (e.g. Codex TUI)
+   *  can connect via `codex --remote ws://host:port`. */
+  sharedAppServer?: boolean;
 }
 
 export interface CodexProcessEvents {
@@ -121,10 +125,33 @@ interface CodexResolvedSettings {
   webSearchMode?: string;
 }
 
-export function buildCodexSpawnSpec(
-  projectPath: string,
-  platform: NodeJS.Platform = process.platform,
-): {
+/** Default port range for shared app-server WebSocket endpoints. */
+const SHARED_APP_SERVER_PORT_START = 19800;
+const SHARED_APP_SERVER_PORT_END = 19899;
+
+/** Find an available port in the shared app-server range. */
+async function findAvailablePort(): Promise<number> {
+  const { createServer } = await import("node:net");
+  for (
+    let port = SHARED_APP_SERVER_PORT_START;
+    port <= SHARED_APP_SERVER_PORT_END;
+    port++
+  ) {
+    const available = await new Promise<boolean>((resolve) => {
+      const server = createServer();
+      server.once("error", () => resolve(false));
+      server.listen(port, "127.0.0.1", () => {
+        server.close(() => resolve(true));
+      });
+    });
+    if (available) return port;
+  }
+  throw new Error(
+    `No available port in range ${SHARED_APP_SERVER_PORT_START}-${SHARED_APP_SERVER_PORT_END}`,
+  );
+}
+
+export interface CodexSpawnSpec {
   command: string;
   args: string[];
   options: {
@@ -133,30 +160,43 @@ export function buildCodexSpawnSpec(
     env: NodeJS.ProcessEnv;
     windowsVerbatimArguments?: boolean;
   };
-} {
+  /** When set, the app-server is listening on this WebSocket URL. */
+  sharedWsUrl?: string;
+}
+
+export function buildCodexSpawnSpec(
+  projectPath: string,
+  platform: NodeJS.Platform = process.platform,
+  sharedPort?: number,
+): CodexSpawnSpec {
   const cwd = resolvePlatformPath(projectPath, platform);
+  const listenUrl = sharedPort
+    ? `ws://127.0.0.1:${sharedPort}`
+    : "stdio://";
 
   if (platform === "win32") {
     return {
       command: "cmd.exe",
-      args: ["/d", "/s", "/c", "codex app-server --listen stdio://"],
+      args: ["/d", "/s", "/c", `codex app-server --listen ${listenUrl}`],
       options: {
         cwd,
         stdio: "pipe",
         env: process.env,
         windowsVerbatimArguments: true,
       },
+      ...(sharedPort ? { sharedWsUrl: listenUrl } : {}),
     };
   }
 
   return {
     command: "codex",
-    args: ["app-server", "--listen", "stdio://"],
+    args: ["app-server", "--listen", listenUrl],
     options: {
       cwd,
       stdio: "pipe",
       env: process.env,
     },
+    ...(sharedPort ? { sharedWsUrl: listenUrl } : {}),
   };
 }
 
@@ -216,6 +256,16 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   private _pendingPlanInput: string | null = null;
   private readonly platform: NodeJS.Platform;
 
+  /** WebSocket connection to a shared app-server (null when using stdio). */
+  private wsConnection: WebSocket | null = null;
+  /** The shared app-server WebSocket URL (null when using stdio). */
+  private _sharedWsUrl: string | null = null;
+
+  /** The WebSocket URL when running in shared mode, null otherwise. */
+  get sharedWsUrl(): string | null {
+    return this._sharedWsUrl;
+  }
+
   constructor(platform: NodeJS.Platform = process.platform) {
     super();
     this.platform = platform;
@@ -246,7 +296,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   }
 
   get isRunning(): boolean {
-    return this.child !== null;
+    return this.child !== null || this.wsConnection !== null;
   }
 
   get approvalPolicy(): string {
@@ -331,9 +381,13 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     }
 
     this.prepareLaunch(projectPath, options);
-    this.launchAppServer(projectPath, options);
 
-    void this.bootstrap(projectPath, options);
+    if (options?.sharedAppServer) {
+      void this.launchSharedAppServer(projectPath, options);
+    } else {
+      this.launchAppServer(projectPath, options);
+      void this.bootstrap(projectPath, options);
+    }
   }
 
   async initializeOnly(projectPath: string): Promise<void> {
@@ -357,6 +411,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     this.pendingApprovals.clear();
     this.pendingUserInputs.clear();
     this.rejectAllPending(new Error("stopped"));
+
+    if (this.wsConnection) {
+      this.wsConnection.close();
+      this.wsConnection = null;
+    }
+    this._sharedWsUrl = null;
 
     if (this.child) {
       this.child.kill("SIGTERM");
@@ -442,6 +502,133 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
       }
       this.setStatus("idle");
       this.emit("exit", code);
+    });
+  }
+
+  /**
+   * Launch app-server in shared WebSocket mode.
+   * The Bridge connects to the app-server via WebSocket instead of stdio,
+   * allowing external clients (Codex TUI) to also connect to the same endpoint.
+   */
+  private async launchSharedAppServer(
+    projectPath: string,
+    options?: CodexStartOptions,
+  ): Promise<void> {
+    try {
+      const port = await findAvailablePort();
+      const spawnSpec = buildCodexSpawnSpec(projectPath, this.platform, port);
+      this._sharedWsUrl = spawnSpec.sharedWsUrl ?? null;
+      console.log(
+        `[codex-process] Starting shared app-server on ${this._sharedWsUrl} (cwd: ${spawnSpec.options.cwd})`,
+      );
+
+      const child = spawn(
+        spawnSpec.command,
+        spawnSpec.args,
+        spawnSpec.options,
+      );
+      this.child = child;
+
+      child.stderr.setEncoding("utf8");
+      child.stderr.on("data", (chunk: string) => {
+        const line = chunk.trim();
+        if (line) {
+          console.log(`[codex-process] stderr: ${line}`);
+        }
+      });
+      // In ws mode, stdout is not used for JSON-RPC, but log it for debugging.
+      child.stdout.setEncoding("utf8");
+      child.stdout.on("data", (chunk: string) => {
+        const line = chunk.trim();
+        if (line) {
+          console.log(`[codex-process] stdout: ${line}`);
+        }
+      });
+
+      child.on("error", (err) => {
+        if (this.stopped) return;
+        console.error("[codex-process] shared app-server process error:", err);
+        this.emitMessage({
+          type: "error",
+          message: `Failed to start shared codex app-server: ${err.message}`,
+        });
+        this.setStatus("idle");
+        this.emit("exit", 1);
+      });
+
+      child.on("exit", (code) => {
+        const exitCode = code ?? 0;
+        this.child = null;
+        this.wsConnection?.close();
+        this.wsConnection = null;
+        this._sharedWsUrl = null;
+        this.rejectAllPending(new Error("shared codex app-server exited"));
+        if (!this.stopped && exitCode !== 0) {
+          this.emitMessage({
+            type: "error",
+            message: `shared codex app-server exited with code ${exitCode}`,
+          });
+        }
+        this.setStatus("idle");
+        this.emit("exit", code);
+      });
+
+      // Wait for the app-server to become ready via /readyz
+      const wsUrl = this._sharedWsUrl!;
+      const httpUrl = wsUrl.replace(/^ws/, "http");
+      for (let i = 0; i < 30; i++) {
+        try {
+          const res = await fetch(`${httpUrl}/readyz`);
+          if (res.ok) break;
+        } catch {
+          // not ready yet
+        }
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      // Connect to the app-server via WebSocket
+      await this.connectWebSocket(wsUrl);
+
+      void this.bootstrap(projectPath, options);
+    } catch (err) {
+      if (!this.stopped) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("[codex-process] shared app-server launch error:", err);
+        this.emitMessage({
+          type: "error",
+          message: `Failed to start shared app-server: ${message}`,
+        });
+      }
+      this.setStatus("idle");
+      this.emit("exit", 1);
+    }
+  }
+
+  private connectWebSocket(url: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(url);
+      ws.on("open", () => {
+        this.wsConnection = ws;
+        console.log(`[codex-process] WebSocket connected to ${url}`);
+        resolve();
+      });
+      ws.on("message", (data: Buffer | string) => {
+        const text = typeof data === "string" ? data : data.toString("utf8");
+        this.handleStdoutChunk(text + "\n");
+      });
+      ws.on("error", (err) => {
+        if (this.wsConnection) {
+          console.error("[codex-process] WebSocket error:", err);
+        } else {
+          reject(err);
+        }
+      });
+      ws.on("close", () => {
+        if (!this.stopped && this.wsConnection) {
+          console.log("[codex-process] WebSocket disconnected");
+          this.wsConnection = null;
+        }
+      });
     });
   }
 
@@ -818,6 +1005,9 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
           : {}),
         ...(resolvedSettings.webSearchMode
           ? { webSearchMode: resolvedSettings.webSearchMode }
+          : {}),
+        ...(this._sharedWsUrl
+          ? { remoteUrl: this._sharedWsUrl }
           : {}),
       });
       this.setStatus("idle");
@@ -1879,11 +2069,22 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   }
 
   private writeEnvelope(envelope: Record<string, unknown>): void {
+    const json = JSON.stringify(envelope);
+
+    // Shared mode: send via WebSocket
+    if (this.wsConnection) {
+      if (this.wsConnection.readyState !== WebSocket.OPEN) {
+        throw new Error("WebSocket is not open");
+      }
+      this.wsConnection.send(json);
+      return;
+    }
+
+    // Stdio mode: send via child stdin
     if (!this.child || this.child.killed) {
       throw new Error("codex app-server is not running");
     }
-    const line = `${JSON.stringify(envelope)}\n`;
-    this.child.stdin.write(line);
+    this.child.stdin.write(`${json}\n`);
   }
 
   private rejectAllPending(error: Error): void {

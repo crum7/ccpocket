@@ -35,6 +35,7 @@ class NewSessionParams {
   final String? claudeFallbackModel;
   final bool? claudeForkSession;
   final bool? claudePersistSession;
+  final bool sharedAppServer;
 
   NewSessionParams({
     required this.projectPath,
@@ -58,6 +59,7 @@ class NewSessionParams {
     this.claudeFallbackModel,
     this.claudeForkSession,
     this.claudePersistSession,
+    this.sharedAppServer = false,
   }) : executionMode =
            executionMode ??
            deriveExecutionMode(
@@ -143,6 +145,7 @@ Map<String, dynamic> sessionStartDefaultsToJson(NewSessionParams params) {
     'modelReasoningEffort': params.modelReasoningEffort?.value,
     'networkAccessEnabled': params.networkAccessEnabled,
     'webSearchMode': params.webSearchMode?.value,
+    'sharedAppServer': params.sharedAppServer,
     'claudeModel': params.claudeModel,
     'claudeEffort': params.claudeEffort?.value,
     // NOTE: claudeMaxTurns, claudeMaxBudgetUsd are session-specific
@@ -165,9 +168,8 @@ NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
       provider: json['provider'] as String?,
       permissionMode: json['permissionMode'] as String?,
     ),
-    codexApprovalPolicy: codexApprovalPolicyFromRaw(
-          json['codexApprovalPolicy'] as String?,
-        ) ??
+    codexApprovalPolicy:
+        codexApprovalPolicyFromRaw(json['codexApprovalPolicy'] as String?) ??
         codexApprovalPolicyFromLegacyExecutionMode(
           json['executionMode'] as String?,
         ),
@@ -183,6 +185,7 @@ NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
     ),
     networkAccessEnabled: json['networkAccessEnabled'] as bool?,
     webSearchMode: webSearchModeFromRaw(json['webSearchMode'] as String?),
+    sharedAppServer: json['sharedAppServer'] as bool? ?? false,
     claudeModel: json['claudeModel'] as String?,
     claudeEffort: claudeEffortFromRaw(json['claudeEffort'] as String?),
     // claudeMaxTurns, claudeMaxBudgetUsd default to null
@@ -327,6 +330,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
   ReasoningEffort _modelReasoningEffort = ReasoningEffort.high;
   bool _networkAccessEnabled = true;
   WebSearchMode? _webSearchMode;
+  bool _sharedAppServer = false;
 
   // Project list expansion
   bool _isProjectListExpanded = false;
@@ -505,6 +509,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     }
     _modelReasoningEffort = p.modelReasoningEffort ?? _modelReasoningEffort;
     _networkAccessEnabled = p.networkAccessEnabled ?? _networkAccessEnabled;
+    _sharedAppServer = p.sharedAppServer;
     _webSearchMode = p.webSearchMode;
     _selectedClaudeModel = _claudeModelList.contains(p.claudeModel)
         ? p.claudeModel
@@ -644,6 +649,7 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
       modelReasoningEffort: isCodex ? _modelReasoningEffort : null,
       networkAccessEnabled: isCodex ? _networkAccessEnabled : null,
       webSearchMode: isCodex ? _webSearchMode : null,
+      sharedAppServer: isCodex && _sharedAppServer,
       claudeModel: !isCodex ? _selectedClaudeModel : null,
       claudeEffort: !isCodex ? _claudeEffort : null,
       claudeMaxTurns: !isCodex ? claudeMaxTurns : null,
@@ -832,6 +838,10 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
             networkAccessEnabled: _networkAccessEnabled,
             onNetworkAccessChanged: (value) {
               setState(() => _networkAccessEnabled = value);
+            },
+            sharedAppServer: _sharedAppServer,
+            onSharedAppServerChanged: (value) {
+              setState(() => _sharedAppServer = value);
             },
           ),
           const SizedBox(height: 16),
@@ -1351,6 +1361,8 @@ class _OptionsSection extends StatelessWidget {
   final ValueChanged<WebSearchMode?> onWebSearchModeChanged;
   final bool networkAccessEnabled;
   final ValueChanged<bool> onNetworkAccessChanged;
+  final bool sharedAppServer;
+  final ValueChanged<bool> onSharedAppServerChanged;
 
   const _OptionsSection({
     required this.appColors,
@@ -1398,6 +1410,8 @@ class _OptionsSection extends StatelessWidget {
     required this.onWebSearchModeChanged,
     required this.networkAccessEnabled,
     required this.onNetworkAccessChanged,
+    required this.sharedAppServer,
+    required this.onSharedAppServerChanged,
   });
 
   @override
@@ -1845,6 +1859,8 @@ class _OptionsSection extends StatelessWidget {
             onWebSearchModeChanged: onWebSearchModeChanged,
             networkAccessEnabled: networkAccessEnabled,
             onNetworkAccessChanged: onNetworkAccessChanged,
+            sharedAppServer: sharedAppServer,
+            onSharedAppServerChanged: onSharedAppServerChanged,
           ),
         ],
       ),
@@ -2015,6 +2031,8 @@ class _AdvancedOptions extends StatelessWidget {
   final ValueChanged<WebSearchMode?> onWebSearchModeChanged;
   final bool networkAccessEnabled;
   final ValueChanged<bool> onNetworkAccessChanged;
+  final bool sharedAppServer;
+  final ValueChanged<bool> onSharedAppServerChanged;
 
   const _AdvancedOptions({
     required this.provider,
@@ -2036,6 +2054,8 @@ class _AdvancedOptions extends StatelessWidget {
     required this.onWebSearchModeChanged,
     required this.networkAccessEnabled,
     required this.onNetworkAccessChanged,
+    required this.sharedAppServer,
+    required this.onSharedAppServerChanged,
   });
 
   @override
@@ -2080,6 +2100,8 @@ class _AdvancedOptions extends StatelessWidget {
                 onWebSearchModeChanged: onWebSearchModeChanged,
                 networkAccessEnabled: networkAccessEnabled,
                 onNetworkAccessChanged: onNetworkAccessChanged,
+                sharedAppServer: sharedAppServer,
+                onSharedAppServerChanged: onSharedAppServerChanged,
               ).buildChildren(context),
       ),
     );
@@ -2227,6 +2249,8 @@ class _CodexAdvancedOptions extends StatelessWidget {
   final ValueChanged<WebSearchMode?> onWebSearchModeChanged;
   final bool networkAccessEnabled;
   final ValueChanged<bool> onNetworkAccessChanged;
+  final bool sharedAppServer;
+  final ValueChanged<bool> onSharedAppServerChanged;
 
   const _CodexAdvancedOptions({
     required this.buildInputDecoration,
@@ -2234,6 +2258,8 @@ class _CodexAdvancedOptions extends StatelessWidget {
     required this.onWebSearchModeChanged,
     required this.networkAccessEnabled,
     required this.onNetworkAccessChanged,
+    required this.sharedAppServer,
+    required this.onSharedAppServerChanged,
   });
 
   List<Widget> buildChildren(BuildContext context) {
@@ -2269,6 +2295,22 @@ class _CodexAdvancedOptions extends StatelessWidget {
         value: networkAccessEnabled,
         onChanged: (value) {
           onNetworkAccessChanged(value);
+        },
+      ),
+      SwitchListTile(
+        key: const ValueKey('dialog_codex_shared_app_server'),
+        contentPadding: EdgeInsets.zero,
+        title: Text(l.sharedAppServer, style: const TextStyle(fontSize: 13)),
+        subtitle: Text(
+          l.sharedAppServerSubtitle,
+          style: TextStyle(
+            fontSize: 11,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        value: sharedAppServer,
+        onChanged: (value) {
+          onSharedAppServerChanged(value);
         },
       ),
     ];

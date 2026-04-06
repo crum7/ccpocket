@@ -151,6 +151,8 @@
   "reasoning": "Reasoning",
   "webSearch": "Web Search",
   "networkAccess": "ネットワークアクセス",
+  "sharedAppServer": "共有App Server",
+  "sharedAppServerSubtitle": "Codex TUIからセッションに合流可能にする（実験的）",
   "worktreeNew": "新規",
   "worktreeExisting": "既存 ({count})",
   "@worktreeExisting": {

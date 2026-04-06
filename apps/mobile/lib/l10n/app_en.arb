@@ -128,6 +128,8 @@
   "reasoning": "Reasoning",
   "webSearch": "Web Search",
   "networkAccess": "Network Access",
+  "sharedAppServer": "Shared App Server",
+  "sharedAppServerSubtitle": "Allow Codex TUI to join this session (Experimental)",
   "worktreeNew": "New",
   "worktreeExisting": "Existing ({count})",
   "branchOptional": "Branch (optional)",

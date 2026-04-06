@@ -46,6 +46,9 @@ class ChatStateUpdate {
   final Set<ChatSideEffect> sideEffects;
   final String? claudeSessionId;
 
+  /// WebSocket URL when the session runs in shared app-server mode.
+  final String? remoteUrl;
+
   /// Tool use IDs that should be hidden from display (replaced by a summary).
   final Set<String> toolUseIdsToHide;
 
@@ -82,6 +85,7 @@ class ChatStateUpdate {
     this.markUserMessagesQueued = false,
     this.sideEffects = const {},
     this.claudeSessionId,
+    this.remoteUrl,
     this.toolUseIdsToHide = const {},
     this.replaceEntries = false,
     this.userUuidUpdate,
@@ -617,7 +621,8 @@ class ChatMessageHandler {
           permissionMode: msg.permissionMode,
           approvalPolicy: msg.approvalPolicy,
         );
-        codexApprovalPolicy = codexApprovalPolicyFromRaw(
+        codexApprovalPolicy =
+            codexApprovalPolicyFromRaw(
               resolveCodexApprovalPolicy(
                 approvalPolicy: msg.approvalPolicy,
                 executionMode: msg.executionMode,
@@ -665,6 +670,9 @@ class ChatMessageHandler {
         msg.tipCode == 'git_not_available') {
       _gitTipShown = true;
     }
+    // Extract remoteUrl from init or session_created messages.
+    final remoteUrl = msg is SystemMessage ? msg.remoteUrl : null;
+
     // Add init and tip as visible chat entries; session_created and
     // supported_commands are internal metadata messages.
     final addEntry = subtype == 'init' || subtype == 'tip';
@@ -677,6 +685,7 @@ class ChatMessageHandler {
       inPlanMode: inPlanMode,
       slashCommands: commands,
       claudeSessionId: sessionId,
+      remoteUrl: remoteUrl,
     );
   }
 

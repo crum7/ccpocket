@@ -350,6 +350,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get networkAccess => '网络访问';
 
   @override
+  String get sharedAppServer => '共享App Server';
+
+  @override
+  String get sharedAppServerSubtitle => '允许Codex TUI加入此会话（实验性）';
+
+  @override
   String get worktreeNew => '新建';
 
   @override

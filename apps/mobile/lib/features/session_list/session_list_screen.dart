@@ -558,6 +558,7 @@ class _SessionListScreenState extends State<SessionListScreen>
         modelReasoningEffort: result.modelReasoningEffort?.value,
         networkAccessEnabled: result.networkAccessEnabled,
         webSearchMode: result.webSearchMode?.value,
+        sharedAppServer: result.sharedAppServer ? true : null,
       ),
     );
     // Navigate immediately to chat with pending state

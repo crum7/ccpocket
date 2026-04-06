@@ -380,6 +380,7 @@ export class BridgeWebSocketServer {
     skills?: string[];
     skillMetadata?: Array<Record<string, unknown>>;
     sourceSessionId?: string;
+    remoteUrl?: string;
   }): SystemServerMessage {
     const {
       sessionId,
@@ -394,6 +395,7 @@ export class BridgeWebSocketServer {
       skills,
       skillMetadata,
       sourceSessionId,
+      remoteUrl,
     } = params;
 
     const msg: SystemServerMessage = {
@@ -470,6 +472,7 @@ export class BridgeWebSocketServer {
           }
         : {}),
       ...(sourceSessionId ? { sourceSessionId } : {}),
+      ...(remoteUrl ? { remoteUrl } : {}),
     };
 
     if (provider === "codex" && session?.codexSettings) {
@@ -666,6 +669,7 @@ export class BridgeWebSocketServer {
                   collaborationMode: planMode
                     ? ("plan" as const)
                     : ("default" as const),
+                  sharedAppServer: msg.sharedAppServer,
                 }
               : undefined,
           );
@@ -678,6 +682,10 @@ export class BridgeWebSocketServer {
             projectPath,
             msg.sessionId,
           ).then(() => {
+            const codexProc =
+              createdSession?.process instanceof CodexProcess
+                ? createdSession.process
+                : undefined;
             this.send(
               ws,
               this.buildSessionCreatedMessage({
@@ -697,6 +705,9 @@ export class BridgeWebSocketServer {
                         ? { skillMetadata: cached.skillMetadata }
                         : {}),
                     }
+                  : {}),
+                ...(codexProc?.sharedWsUrl
+                  ? { remoteUrl: codexProc.sharedWsUrl }
                   : {}),
               }),
             );

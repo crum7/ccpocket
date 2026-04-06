@@ -754,6 +754,18 @@ abstract class AppLocalizations {
   /// **'ネットワークアクセス'**
   String get networkAccess;
 
+  /// No description provided for @sharedAppServer.
+  ///
+  /// In ja, this message translates to:
+  /// **'共有App Server'**
+  String get sharedAppServer;
+
+  /// No description provided for @sharedAppServerSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Codex TUIからセッションに合流可能にする（実験的）'**
+  String get sharedAppServerSubtitle;
+
   /// No description provided for @worktreeNew.
   ///
   /// In ja, this message translates to:
