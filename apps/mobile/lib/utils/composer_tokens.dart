@@ -96,37 +96,39 @@ class ComposerTokenPalette {
   factory ComposerTokenPalette.fromTheme(ThemeData theme) {
     final cs = theme.colorScheme;
     final surface = cs.surfaceContainerHigh;
+    const fileTint = Color(0xFF4C9BFF);
+    const purpleTint = Color(0xFFA06BFF);
     return ComposerTokenPalette(
       slashForeground: Color.alphaBlend(
-        cs.primary.withValues(alpha: 0.32),
+        purpleTint.withValues(alpha: 0.42),
         cs.onSurfaceVariant,
       ),
       slashBackground: Color.alphaBlend(
-        cs.primary.withValues(alpha: 0.10),
+        purpleTint.withValues(alpha: 0.14),
         surface,
       ),
       fileForeground: Color.alphaBlend(
-        cs.secondary.withValues(alpha: 0.28),
+        fileTint.withValues(alpha: 0.42),
         cs.onSurfaceVariant,
       ),
       fileBackground: Color.alphaBlend(
-        cs.secondary.withValues(alpha: 0.10),
+        fileTint.withValues(alpha: 0.14),
         surface,
       ),
       skillForeground: Color.alphaBlend(
-        cs.tertiary.withValues(alpha: 0.3),
+        purpleTint.withValues(alpha: 0.42),
         cs.onSurfaceVariant,
       ),
       skillBackground: Color.alphaBlend(
-        cs.tertiary.withValues(alpha: 0.11),
+        purpleTint.withValues(alpha: 0.14),
         surface,
       ),
       appForeground: Color.alphaBlend(
-        cs.primary.withValues(alpha: 0.26),
+        purpleTint.withValues(alpha: 0.42),
         cs.onSurfaceVariant,
       ),
       appBackground: Color.alphaBlend(
-        cs.primary.withValues(alpha: 0.08),
+        purpleTint.withValues(alpha: 0.14),
         surface,
       ),
     );
