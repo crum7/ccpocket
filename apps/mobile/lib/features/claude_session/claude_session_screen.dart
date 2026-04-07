@@ -18,6 +18,7 @@ import '../../router/app_router.dart';
 import '../../services/bridge_service.dart';
 import '../../services/chat_message_handler.dart';
 import '../../services/draft_service.dart';
+import '../../utils/composer_tokens.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/diff_parser.dart';
@@ -324,7 +325,8 @@ class _ChatScreenBody extends HookWidget {
     final planFeedbackController = useTextEditingController();
 
     // Chat input controller (managed here to preserve text across rebuilds)
-    final chatInputController = useTextEditingController();
+    final chatInputController = useMemoized(ComposerTextEditingController.new);
+    useEffect(() => chatInputController.dispose, [chatInputController]);
     final draftService = context.read<DraftService>();
 
     // --- Draft persistence: restore on mount, auto-save on change ---

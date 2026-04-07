@@ -8,6 +8,7 @@ import '../widgets/slash_command_sheet.dart'
         buildDollarApp,
         buildDollarSkill,
         buildSlashCommand,
+        buildSlashSkill,
         knownCommands;
 
 /// Side effects that the widget layer must execute after a state update.
@@ -812,6 +813,15 @@ class ChatMessageHandler {
       final meta = metaMap[name];
       return buildSlashCommand(name, category: category, skillMeta: meta);
     }).toList();
+    final slashCommands = result.map((item) => item.command).toSet();
+    if (includeDollarEntities) {
+      for (final name in skills) {
+        final meta = metaMap[name];
+        if (meta != null && slashCommands.add('/$name')) {
+          result.add(buildSlashSkill(meta));
+        }
+      }
+    }
     if (includeDollarEntities) {
       for (final name in skills) {
         final meta = metaMap[name];

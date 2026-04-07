@@ -203,6 +203,10 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   private _apps: CodexAppMetadata[] = [];
   /** Project path stored for re-fetching skills on `skills/changed`. */
   private _projectPath: string | null = null;
+  /** Prevent redundant completion fetch storms from repeated change notifications. */
+  private _completionFetchInFlight: Promise<void> | null = null;
+  private _completionFetchQueued = false;
+  private _lastCompletionEntitiesSignature: string | null = null;
 
   /** Expose skill metadata so session/websocket can access it. */
   get skills(): CodexSkillMetadata[] {
@@ -902,6 +906,27 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   }
 
   private async fetchCompletionEntities(projectPath: string): Promise<void> {
+    if (this._completionFetchInFlight) {
+      this._completionFetchQueued = true;
+      return this._completionFetchInFlight;
+    }
+    this._completionFetchInFlight = this._fetchCompletionEntitiesInternal(
+      projectPath,
+    );
+    try {
+      await this._completionFetchInFlight;
+    } finally {
+      this._completionFetchInFlight = null;
+      if (this._completionFetchQueued && !this.stopped && this._projectPath) {
+        this._completionFetchQueued = false;
+        void this.fetchCompletionEntities(this._projectPath);
+      }
+    }
+  }
+
+  private async _fetchCompletionEntitiesInternal(
+    projectPath: string,
+  ): Promise<void> {
     const TIMEOUT_MS = 10_000;
     try {
       interface SkillRaw {
@@ -982,6 +1007,16 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         }));
       this._apps = appMetadata;
       if (this.stopped) return;
+      const signature = JSON.stringify({
+        skills,
+        skillMetadata,
+        apps: appMetadata.map((app) => app.id),
+        appMetadata,
+      });
+      if (signature === this._lastCompletionEntitiesSignature) {
+        return;
+      }
+      this._lastCompletionEntitiesSignature = signature;
       if (skills.length > 0 || appMetadata.length > 0) {
         console.log(
           `[codex-process] completion entities loaded: ${skills.length} skills, ${appMetadata.length} apps`,

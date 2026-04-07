@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -8,6 +9,7 @@ import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../utils/platform_helper.dart';
+import '../../../utils/composer_tokens.dart';
 import '../../../hooks/use_list_auto_complete.dart';
 import '../../../hooks/use_voice_input.dart';
 import '../../../models/messages.dart';
@@ -21,7 +23,11 @@ import '../../settings/state/settings_cubit.dart';
 import '../../../services/draft_service.dart';
 import '../../prompt_history/widgets/prompt_history_sheet.dart';
 import '../../../widgets/slash_command_sheet.dart'
-    show SlashCommand, fallbackCodexSlashCommands, fallbackSlashCommands;
+    show
+        SlashCommand,
+        SlashCommandCategory,
+        fallbackCodexSlashCommands,
+        fallbackSlashCommands;
 import '../state/chat_session_cubit.dart';
 
 /// Manages the chat input bar together with slash-command and @-mention
@@ -150,6 +156,31 @@ class ChatInputWithOverlays extends HookWidget {
     final dollarEntities = completionItems
         .where((c) => c.command.startsWith(r'$'))
         .toList();
+    final skillTokens = dollarEntities
+        .where((c) => c.category == SlashCommandCategory.skill)
+        .map((c) => c.command)
+        .toSet();
+    final appTokens = dollarEntities
+        .where((c) => c.category == SlashCommandCategory.app)
+        .map((c) => c.command)
+        .toSet();
+    final composerTokenConfig = ComposerTokenConfig(
+      provider: isCodex ? Provider.codex : Provider.claude,
+      slashCommands: commands.map((c) => c.command).toSet(),
+      skillTokens: skillTokens,
+      appTokens: appTokens,
+      fileMentions: projectFiles.toSet(),
+    );
+    final composerTokenPalette = ComposerTokenPalette.fromTheme(
+      Theme.of(context),
+    );
+
+    if (inputController case final ComposerTextEditingController controller) {
+      controller.updateTokenState(
+        config: composerTokenConfig,
+        palette: composerTokenPalette,
+      );
+    }
 
     // Input change listener
     useEffect(() {
@@ -164,22 +195,29 @@ class ChatInputWithOverlays extends HookWidget {
           isInputEmpty.value = empty;
         }
 
-        if (text.startsWith('/') && text.isNotEmpty) {
-          // Slash command filtering
-          final query = text.toLowerCase();
+        final slashQuery = _extractTriggerQuery(
+          text,
+          inputController.selection.baseOffset,
+          trigger: '/',
+        );
+        if (slashQuery != null) {
+          if (isInMentionContext.value) {
+            isInMentionContext.value = false;
+          }
+          final query = '/${slashQuery.toLowerCase()}';
           final filtered = commands
               .where((c) => c.command.toLowerCase().startsWith(query))
               .toList();
           if (filtered.isNotEmpty) {
             filteredSlash.value = filtered;
-            slashPortalController.show();
+            _setPortalVisibility(slashPortalController, visible: true);
           } else {
-            slashPortalController.hide();
+            _setPortalVisibility(slashPortalController, visible: false);
           }
-          dollarPortalController.hide();
-          filePortalController.hide();
+          _setPortalVisibility(dollarPortalController, visible: false);
+          _setPortalVisibility(filePortalController, visible: false);
         } else {
-          slashPortalController.hide();
+          _setPortalVisibility(slashPortalController, visible: false);
           final dollarQuery = isCodex
               ? _extractTriggerQuery(
                   text,
@@ -188,6 +226,9 @@ class ChatInputWithOverlays extends HookWidget {
                 )
               : null;
           if (dollarQuery != null) {
+            if (isInMentionContext.value) {
+              isInMentionContext.value = false;
+            }
             final q = '${r'$'}${dollarQuery.toLowerCase()}';
             final filtered =
                 dollarEntities
@@ -196,14 +237,14 @@ class ChatInputWithOverlays extends HookWidget {
                   ..sort((a, b) => a.command.compareTo(b.command));
             if (filtered.isNotEmpty) {
               filteredDollar.value = filtered;
-              dollarPortalController.show();
+              _setPortalVisibility(dollarPortalController, visible: true);
             } else {
-              dollarPortalController.hide();
+              _setPortalVisibility(dollarPortalController, visible: false);
             }
-            filePortalController.hide();
+            _setPortalVisibility(filePortalController, visible: false);
             return;
           }
-          dollarPortalController.hide();
+          _setPortalVisibility(dollarPortalController, visible: false);
           // @-mention filtering
           final mentionQuery = _extractMentionQuery(
             text,
@@ -230,12 +271,12 @@ class ChatInputWithOverlays extends HookWidget {
             final filtered = scored.take(15).map((e) => e.file).toList();
             if (filtered.isNotEmpty) {
               filteredFiles.value = filtered;
-              filePortalController.show();
+              _setPortalVisibility(filePortalController, visible: true);
             } else {
-              filePortalController.hide();
+              _setPortalVisibility(filePortalController, visible: false);
             }
           } else {
-            filePortalController.hide();
+            _setPortalVisibility(filePortalController, visible: false);
           }
         }
       }
@@ -282,25 +323,26 @@ class ChatInputWithOverlays extends HookWidget {
     }
 
     // Callbacks
-    void onSlashCommandSelected(String command) {
-      slashPortalController.hide();
-      inputController.text = '$command ';
-      inputController.selection = TextSelection.fromPosition(
-        TextPosition(offset: inputController.text.length),
+    void onSlashCommandSelected(SlashCommand command) {
+      _setPortalVisibility(slashPortalController, visible: false);
+      _replaceActiveTriggerQuery(
+        inputController,
+        trigger: '/',
+        replacement: command.insertText,
       );
     }
 
-    void onDollarEntitySelected(String command) {
-      dollarPortalController.hide();
+    void onDollarEntitySelected(SlashCommand command) {
+      _setPortalVisibility(dollarPortalController, visible: false);
       _replaceActiveTriggerQuery(
         inputController,
         trigger: r'$',
-        replacement: '$command ',
+        replacement: '${command.command} ',
       );
     }
 
     void onFileMentionSelected(String filePath) {
-      filePortalController.hide();
+      _setPortalVisibility(filePortalController, visible: false);
       final text = inputController.text;
       final cursorPos = inputController.selection.baseOffset;
       final beforeCursor = text.substring(0, cursorPos);
@@ -959,6 +1001,26 @@ bool _currentLineHasLeadingSpaces(TextEditingController controller) {
   final lineEnd = text.indexOf('\n', lineStart);
   final line = text.substring(lineStart, lineEnd < 0 ? text.length : lineEnd);
   return line.startsWith(' ');
+}
+
+void _setPortalVisibility(
+  OverlayPortalController controller, {
+  required bool visible,
+}) {
+  void update() {
+    if (visible) {
+      controller.show();
+    } else {
+      controller.hide();
+    }
+  }
+
+  if (WidgetsBinding.instance.schedulerPhase ==
+      SchedulerPhase.persistentCallbacks) {
+    WidgetsBinding.instance.addPostFrameCallback((_) => update());
+    return;
+  }
+  update();
 }
 
 /// Apply indent or dedent to the current line(s).

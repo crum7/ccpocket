@@ -5,7 +5,7 @@ import 'slash_command_sheet.dart';
 
 class SlashCommandOverlay extends StatelessWidget {
   final List<SlashCommand> filteredCommands;
-  final void Function(String command) onSelect;
+  final void Function(SlashCommand command) onSelect;
   final VoidCallback onDismiss;
 
   const SlashCommandOverlay({
@@ -44,7 +44,7 @@ class SlashCommandOverlay extends StatelessWidget {
             };
             return InkWell(
               borderRadius: BorderRadius.circular(8),
-              onTap: () => onSelect(cmd.command),
+              onTap: () => onSelect(cmd),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,

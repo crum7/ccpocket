@@ -51,6 +51,7 @@ void main() {
     test('known command gets correct icon and description', () {
       final cmd = buildSlashCommand('compact');
       expect(cmd.command, '/compact');
+      expect(cmd.insertText, '/compact ');
       expect(cmd.description, 'Compact conversation');
       expect(cmd.icon, Icons.compress);
       expect(cmd.category, SlashCommandCategory.builtin);
@@ -59,6 +60,7 @@ void main() {
     test('unknown command gets default icon', () {
       final cmd = buildSlashCommand('my-custom-command');
       expect(cmd.command, '/my-custom-command');
+      expect(cmd.insertText, '/my-custom-command ');
       expect(cmd.description, 'my-custom-command');
       expect(cmd.icon, Icons.terminal);
       expect(cmd.category, SlashCommandCategory.builtin);
@@ -82,8 +84,23 @@ void main() {
         category: SlashCommandCategory.project,
       );
       expect(cmd.command, '/deploy');
+      expect(cmd.insertText, '/deploy ');
       expect(cmd.category, SlashCommandCategory.project);
       expect(cmd.icon, Icons.terminal); // unknown → default
+    });
+
+    test('codex slash skill inserts dollar skill token', () {
+      final cmd = buildSlashSkill(
+        const CodexSkillMetadata(
+          name: 'flutter-ui-design',
+          path: '/tmp/flutter-ui-design/SKILL.md',
+          description: 'Flutter UI implementation guide',
+        ),
+      );
+      expect(cmd.command, '/flutter-ui-design');
+      expect(cmd.insertText, r'$flutter-ui-design ');
+      expect(cmd.category, SlashCommandCategory.skill);
+      expect(cmd.skillInfo?.path, '/tmp/flutter-ui-design/SKILL.md');
     });
   });
 
@@ -268,5 +285,52 @@ void main() {
       );
       expect(review.category, SlashCommandCategory.skill);
     });
+
+    test(
+      'codex supported commands expose both slash skill and dollar entities',
+      () {
+        final handler = ChatMessageHandler();
+        final update = handler.handle(
+          const SystemMessage(
+            subtype: 'supported_commands',
+            provider: 'codex',
+            skills: ['flutter-ui-design'],
+            skillMetadata: [
+              CodexSkillMetadata(
+                name: 'flutter-ui-design',
+                path: '/tmp/flutter-ui-design/SKILL.md',
+                description: 'Flutter UI implementation guide',
+              ),
+            ],
+            apps: ['demo-app'],
+            appMetadata: [
+              CodexAppMetadata(
+                id: 'demo-app',
+                name: 'Demo App',
+                description: 'Example connector',
+              ),
+            ],
+          ),
+          isBackground: false,
+          isCodex: true,
+        );
+
+        expect(update.slashCommands, isNotNull);
+        final names = update.slashCommands!.map((c) => c.command).toSet();
+        expect(names, contains('/flutter-ui-design'));
+        expect(names, contains(r'$flutter-ui-design'));
+        expect(names, contains(r'$demo-app'));
+
+        final slashSkill = update.slashCommands!.firstWhere(
+          (c) => c.command == '/flutter-ui-design',
+        );
+        expect(slashSkill.insertText, r'$flutter-ui-design ');
+
+        final app = update.slashCommands!.firstWhere(
+          (c) => c.command == r'$demo-app',
+        );
+        expect(app.category, SlashCommandCategory.app);
+      },
+    );
   });
 }

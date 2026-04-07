@@ -10,6 +10,7 @@ enum SlashCommandCategory { builtin, project, skill, app }
 
 class SlashCommand {
   final String command;
+  final String insertText;
   final String description;
   final IconData icon;
   final SlashCommandCategory category;
@@ -20,12 +21,13 @@ class SlashCommand {
 
   const SlashCommand({
     required this.command,
+    String? insertText,
     required this.description,
     required this.icon,
     this.category = SlashCommandCategory.builtin,
     this.skillInfo,
     this.appInfo,
-  });
+  }) : insertText = insertText ?? '$command ';
 }
 
 /// Lightweight skill info attached to a [SlashCommand] for Codex skill input.
@@ -107,6 +109,7 @@ SlashCommand buildSlashCommand(
   String name, {
   SlashCommandCategory category = SlashCommandCategory.builtin,
   CodexSkillMetadata? skillMeta,
+  String? insertText,
 }) {
   final known = knownCommands[name];
   // Prefer rich metadata from Codex skills/list when available
@@ -114,6 +117,7 @@ SlashCommand buildSlashCommand(
   final icon = known?.icon ?? Icons.terminal;
   return SlashCommand(
     command: '/$name',
+    insertText: insertText,
     description: description,
     icon: icon,
     category: category,
@@ -124,6 +128,21 @@ SlashCommand buildSlashCommand(
             defaultPrompt: skillMeta.defaultPrompt,
           )
         : null,
+  );
+}
+
+SlashCommand buildSlashSkill(CodexSkillMetadata skillMeta) {
+  return SlashCommand(
+    command: '/${skillMeta.name}',
+    insertText: '\$${skillMeta.name} ',
+    description: skillMeta.summary,
+    icon: knownCommands[skillMeta.name]?.icon ?? Icons.extension,
+    category: SlashCommandCategory.skill,
+    skillInfo: CodexSkillInfo(
+      name: skillMeta.name,
+      path: skillMeta.path,
+      defaultPrompt: skillMeta.defaultPrompt,
+    ),
   );
 }
 
@@ -205,7 +224,7 @@ const fallbackCodexSlashCommands = [
 
 class SlashCommandSheet extends StatelessWidget {
   final List<SlashCommand> commands;
-  final void Function(String command) onSelect;
+  final void Function(SlashCommand command) onSelect;
 
   const SlashCommandSheet({
     super.key,
@@ -331,7 +350,7 @@ class _SectionHeader extends StatelessWidget {
 
 class _CommandTile extends StatelessWidget {
   final SlashCommand command;
-  final void Function(String command) onSelect;
+  final void Function(SlashCommand command) onSelect;
 
   const _CommandTile({required this.command, required this.onSelect});
 
@@ -388,7 +407,7 @@ class _CommandTile extends StatelessWidget {
       onTap: () {
         HapticFeedback.selectionClick();
         Navigator.pop(context);
-        onSelect(command.command);
+        onSelect(command);
       },
     );
   }

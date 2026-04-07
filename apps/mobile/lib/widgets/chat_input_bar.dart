@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
-import '../utils/platform_helper.dart';
 import '../models/messages.dart';
+import '../utils/platform_helper.dart';
 import '../utils/diff_parser.dart';
 import 'bubbles/image_preview.dart';
 

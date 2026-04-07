@@ -18,6 +18,7 @@ import '../../services/bridge_service.dart';
 import '../../widgets/rename_session_dialog.dart';
 import '../../services/chat_message_handler.dart';
 import '../../services/draft_service.dart';
+import '../../utils/composer_tokens.dart';
 import '../../services/notification_service.dart';
 import '../../widgets/session_name_title.dart';
 import '../../utils/diff_parser.dart';
@@ -334,7 +335,8 @@ class _CodexChatBody extends HookWidget {
     useKeyboardScrollAdjustment(scroll.controller);
 
     // Chat input controller
-    final chatInputController = useTextEditingController();
+    final chatInputController = useMemoized(ComposerTextEditingController.new);
+    useEffect(() => chatInputController.dispose, [chatInputController]);
     final planFeedbackController = useTextEditingController();
     final draftService = context.read<DraftService>();
 
