@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../models/messages.dart' show CodexSkillMetadata;
+import '../models/messages.dart' show CodexAppMetadata, CodexSkillMetadata;
 import '../theme/app_theme.dart';
 
 // ---- Model ----
 
-enum SlashCommandCategory { builtin, project, skill }
+enum SlashCommandCategory { builtin, project, skill, app }
 
 class SlashCommand {
   final String command;
@@ -16,6 +16,7 @@ class SlashCommand {
 
   /// Codex skill metadata (null for non-skill commands).
   final CodexSkillInfo? skillInfo;
+  final CodexAppInfo? appInfo;
 
   const SlashCommand({
     required this.command,
@@ -23,6 +24,7 @@ class SlashCommand {
     required this.icon,
     this.category = SlashCommandCategory.builtin,
     this.skillInfo,
+    this.appInfo,
   });
 }
 
@@ -36,6 +38,21 @@ class CodexSkillInfo {
     required this.name,
     required this.path,
     this.defaultPrompt,
+  });
+
+  Map<String, String> toJson() => {'name': name, 'path': path};
+}
+
+/// Lightweight app info attached to a [SlashCommand] for Codex app mentions.
+class CodexAppInfo {
+  final String id;
+  final String name;
+  final String path;
+
+  const CodexAppInfo({
+    required this.id,
+    required this.name,
+    required this.path,
   });
 
   Map<String, String> toJson() => {'name': name, 'path': path};
@@ -107,6 +124,34 @@ SlashCommand buildSlashCommand(
             defaultPrompt: skillMeta.defaultPrompt,
           )
         : null,
+  );
+}
+
+SlashCommand buildDollarSkill(CodexSkillMetadata skillMeta) {
+  return SlashCommand(
+    command: '\$${skillMeta.name}',
+    description: skillMeta.summary,
+    icon: Icons.extension,
+    category: SlashCommandCategory.skill,
+    skillInfo: CodexSkillInfo(
+      name: skillMeta.name,
+      path: skillMeta.path,
+      defaultPrompt: skillMeta.defaultPrompt,
+    ),
+  );
+}
+
+SlashCommand buildDollarApp(CodexAppMetadata appMeta) {
+  return SlashCommand(
+    command: '\$${appMeta.id}',
+    description: appMeta.description,
+    icon: Icons.apps_outlined,
+    category: SlashCommandCategory.app,
+    appInfo: CodexAppInfo(
+      id: appMeta.id,
+      name: appMeta.label,
+      path: 'app://${appMeta.id}',
+    ),
   );
 }
 
@@ -182,6 +227,9 @@ class SlashCommandSheet extends StatelessWidget {
     final skills = commands
         .where((c) => c.category == SlashCommandCategory.skill)
         .toList();
+    final apps = commands
+        .where((c) => c.category == SlashCommandCategory.app)
+        .toList();
 
     return SafeArea(
       child: Column(
@@ -230,8 +278,18 @@ class SlashCommandSheet extends StatelessWidget {
                     for (final cmd in skills)
                       _CommandTile(command: cmd, onSelect: onSelect),
                   ],
+                  if (apps.isNotEmpty) ...[
+                    _SectionHeader(
+                      label: 'Apps',
+                      accentColor: Theme.of(context).colorScheme.primary,
+                    ),
+                    for (final cmd in apps)
+                      _CommandTile(command: cmd, onSelect: onSelect),
+                  ],
                   if (builtin.isNotEmpty) ...[
-                    if (project.isNotEmpty || skills.isNotEmpty)
+                    if (project.isNotEmpty ||
+                        skills.isNotEmpty ||
+                        apps.isNotEmpty)
                       const _SectionHeader(label: 'Built-in'),
                     for (final cmd in builtin)
                       _CommandTile(command: cmd, onSelect: onSelect),
@@ -284,6 +342,7 @@ class _CommandTile extends StatelessWidget {
     final iconColor = switch (command.category) {
       SlashCommandCategory.project => colorScheme.secondary,
       SlashCommandCategory.skill => colorScheme.tertiary,
+      SlashCommandCategory.app => colorScheme.primary,
       SlashCommandCategory.builtin => null,
     };
     return ListTile(
@@ -311,6 +370,8 @@ class _CommandTile extends StatelessWidget {
               child: Text(
                 command.category == SlashCommandCategory.project
                     ? 'project'
+                    : command.category == SlashCommandCategory.app
+                    ? 'app'
                     : 'skill',
                 style: TextStyle(
                   fontSize: 9,

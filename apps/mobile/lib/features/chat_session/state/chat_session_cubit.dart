@@ -499,29 +499,23 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
           .toList();
     }
 
-    // Check if the text starts with a Codex skill command (e.g. "/skillname ...")
-    // and attach skill metadata so Bridge sends a proper SkillUserInput.
-    Map<String, String>? skillPayload;
-    final trimmed = text.trim();
-    if (trimmed.startsWith('/')) {
-      final spaceIdx = trimmed.indexOf(' ');
-      final cmdName = spaceIdx > 0
-          ? trimmed.substring(1, spaceIdx)
-          : trimmed.substring(1);
-      for (final cmd in state.slashCommands) {
-        if (cmd.skillInfo != null && cmd.command == '/$cmdName') {
-          skillPayload = cmd.skillInfo!.toJson();
-          break;
-        }
-      }
-    }
+    final structuredMentions = isCodex
+        ? _extractCodexStructuredInputs(text)
+        : (
+            skills: const <Map<String, String>>[],
+            mentions: const <Map<String, String>>[],
+          );
 
     _bridge.send(
       ClientMessage.input(
         text,
         sessionId: sessionId,
         images: imagePayloads,
-        skill: skillPayload,
+        skill: structuredMentions.skills.isNotEmpty
+            ? structuredMentions.skills.first
+            : null,
+        skills: structuredMentions.skills,
+        mentions: structuredMentions.mentions,
       ),
     );
   }
@@ -932,6 +926,35 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     _bridge.send(
       ClientMessage.input(entry.text, sessionId: entry.sessionId ?? sessionId),
     );
+  }
+
+  ({List<Map<String, String>> skills, List<Map<String, String>> mentions})
+  _extractCodexStructuredInputs(String text) {
+    final skills = <Map<String, String>>[];
+    final mentions = <Map<String, String>>[];
+    final seenSkills = <String>{};
+    final seenMentions = <String>{};
+    final entityByToken = {
+      for (final item in state.slashCommands) item.command: item,
+    };
+    final matches = RegExp(
+      r'(?<![A-Za-z0-9_-])\$([A-Za-z0-9][A-Za-z0-9_-]*)',
+    ).allMatches(text);
+    for (final match in matches) {
+      final token = '\$${match.group(1)!}';
+      final item = entityByToken[token];
+      if (item == null) continue;
+      if (item.skillInfo != null) {
+        final payload = item.skillInfo!.toJson();
+        final key = '${payload['name']}|${payload['path']}';
+        if (seenSkills.add(key)) skills.add(payload);
+      } else if (item.appInfo != null) {
+        final payload = item.appInfo!.toJson();
+        final key = '${payload['name']}|${payload['path']}';
+        if (seenMentions.add(key)) mentions.add(payload);
+      }
+    }
+    return (skills: skills, mentions: mentions);
   }
 
   @override

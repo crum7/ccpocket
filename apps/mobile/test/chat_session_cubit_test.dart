@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:ccpocket/features/chat_session/state/chat_session_cubit.dart';
 import 'package:ccpocket/features/chat_session/state/chat_session_state.dart';
@@ -225,6 +226,55 @@ void main() {
 
       expect(mockBridge.sentMessages, hasLength(1));
     });
+
+    test(
+      'codex sendMessage includes structured skills and app mentions',
+      () async {
+        final cubit = createCubit('s1', provider: Provider.codex);
+        addTearDown(cubit.close);
+        await Future.microtask(() {});
+
+        mockBridge.emitMessage(
+          const SystemMessage(
+            subtype: 'supported_commands',
+            provider: 'codex',
+            skills: ['skill-creator'],
+            skillMetadata: [
+              CodexSkillMetadata(
+                name: 'skill-creator',
+                path: '/tmp/skill-creator/SKILL.md',
+                description: 'Create a skill',
+              ),
+            ],
+            apps: ['demo-app'],
+            appMetadata: [
+              CodexAppMetadata(
+                id: 'demo-app',
+                name: 'Demo App',
+                description: 'Example connector',
+              ),
+            ],
+          ),
+          sessionId: 's1',
+        );
+        await Future.microtask(() {});
+
+        cubit.sendMessage(
+          r'$skill-creator draft a skill and ask $demo-app for context',
+        );
+
+        expect(mockBridge.sentMessages, hasLength(1));
+        final json =
+            jsonDecode(mockBridge.sentMessages.single.toJson())
+                as Map<String, dynamic>;
+        expect(json['skills'], [
+          {'name': 'skill-creator', 'path': '/tmp/skill-creator/SKILL.md'},
+        ]);
+        expect(json['mentions'], [
+          {'name': 'Demo App', 'path': 'app://demo-app'},
+        ]);
+      },
+    );
 
     test('approve clears approval state and sends message', () async {
       final cubit = createCubit('s1');

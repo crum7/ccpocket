@@ -2,7 +2,13 @@ import '../core/logger.dart';
 import '../models/messages.dart';
 import '../utils/request_user_input.dart' show withRequestUserInputToolName;
 import '../widgets/slash_command_sheet.dart'
-    show SlashCommand, SlashCommandCategory, buildSlashCommand, knownCommands;
+    show
+        SlashCommand,
+        SlashCommandCategory,
+        buildDollarApp,
+        buildDollarSkill,
+        buildSlashCommand,
+        knownCommands;
 
 /// Side effects that the widget layer must execute after a state update.
 enum ChatSideEffect {
@@ -163,6 +169,8 @@ class ChatMessageHandler {
         :final slashCommands,
         :final skills,
         :final skillMetadata,
+        :final apps,
+        :final appMetadata,
       ):
         return _handleSystem(
           msg,
@@ -170,6 +178,9 @@ class ChatMessageHandler {
           slashCommands,
           skills,
           skillMetadata,
+          apps,
+          appMetadata,
+          isCodex: isCodex,
         );
       case PermissionRequestMessage(
         :final toolUseId,
@@ -458,6 +469,7 @@ class ChatMessageHandler {
     final entries = <ChatEntry>[];
     ProcessStatus? lastStatus;
     List<SlashCommand>? commands;
+    var isCodexSession = false;
 
     // Track pending permissions using a map to handle multiple concurrent requests.
     // Key: toolUseId, Value: PermissionRequestMessage
@@ -508,11 +520,26 @@ class ChatMessageHandler {
             (m.subtype == 'init' ||
                 m.subtype == 'supported_commands' ||
                 m.subtype == 'session_created')) {
+          if (m.provider == Provider.codex.value) {
+            isCodexSession = true;
+          }
           if (m.slashCommands.isNotEmpty) {
             commands = _buildCommandList(
               m.slashCommands,
               m.skills,
               m.skillMetadata,
+              m.apps,
+              m.appMetadata,
+              includeDollarEntities: isCodexSession,
+            );
+          } else if (m.skills.isNotEmpty || m.apps.isNotEmpty) {
+            commands = _buildCommandList(
+              const [],
+              m.skills,
+              m.skillMetadata,
+              m.apps,
+              m.appMetadata,
+              includeDollarEntities: isCodexSession,
             );
           }
           // Extract claudeSessionId for image loading etc.
@@ -603,7 +630,10 @@ class ChatMessageHandler {
     List<String> slashCommands,
     List<String> skills,
     List<CodexSkillMetadata> skillMetadata,
-  ) {
+    List<String> apps,
+    List<CodexAppMetadata> appMetadata, {
+    required bool isCodex,
+  }) {
     List<SlashCommand>? commands;
     PermissionMode? permissionMode;
     ExecutionMode? executionMode;
@@ -619,8 +649,15 @@ class ChatMessageHandler {
     if ((subtype == 'init' ||
             subtype == 'session_created' ||
             subtype == 'supported_commands') &&
-        slashCommands.isNotEmpty) {
-      commands = _buildCommandList(slashCommands, skills, skillMetadata);
+        (slashCommands.isNotEmpty || skills.isNotEmpty || apps.isNotEmpty)) {
+      commands = _buildCommandList(
+        slashCommands,
+        skills,
+        skillMetadata,
+        apps,
+        appMetadata,
+        includeDollarEntities: isCodex,
+      );
     }
     if (msg is SystemMessage && msg.permissionMode != null) {
       permissionMode = PermissionMode.values.cast<PermissionMode?>().firstWhere(
@@ -750,15 +787,23 @@ class ChatMessageHandler {
     List<String> commands,
     List<String> skills,
     List<CodexSkillMetadata> skillMetadata,
-  ) {
+    List<String> apps,
+    List<CodexAppMetadata> appMetadata, {
+    required bool includeDollarEntities,
+  }) {
     final skillSet = skills.toSet();
+    final appSet = apps.toSet();
     final knownNames = knownCommands.keys.toSet();
     // Build a lookup map from skill name to full metadata
     final metaMap = <String, CodexSkillMetadata>{};
     for (final meta in skillMetadata) {
       metaMap[meta.name] = meta;
     }
-    return commands.map((name) {
+    final appMetaMap = <String, CodexAppMetadata>{};
+    for (final meta in appMetadata) {
+      appMetaMap[meta.id] = meta;
+    }
+    final result = commands.map((name) {
       final category = skillSet.contains(name)
           ? SlashCommandCategory.skill
           : knownNames.contains(name)
@@ -767,5 +812,20 @@ class ChatMessageHandler {
       final meta = metaMap[name];
       return buildSlashCommand(name, category: category, skillMeta: meta);
     }).toList();
+    if (includeDollarEntities) {
+      for (final name in skills) {
+        final meta = metaMap[name];
+        if (meta != null) {
+          result.add(buildDollarSkill(meta));
+        }
+      }
+      for (final id in apps) {
+        final meta = appMetaMap[id];
+        if (meta != null && appSet.contains(id)) {
+          result.add(buildDollarApp(meta));
+        }
+      }
+    }
+    return result;
   }
 }

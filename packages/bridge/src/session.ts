@@ -155,6 +155,8 @@ export class SessionManager {
       slashCommands: string[];
       skills: string[];
       skillMetadata?: Array<Record<string, unknown>>;
+      apps: string[];
+      appMetadata?: Array<Record<string, unknown>>;
     }
   >();
 
@@ -247,6 +249,36 @@ export class SessionManager {
       try {
         session.lastActivityAt = new Date();
 
+        if (
+          msg.type === "system" &&
+          (msg.subtype === "init" || msg.subtype === "supported_commands") &&
+          (msg.slashCommands ||
+              msg.skills ||
+              msg.skillMetadata ||
+              msg.apps ||
+              msg.appMetadata)
+        ) {
+          this.commandCache.set(projectPath, {
+            slashCommands:
+              msg.slashCommands ??
+              this.commandCache.get(projectPath)?.slashCommands ??
+              [],
+            skills:
+              msg.skills ?? this.commandCache.get(projectPath)?.skills ?? [],
+            skillMetadata:
+              (msg.skillMetadata as
+                | Array<Record<string, unknown>>
+                | undefined) ??
+              this.commandCache.get(projectPath)?.skillMetadata,
+            apps: msg.apps ?? this.commandCache.get(projectPath)?.apps ?? [],
+            appMetadata:
+              (msg.appMetadata as
+                | Array<Record<string, unknown>>
+                | undefined) ??
+              this.commandCache.get(projectPath)?.appMetadata,
+          });
+        }
+
         if (effectiveProvider === "claude") {
           // Capture Claude session_id from result events
           if (msg.type === "result" && "sessionId" in msg && msg.sessionId) {
@@ -256,24 +288,6 @@ export class SessionManager {
           if (msg.type === "system" && "sessionId" in msg && msg.sessionId) {
             session.claudeSessionId = msg.sessionId;
             this.saveWorktreeMapping(session);
-          }
-
-          // Cache slash commands and skills from system messages.
-          if (
-            msg.type === "system" &&
-            (msg.subtype === "init" || msg.subtype === "supported_commands") &&
-            msg.slashCommands
-          ) {
-            this.commandCache.set(projectPath, {
-              slashCommands: msg.slashCommands,
-              skills:
-                msg.skills ?? this.commandCache.get(projectPath)?.skills ?? [],
-              skillMetadata:
-                (msg.skillMetadata as
-                  | Array<Record<string, unknown>>
-                  | undefined) ??
-                this.commandCache.get(projectPath)?.skillMetadata,
-            });
           }
 
           // Cache tool_use names from assistant messages
@@ -660,6 +674,8 @@ export class SessionManager {
         slashCommands: string[];
         skills: string[];
         skillMetadata?: Array<Record<string, unknown>>;
+        apps: string[];
+        appMetadata?: Array<Record<string, unknown>>;
       }
     | undefined {
     return this.commandCache.get(projectPath);

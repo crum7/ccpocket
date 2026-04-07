@@ -39,6 +39,7 @@ class SlashCommandOverlay extends StatelessWidget {
             final iconColor = switch (cmd.category) {
               SlashCommandCategory.project => cs.secondary,
               SlashCommandCategory.skill => cs.tertiary,
+              SlashCommandCategory.app => cs.primary,
               SlashCommandCategory.builtin => appColors.subtleText,
             };
             return InkWell(
@@ -74,9 +75,12 @@ class SlashCommandOverlay extends StatelessWidget {
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: Text(
-                          cmd.category == SlashCommandCategory.project
-                              ? 'project'
-                              : 'skill',
+                          switch (cmd.category) {
+                            SlashCommandCategory.project => 'project',
+                            SlashCommandCategory.skill => 'skill',
+                            SlashCommandCategory.app => 'app',
+                            SlashCommandCategory.builtin => 'builtin',
+                          },
                           style: TextStyle(
                             fontSize: 8,
                             fontWeight: FontWeight.w600,

@@ -30,7 +30,14 @@ interface PendingInput {
     base64: string;
     mimeType: string;
   }>;
-  skill?: { name: string; path: string };
+  skills?: Array<{
+    name: string;
+    path: string;
+  }>;
+  mentions?: Array<{
+    name: string;
+    path: string;
+  }>;
 }
 
 /** Skill metadata returned by the Codex `skills/list` RPC. */
@@ -44,6 +51,16 @@ export interface CodexSkillMetadata {
   displayName?: string;
   defaultPrompt?: string;
   brandColor?: string;
+}
+
+/** App / connector metadata returned by the Codex `app/list` RPC. */
+export interface CodexAppMetadata {
+  id: string;
+  name: string;
+  description: string;
+  installUrl?: string;
+  isAccessible: boolean;
+  isEnabled: boolean;
 }
 
 export interface CodexThreadSummary {
@@ -182,12 +199,18 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
 
   /** Full skill metadata from the last `skills/list` response. */
   private _skills: CodexSkillMetadata[] = [];
+  /** Full app metadata from the last `app/list` response. */
+  private _apps: CodexAppMetadata[] = [];
   /** Project path stored for re-fetching skills on `skills/changed`. */
   private _projectPath: string | null = null;
 
   /** Expose skill metadata so session/websocket can access it. */
   get skills(): CodexSkillMetadata[] {
     return this._skills;
+  }
+
+  get apps(): CodexAppMetadata[] {
+    return this._apps;
   }
 
   private rpcSeq = 1;
@@ -489,15 +512,31 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     text: string,
     skill: { name: string; path: string },
   ): void {
+    this.sendInputStructured(text, { skills: [skill] });
+  }
+
+  sendInputStructured(
+    text: string,
+    options?: {
+      images?: Array<{ base64: string; mimeType: string }>;
+      skills?: Array<{ name: string; path: string }>;
+      mentions?: Array<{ name: string; path: string }>;
+    },
+  ): void {
     if (!this.inputResolve) {
       console.error(
-        "[codex-process] No pending input resolver for sendInputWithSkill",
+        "[codex-process] No pending input resolver for sendInputStructured",
       );
       return;
     }
     const resolve = this.inputResolve;
     this.inputResolve = null;
-    resolve({ text, skill });
+    resolve({
+      text,
+      images: options?.images,
+      skills: options?.skills,
+      mentions: options?.mentions,
+    });
   }
 
   approve(toolUseId?: string, _updatedInput?: Record<string, unknown>): void {
@@ -822,9 +861,13 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
       });
       this.setStatus("idle");
 
-      // Fetch skills in background (non-blocking)
+      // Fetch skills/apps in background (non-blocking)
       this._projectPath = projectPath;
-      void this.fetchSkills(projectPath);
+      setTimeout(() => {
+        if (!this.stopped) {
+          void this.fetchCompletionEntities(projectPath);
+        }
+      }, 25);
 
       await this.runInputLoop(options);
     } catch (err) {
@@ -858,12 +901,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     this.notify("initialized", {});
   }
 
-  /**
-   * Fetch skills from Codex app-server via `skills/list` RPC and emit them
-   * as a `supported_commands` system message so the Flutter client can display
-   * skill entries alongside built-in slash commands.
-   */
-  private async fetchSkills(projectPath: string): Promise<void> {
+  private async fetchCompletionEntities(projectPath: string): Promise<void> {
     const TIMEOUT_MS = 10_000;
     try {
       interface SkillRaw {
@@ -880,56 +918,86 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
           brandColor?: string | null;
         } | null;
       }
-      const result = (await Promise.race([
+      interface AppRaw {
+        id: string;
+        name: string;
+        description: string;
+        installUrl?: string | null;
+        isAccessible?: boolean | null;
+        isEnabled?: boolean | null;
+      }
+      const skillsResult = (await Promise.race([
         this.request("skills/list", { cwds: [projectPath] }),
         new Promise<null>((resolve) =>
           setTimeout(() => resolve(null), TIMEOUT_MS),
         ),
       ])) as { data?: Array<{ cwd: string; skills: SkillRaw[] }> } | null;
-
-      if (this.stopped || !result?.data) return;
+      const appsResult = (await Promise.race([
+        this.request("app/list", {
+          cursor: null,
+          limit: 100,
+          threadId: this._threadId ?? undefined,
+          forceRefetch: false,
+        }),
+        new Promise<null>((resolve) =>
+          setTimeout(() => resolve(null), TIMEOUT_MS),
+        ),
+      ])) as { data?: AppRaw[] } | null;
 
       const skills: string[] = [];
-      const slashCommands: string[] = [];
       const skillMetadata: CodexSkillMetadata[] = [];
-      for (const entry of result.data) {
-        for (const skill of entry.skills) {
-          if (skill.enabled) {
-            skills.push(skill.name);
-            slashCommands.push(skill.name);
-            skillMetadata.push({
-              name: skill.name,
-              path: skill.path,
-              description: skill.description,
-              shortDescription:
-                skill.shortDescription ??
-                skill.interface?.shortDescription ??
-                undefined,
-              enabled: skill.enabled,
-              scope: skill.scope,
-              displayName: skill.interface?.displayName ?? undefined,
-              defaultPrompt: skill.interface?.defaultPrompt ?? undefined,
-              brandColor: skill.interface?.brandColor ?? undefined,
-            });
+      if (skillsResult?.data) {
+        for (const entry of skillsResult.data) {
+          for (const skill of entry.skills) {
+            if (skill.enabled) {
+              skills.push(skill.name);
+              skillMetadata.push({
+                name: skill.name,
+                path: skill.path,
+                description: skill.description,
+                shortDescription:
+                  skill.shortDescription ??
+                  skill.interface?.shortDescription ??
+                  undefined,
+                enabled: skill.enabled,
+                scope: skill.scope,
+                displayName: skill.interface?.displayName ?? undefined,
+                defaultPrompt: skill.interface?.defaultPrompt ?? undefined,
+                brandColor: skill.interface?.brandColor ?? undefined,
+              });
+            }
           }
         }
       }
       this._skills = skillMetadata;
-      if (slashCommands.length > 0) {
+      const appMetadata = (appsResult?.data ?? [])
+        .filter((app) => (app.isAccessible ?? true) && (app.isEnabled ?? true))
+        .map((app) => ({
+          id: app.id,
+          name: app.name,
+          description: app.description,
+          installUrl: app.installUrl ?? undefined,
+          isAccessible: app.isAccessible ?? true,
+          isEnabled: app.isEnabled ?? true,
+        }));
+      this._apps = appMetadata;
+      if (this.stopped) return;
+      if (skills.length > 0 || appMetadata.length > 0) {
         console.log(
-          `[codex-process] skills/list returned ${slashCommands.length} skills`,
+          `[codex-process] completion entities loaded: ${skills.length} skills, ${appMetadata.length} apps`,
         );
         this.emitMessage({
           type: "system",
           subtype: "supported_commands",
-          slashCommands,
           skills,
           skillMetadata,
+          apps: appMetadata.map((app) => app.id),
+          appMetadata,
         });
       }
     } catch (err) {
       console.log(
-        `[codex-process] skills/list failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`,
+        `[codex-process] completion entity fetch failed (non-fatal): ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }
@@ -1389,9 +1457,16 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
       }
 
       case "skills/changed": {
-        // Re-fetch skills when Codex notifies us of changes
+        // Re-fetch skills/apps when Codex notifies us of changes
         if (this._projectPath) {
-          void this.fetchSkills(this._projectPath);
+          void this.fetchCompletionEntities(this._projectPath);
+        }
+        break;
+      }
+
+      case "app/list/updated": {
+        if (this._projectPath) {
+          void this.fetchCompletionEntities(this._projectPath);
         }
         break;
       }
@@ -1794,12 +1869,19 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     const input: Array<Record<string, unknown>> = [];
     const tempPaths: string[] = [];
 
-    // Prepend SkillUserInput if a skill reference is attached
-    if (pendingInput.skill) {
+    // Prepend structured input items before the free-form text body.
+    for (const skill of pendingInput.skills ?? []) {
       input.push({
         type: "skill",
-        name: pendingInput.skill.name,
-        path: pendingInput.skill.path,
+        name: skill.name,
+        path: skill.path,
+      });
+    }
+    for (const mention of pendingInput.mentions ?? []) {
+      input.push({
+        type: "mention",
+        name: mention.name,
+        path: mention.path,
       });
     }
     input.push({ type: "text", text: pendingInput.text });

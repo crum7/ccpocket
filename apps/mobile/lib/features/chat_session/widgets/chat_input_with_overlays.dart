@@ -85,6 +85,7 @@ class ChatInputWithOverlays extends HookWidget {
 
     // OverlayPortal controllers
     final slashPortalController = useMemoized(() => OverlayPortalController());
+    final dollarPortalController = useMemoized(() => OverlayPortalController());
     final filePortalController = useMemoized(() => OverlayPortalController());
 
     // LayerLink for CompositedTransformFollower positioning
@@ -92,6 +93,7 @@ class ChatInputWithOverlays extends HookWidget {
 
     // Filtered overlay items
     final filteredSlash = useState<List<SlashCommand>>(const []);
+    final filteredDollar = useState<List<SlashCommand>>(const []);
     final filteredFiles = useState<List<String>>(const []);
 
     // Image attachment state (multiple images)
@@ -127,10 +129,27 @@ class ChatInputWithOverlays extends HookWidget {
     // Slash commands from cubit
     final chatCubit = context.read<ChatSessionCubit>();
     final isCodex = chatCubit.isCodex;
-    final slashCommands = context.watch<ChatSessionCubit>().state.slashCommands;
-    final commands = slashCommands.isNotEmpty
-        ? slashCommands
-        : (isCodex ? fallbackCodexSlashCommands : fallbackSlashCommands);
+    final completionItems = context
+        .watch<ChatSessionCubit>()
+        .state
+        .slashCommands;
+    final sessionSlashCommands = completionItems
+        .where((c) => c.command.startsWith('/'))
+        .toList();
+    final fallbackCommands = isCodex
+        ? fallbackCodexSlashCommands
+        : fallbackSlashCommands;
+    final commands = [
+      ...fallbackCommands,
+      ...sessionSlashCommands.where(
+        (item) => !fallbackCommands.any(
+          (fallback) => fallback.command == item.command,
+        ),
+      ),
+    ];
+    final dollarEntities = completionItems
+        .where((c) => c.command.startsWith(r'$'))
+        .toList();
 
     // Input change listener
     useEffect(() {
@@ -157,9 +176,34 @@ class ChatInputWithOverlays extends HookWidget {
           } else {
             slashPortalController.hide();
           }
+          dollarPortalController.hide();
           filePortalController.hide();
         } else {
           slashPortalController.hide();
+          final dollarQuery = isCodex
+              ? _extractTriggerQuery(
+                  text,
+                  inputController.selection.baseOffset,
+                  trigger: r'$',
+                )
+              : null;
+          if (dollarQuery != null) {
+            final q = '${r'$'}${dollarQuery.toLowerCase()}';
+            final filtered =
+                dollarEntities
+                    .where((c) => c.command.toLowerCase().startsWith(q))
+                    .toList()
+                  ..sort((a, b) => a.command.compareTo(b.command));
+            if (filtered.isNotEmpty) {
+              filteredDollar.value = filtered;
+              dollarPortalController.show();
+            } else {
+              dollarPortalController.hide();
+            }
+            filePortalController.hide();
+            return;
+          }
+          dollarPortalController.hide();
           // @-mention filtering
           final mentionQuery = _extractMentionQuery(
             text,
@@ -198,7 +242,7 @@ class ChatInputWithOverlays extends HookWidget {
 
       inputController.addListener(onChange);
       return () => inputController.removeListener(onChange);
-    }, [commands, projectFiles]);
+    }, [commands, dollarEntities, isCodex, projectFiles]);
 
     // Update canDedent on cursor/text changes
     useEffect(() {
@@ -230,18 +274,11 @@ class ChatInputWithOverlays extends HookWidget {
     }
 
     void insertMention() {
-      final text = inputController.text;
-      final cursorPos = inputController.selection.baseOffset;
-      final pos = cursorPos < 0 ? text.length : cursorPos;
-      final before = text.substring(0, pos);
-      final after = text.substring(pos);
-      // Insert space before @ if preceded by a non-whitespace character
-      final needSpace = before.isNotEmpty && !RegExp(r'\s$').hasMatch(before);
-      final insertion = needSpace ? ' @' : '@';
-      final newText = '$before$insertion$after';
-      final newCursor = pos + insertion.length;
-      inputController.text = newText;
-      inputController.selection = TextSelection.collapsed(offset: newCursor);
+      _insertTrigger(inputController, '@');
+    }
+
+    void insertDollar() {
+      _insertTrigger(inputController, r'$');
     }
 
     // Callbacks
@@ -250,6 +287,15 @@ class ChatInputWithOverlays extends HookWidget {
       inputController.text = '$command ';
       inputController.selection = TextSelection.fromPosition(
         TextPosition(offset: inputController.text.length),
+      );
+    }
+
+    void onDollarEntitySelected(String command) {
+      dollarPortalController.hide();
+      _replaceActiveTriggerQuery(
+        inputController,
+        trigger: r'$',
+        replacement: '$command ',
       );
     }
 
@@ -682,55 +728,70 @@ class ChatInputWithOverlays extends HookWidget {
         ),
       ),
       child: OverlayPortal(
-        controller: filePortalController,
+        controller: dollarPortalController,
         overlayChildBuilder: (_) => Positioned(
           left: 8,
           child: buildFollowerOverlay(
-            child: FileMentionOverlay(
-              filteredFiles: filteredFiles.value,
-              onSelect: onFileMentionSelected,
-              onDismiss: filePortalController.hide,
+            child: SlashCommandOverlay(
+              filteredCommands: filteredDollar.value,
+              onSelect: onDollarEntitySelected,
+              onDismiss: dollarPortalController.hide,
             ),
           ),
         ),
-        child: CompositedTransformTarget(
-          link: layerLink,
-          child: _wrapWithDropRegion(
-            enabled: isDesktopPlatform,
-            onPerformDrop: handleDroppedItems,
-            child: ChatInputBar(
-              inputController: inputController,
-              status: status,
-              hasInputText:
-                  hasInputText.value ||
-                  attachedImages.value.isNotEmpty ||
-                  attachedDiffSelection.value != null,
-              isInputEmpty: isInputEmpty.value,
-              isVoiceAvailable:
-                  !context.watch<SettingsCubit>().state.hideVoiceInput &&
-                  voice.isAvailable,
-              isRecording: voice.isRecording,
-              onSend: sendMessage,
-              onStop: stopSession,
-              onInterrupt: interruptSession,
-              onToggleVoice: voice.toggle,
-              onIndent: indent,
-              onDedent: dedent,
-              canDedent: canDedent.value,
-              onSlashCommand: insertSlashPrefix,
-              onMention: insertMention,
-              isInMentionContext: isInMentionContext.value,
-              onShowPromptHistory: showPromptHistory,
-              onAttachImage: showAttachOptions,
-              attachedImages: attachedImages.value,
-              onClearImage: clearAttachment,
-              attachedDiffSelection: attachedDiffSelection.value,
-              onClearDiffSelection: clearDiffSelection,
-              onTapDiffPreview: onOpenGitScreen != null
-                  ? () => onOpenGitScreen!(attachedDiffSelection.value)
-                  : null,
-              hintText: hintText,
-              onPasteImage: isDesktopPlatform ? tryPasteImage : null,
+        child: OverlayPortal(
+          controller: filePortalController,
+          overlayChildBuilder: (_) => Positioned(
+            left: 8,
+            child: buildFollowerOverlay(
+              child: FileMentionOverlay(
+                filteredFiles: filteredFiles.value,
+                onSelect: onFileMentionSelected,
+                onDismiss: filePortalController.hide,
+              ),
+            ),
+          ),
+          child: CompositedTransformTarget(
+            link: layerLink,
+            child: _wrapWithDropRegion(
+              enabled: isDesktopPlatform,
+              onPerformDrop: handleDroppedItems,
+              child: ChatInputBar(
+                inputController: inputController,
+                status: status,
+                hasInputText:
+                    hasInputText.value ||
+                    attachedImages.value.isNotEmpty ||
+                    attachedDiffSelection.value != null,
+                isInputEmpty: isInputEmpty.value,
+                isVoiceAvailable:
+                    !context.watch<SettingsCubit>().state.hideVoiceInput &&
+                    voice.isAvailable,
+                isRecording: voice.isRecording,
+                onSend: sendMessage,
+                onStop: stopSession,
+                onInterrupt: interruptSession,
+                onToggleVoice: voice.toggle,
+                onIndent: indent,
+                onDedent: dedent,
+                canDedent: canDedent.value,
+                onSlashCommand: insertSlashPrefix,
+                onMention: insertMention,
+                onDollarMention: isCodex ? insertDollar : null,
+                showDollarButton: isCodex,
+                isInMentionContext: isInMentionContext.value,
+                onShowPromptHistory: showPromptHistory,
+                onAttachImage: showAttachOptions,
+                attachedImages: attachedImages.value,
+                onClearImage: clearAttachment,
+                attachedDiffSelection: attachedDiffSelection.value,
+                onClearDiffSelection: clearDiffSelection,
+                onTapDiffPreview: onOpenGitScreen != null
+                    ? () => onOpenGitScreen!(attachedDiffSelection.value)
+                    : null,
+                hintText: hintText,
+                onPasteImage: isDesktopPlatform ? tryPasteImage : null,
+              ),
             ),
           ),
         ),
@@ -829,18 +890,60 @@ int _fileScore(String path, String query) {
 /// Extract the file query after the last '@' before cursor position.
 /// Returns null if no active @-mention is being typed.
 String? _extractMentionQuery(String text, int cursorPos) {
+  return _extractTriggerQuery(text, cursorPos, trigger: '@');
+}
+
+String? _extractTriggerQuery(
+  String text,
+  int cursorPos, {
+  required String trigger,
+}) {
   if (cursorPos < 0) return null;
   final beforeCursor = text.substring(0, cursorPos);
-  final atIndex = beforeCursor.lastIndexOf('@');
-  if (atIndex < 0) return null;
-  // '@' must be at start or preceded by whitespace
-  if (atIndex > 0 && !RegExp(r'\s').hasMatch(beforeCursor[atIndex - 1])) {
+  final triggerIndex = beforeCursor.lastIndexOf(trigger);
+  if (triggerIndex < 0) return null;
+  if (triggerIndex > 0 &&
+      !RegExp(r'[\s(\[{:,;]').hasMatch(beforeCursor[triggerIndex - 1])) {
     return null;
   }
-  final query = beforeCursor.substring(atIndex + 1);
-  // No spaces in the query (file paths don't have spaces)
-  if (query.contains(' ')) return null;
+  final query = beforeCursor.substring(triggerIndex + 1);
+  if (query.contains(RegExp(r'\s'))) return null;
   return query;
+}
+
+void _insertTrigger(TextEditingController controller, String trigger) {
+  final text = controller.text;
+  final cursorPos = controller.selection.baseOffset;
+  final pos = cursorPos < 0 ? text.length : cursorPos;
+  final before = text.substring(0, pos);
+  final after = text.substring(pos);
+  final needSpace = before.isNotEmpty && !RegExp(r'\s$').hasMatch(before);
+  final insertion = needSpace ? ' $trigger' : trigger;
+  controller.text = '$before$insertion$after';
+  controller.selection = TextSelection.collapsed(
+    offset: pos + insertion.length,
+  );
+}
+
+void _replaceActiveTriggerQuery(
+  TextEditingController controller, {
+  required String trigger,
+  required String replacement,
+}) {
+  final text = controller.text;
+  final cursorPos = controller.selection.baseOffset;
+  final pos = cursorPos < 0 ? text.length : cursorPos;
+  final before = text.substring(0, pos);
+  final triggerIndex = before.lastIndexOf(trigger);
+  if (triggerIndex < 0) {
+    _insertTrigger(controller, trigger);
+    return;
+  }
+  final after = text.substring(pos);
+  final nextText = '${before.substring(0, triggerIndex)}$replacement$after';
+  final nextOffset = triggerIndex + replacement.length;
+  controller.text = nextText;
+  controller.selection = TextSelection.collapsed(offset: nextOffset);
 }
 
 /// Check if the current cursor line has leading spaces.

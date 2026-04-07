@@ -90,6 +90,8 @@ export type ClientMessage =
       imageBase64?: string;
       mimeType?: string;
       skill?: { name: string; path: string };
+      skills?: Array<{ name: string; path: string }>;
+      mentions?: Array<{ name: string; path: string }>;
     }
   | {
       type: "push_register";
@@ -310,6 +312,15 @@ export type ServerMessage =
         displayName?: string;
         defaultPrompt?: string;
         brandColor?: string;
+      }>;
+      apps?: string[];
+      appMetadata?: Array<{
+        id: string;
+        name: string;
+        description: string;
+        installUrl?: string;
+        isAccessible: boolean;
+        isEnabled: boolean;
       }>;
       worktreePath?: string;
       worktreeBranch?: string;
@@ -654,6 +665,26 @@ export function parseClientMessage(data: string): ClientMessage | null {
             if (
               typeof img?.base64 !== "string" ||
               typeof img?.mimeType !== "string"
+            )
+              return null;
+          }
+        }
+        if (msg.skills !== undefined) {
+          if (!Array.isArray(msg.skills)) return null;
+          for (const skill of msg.skills) {
+            if (
+              typeof skill?.name !== "string" ||
+              typeof skill?.path !== "string"
+            )
+              return null;
+          }
+        }
+        if (msg.mentions !== undefined) {
+          if (!Array.isArray(msg.mentions)) return null;
+          for (const mention of msg.mentions) {
+            if (
+              typeof mention?.name !== "string" ||
+              typeof mention?.path !== "string"
             )
               return null;
           }

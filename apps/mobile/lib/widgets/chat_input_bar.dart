@@ -30,7 +30,9 @@ class ChatInputBar extends StatelessWidget {
   final bool canDedent;
   final VoidCallback onSlashCommand;
   final VoidCallback onMention;
+  final VoidCallback? onDollarMention;
   final bool isInMentionContext;
+  final bool showDollarButton;
   final VoidCallback? onShowPromptHistory;
   final VoidCallback? onAttachImage;
   final List<({Uint8List bytes, String mimeType})> attachedImages;
@@ -62,7 +64,9 @@ class ChatInputBar extends StatelessWidget {
     this.canDedent = true,
     required this.onSlashCommand,
     required this.onMention,
+    this.onDollarMention,
     this.isInMentionContext = false,
+    this.showDollarButton = false,
     this.onShowPromptHistory,
     this.onAttachImage,
     this.attachedImages = const [],
@@ -135,6 +139,10 @@ class ChatInputBar extends StatelessWidget {
               _IndentButton(onTap: onIndent),
               const SizedBox(width: 8),
               _MentionButton(onTap: onMention, enabled: !isInMentionContext),
+              if (showDollarButton) ...[
+                const SizedBox(width: 8),
+                _DollarButton(onTap: onDollarMention ?? () {}),
+              ],
               const SizedBox(width: 8),
               _AttachButton(
                 hasAttachment: attachedImages.isNotEmpty,
@@ -300,6 +308,41 @@ class _MentionButton extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   color: cs.primary,
                 ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DollarButton extends StatelessWidget {
+  const _DollarButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: 'Skills & Apps',
+      child: Material(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          key: const ValueKey('dollar_button'),
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            child: Text(
+              r'$',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: cs.primary,
               ),
             ),
           ),

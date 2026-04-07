@@ -379,6 +379,8 @@ export class BridgeWebSocketServer {
     slashCommands?: string[];
     skills?: string[];
     skillMetadata?: Array<Record<string, unknown>>;
+    apps?: string[];
+    appMetadata?: Array<Record<string, unknown>>;
     sourceSessionId?: string;
   }): SystemServerMessage {
     const {
@@ -393,6 +395,8 @@ export class BridgeWebSocketServer {
       slashCommands,
       skills,
       skillMetadata,
+      apps,
+      appMetadata,
       sourceSessionId,
     } = params;
 
@@ -461,6 +465,13 @@ export class BridgeWebSocketServer {
         ? {
             skillMetadata:
               skillMetadata as SystemServerMessage["skillMetadata"],
+          }
+        : {}),
+      ...(apps ? { apps } : {}),
+      ...(appMetadata
+        ? {
+            appMetadata:
+              appMetadata as SystemServerMessage["appMetadata"],
           }
         : {}),
       ...(session?.worktreePath
@@ -696,6 +707,10 @@ export class BridgeWebSocketServer {
                       ...(cached.skillMetadata
                         ? { skillMetadata: cached.skillMetadata }
                         : {}),
+                      apps: cached.apps,
+                      ...(cached.appMetadata
+                        ? { appMetadata: cached.appMetadata }
+                        : {}),
                     }
                   : {}),
               }),
@@ -829,25 +844,35 @@ export class BridgeWebSocketServer {
             queued: false,
           });
           const codexProc = session.process as CodexProcess;
+          const skills = msg.skills ?? (msg.skill ? [msg.skill] : []);
+          const mentions = msg.mentions ?? [];
           if (images.length > 0) {
-            codexProc.sendInputWithImages(text, images);
+            codexProc.sendInputStructured(text, {
+              images,
+              skills,
+              mentions,
+            });
           } else if (msg.imageId && this.galleryStore) {
             this.galleryStore
               .getImageAsBase64(msg.imageId)
               .then((imageData) => {
                 if (imageData) {
-                  codexProc.sendInputWithImages(text, [imageData]);
+                  codexProc.sendInputStructured(text, {
+                    images: [imageData],
+                    skills,
+                    mentions,
+                  });
                 } else {
                   console.warn(`[ws] Image not found: ${msg.imageId}`);
-                  codexProc.sendInput(text);
+                  codexProc.sendInputStructured(text, { skills, mentions });
                 }
               })
               .catch((err) => {
                 console.error(`[ws] Failed to load image: ${err}`);
-                codexProc.sendInput(text);
+                codexProc.sendInputStructured(text, { skills, mentions });
               });
-          } else if (msg.skill) {
-            codexProc.sendInputWithSkill(text, msg.skill);
+          } else if (skills.length > 0 || mentions.length > 0) {
+            codexProc.sendInputStructured(text, { skills, mentions });
           } else {
             codexProc.sendInput(text);
           }
@@ -1772,7 +1797,12 @@ export class BridgeWebSocketServer {
           const cached = this.sessionManager.getCachedCommands(
             session.projectPath,
           );
-          if (cached && cached.slashCommands.length > 0) {
+          if (
+            cached &&
+            (cached.slashCommands.length > 0 ||
+                cached.skills.length > 0 ||
+                cached.apps.length > 0)
+          ) {
             this.send(ws, {
               type: "system",
               subtype: "supported_commands",
@@ -1782,6 +1812,8 @@ export class BridgeWebSocketServer {
               ...(cached.skillMetadata
                 ? { skillMetadata: cached.skillMetadata }
                 : {}),
+              apps: cached.apps,
+              ...(cached.appMetadata ? { appMetadata: cached.appMetadata } : {}),
             });
           }
         } else {
@@ -2191,6 +2223,10 @@ export class BridgeWebSocketServer {
                         skills: cached.skills,
                         ...(cached.skillMetadata
                           ? { skillMetadata: cached.skillMetadata }
+                          : {}),
+                        apps: cached.apps,
+                        ...(cached.appMetadata
+                          ? { appMetadata: cached.appMetadata }
                           : {}),
                       }
                     : {}),
@@ -4176,7 +4212,7 @@ export class BridgeWebSocketServer {
       case "input": {
         const textPreview = msg.text.replace(/\s+/g, " ").trim().slice(0, 80);
         const hasImage = msg.imageBase64 != null || msg.imageId != null;
-        return `text=\"${textPreview}\" image=${hasImage}`;
+        return `text=\"${textPreview}\" image=${hasImage} skills=${msg.skills?.length ?? (msg.skill ? 1 : 0)} mentions=${msg.mentions?.length ?? 0}`;
       }
       case "push_register":
         return `platform=${msg.platform} token=${msg.token.slice(0, 8)}...`;

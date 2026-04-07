@@ -454,6 +454,16 @@ sealed class ServerMessage {
                 )
                 .toList() ??
             const [],
+        apps:
+            (json['apps'] as List?)?.map((e) => e as String).toList() ??
+            const [],
+        appMetadata:
+            (json['appMetadata'] as List?)
+                ?.map(
+                  (e) => CodexAppMetadata.fromJson(e as Map<String, dynamic>),
+                )
+                .toList() ??
+            const [],
         worktreePath: json['worktreePath'] as String?,
         worktreeBranch: json['worktreeBranch'] as String?,
         clearContext: json['clearContext'] as bool? ?? false,
@@ -849,6 +859,44 @@ class CodexSkillMetadata {
   String get summary => shortDescription ?? description;
 }
 
+/// Metadata for a Codex app / connector, returned by the `app/list` RPC.
+class CodexAppMetadata {
+  final String id;
+  final String name;
+  final String description;
+  final String? installUrl;
+  final bool isAccessible;
+  final bool isEnabled;
+
+  const CodexAppMetadata({
+    required this.id,
+    required this.name,
+    required this.description,
+    this.installUrl,
+    this.isAccessible = true,
+    this.isEnabled = true,
+  });
+
+  factory CodexAppMetadata.fromJson(Map<String, dynamic> json) {
+    return CodexAppMetadata(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      installUrl: json['installUrl'] as String?,
+      isAccessible: json['isAccessible'] as bool? ?? true,
+      isEnabled: json['isEnabled'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'path': 'app://$id',
+  };
+
+  String get label => name.isNotEmpty ? name : id;
+}
+
 class SystemMessage implements ServerMessage {
   final String subtype;
   final String? sessionId;
@@ -870,6 +918,8 @@ class SystemMessage implements ServerMessage {
   final List<String> slashCommands;
   final List<String> skills;
   final List<CodexSkillMetadata> skillMetadata;
+  final List<String> apps;
+  final List<CodexAppMetadata> appMetadata;
   final String? worktreePath;
   final String? worktreeBranch;
   final bool clearContext;
@@ -893,6 +943,8 @@ class SystemMessage implements ServerMessage {
     this.slashCommands = const [],
     this.skills = const [],
     this.skillMetadata = const [],
+    this.apps = const [],
+    this.appMetadata = const [],
     this.worktreePath,
     this.worktreeBranch,
     this.clearContext = false,
@@ -2298,6 +2350,8 @@ class ClientMessage {
     String? sessionId,
     List<Map<String, String>>? images,
     Map<String, String>? skill,
+    List<Map<String, String>>? skills,
+    List<Map<String, String>>? mentions,
   }) {
     return ClientMessage._(<String, dynamic>{
       'type': 'input',
@@ -2305,6 +2359,8 @@ class ClientMessage {
       'sessionId': ?sessionId,
       if (images != null && images.isNotEmpty) 'images': images,
       'skill': ?skill,
+      if (skills != null && skills.isNotEmpty) 'skills': skills,
+      if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
     });
   }
 

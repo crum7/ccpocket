@@ -32,7 +32,9 @@ void main() {
     bool canDedent = true,
     VoidCallback? onSlashCommand,
     VoidCallback? onMention,
+    VoidCallback? onDollarMention,
     bool isInMentionContext = false,
+    bool showDollarButton = false,
     DiffSelection? attachedDiffSelection,
   }) {
     return MaterialApp(
@@ -56,7 +58,9 @@ void main() {
           canDedent: canDedent,
           onSlashCommand: onSlashCommand ?? () {},
           onMention: onMention ?? () {},
+          onDollarMention: onDollarMention,
           isInMentionContext: isInMentionContext,
+          showDollarButton: showDollarButton,
           attachedDiffSelection: attachedDiffSelection,
         ),
       ),
@@ -195,6 +199,20 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey('voice_button')));
       expect(toggled, isTrue);
+    });
+
+    testWidgets('shows dollar button when enabled', (tester) async {
+      var tapped = false;
+      await tester.pumpWidget(
+        buildSubject(
+          showDollarButton: true,
+          onDollarMention: () => tapped = true,
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('dollar_button')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('dollar_button')));
+      expect(tapped, isTrue);
     });
 
     testWidgets('shows disabled send button when starting', (tester) async {
