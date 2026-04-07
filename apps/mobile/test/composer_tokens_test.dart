@@ -90,5 +90,62 @@ void main() {
       );
     });
 
+    testWidgets('controller keeps token highlight during IME composing', (
+      tester,
+    ) async {
+      final controller = ComposerTextEditingController()
+        ..value = const TextEditingValue(
+          text: r'$flutter-upgrade @.mcp.json',
+          selection: TextSelection.collapsed(offset: 15),
+          composing: TextRange(start: 0, end: 16),
+        );
+      addTearDown(controller.dispose);
+
+      TextSpan? span;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) {
+              controller.updateTokenState(
+                config: const ComposerTokenConfig(
+                  provider: Provider.codex,
+                  skillTokens: {r'$flutter-upgrade'},
+                  fileMentions: {'.mcp.json'},
+                ),
+                palette: ComposerTokenPalette.fromTheme(Theme.of(context)),
+              );
+              span = controller.buildTextSpan(
+                context: context,
+                style: const TextStyle(fontSize: 14),
+                withComposing: true,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      );
+
+      expect(span?.children, isNotNull);
+      final children = span!.children!.whereType<TextSpan>().toList();
+      expect(
+        children.any(
+          (child) =>
+              child.text == r'$flutter-upgrade' &&
+              child.style?.backgroundColor != null &&
+              child.style?.decoration == TextDecoration.underline,
+        ),
+        isTrue,
+      );
+      expect(
+        children.any(
+          (child) =>
+              child.text == '@.mcp.json' &&
+              child.style?.backgroundColor != null &&
+              child.style?.decoration != TextDecoration.underline,
+        ),
+        isTrue,
+      );
+    });
+
   });
 }

@@ -241,10 +241,7 @@ class ComposerTextEditingController extends TextEditingController {
     required bool withComposing,
   }) {
     final baseStyle = style ?? DefaultTextStyle.of(context).style;
-    if (_palette == null ||
-        (withComposing &&
-            value.composing.isValid &&
-            !value.composing.isCollapsed)) {
+    if (_palette == null) {
       return super.buildTextSpan(
         context: context,
         style: style,
@@ -260,27 +257,102 @@ class ComposerTextEditingController extends TextEditingController {
       return TextSpan(style: baseStyle, text: text);
     }
 
+    final composingRange =
+        withComposing &&
+            value.composing.isValid &&
+            !value.composing.isCollapsed
+        ? TextRange(
+            start: value.composing.start.clamp(0, text.length),
+            end: value.composing.end.clamp(0, text.length),
+          )
+        : null;
+
     final children = <InlineSpan>[];
     var cursor = 0;
     for (final token in tokens) {
       if (cursor < token.start) {
-        children.add(
-          TextSpan(text: text.substring(cursor, token.start), style: baseStyle),
+        children.addAll(
+          _buildSegmentSpans(
+            text: text,
+            start: cursor,
+            end: token.start,
+            style: baseStyle,
+            composingRange: composingRange,
+          ),
         );
       }
-      children.add(
-        TextSpan(
-          text: token.rawText,
+      children.addAll(
+        _buildSegmentSpans(
+          text: text,
+          start: token.start,
+          end: token.end,
           style: _palette!.styleFor(baseStyle, token.category),
+          composingRange: composingRange,
         ),
       );
       cursor = token.end;
     }
     if (cursor < text.length) {
-      children.add(TextSpan(text: text.substring(cursor), style: baseStyle));
+      children.addAll(
+        _buildSegmentSpans(
+          text: text,
+          start: cursor,
+          end: text.length,
+          style: baseStyle,
+          composingRange: composingRange,
+        ),
+      );
     }
     return TextSpan(style: baseStyle, children: children);
   }
+}
+
+List<TextSpan> _buildSegmentSpans({
+  required String text,
+  required int start,
+  required int end,
+  required TextStyle style,
+  required TextRange? composingRange,
+}) {
+  if (start >= end) return const [];
+
+  if (composingRange == null ||
+      composingRange.isCollapsed ||
+      end <= composingRange.start ||
+      start >= composingRange.end) {
+    return [TextSpan(text: text.substring(start, end), style: style)];
+  }
+
+  final spans = <TextSpan>[];
+  if (start < composingRange.start) {
+    spans.add(
+      TextSpan(
+        text: text.substring(start, composingRange.start),
+        style: style,
+      ),
+    );
+  }
+
+  final composingStart = start > composingRange.start
+      ? start
+      : composingRange.start;
+  final composingEnd = end < composingRange.end ? end : composingRange.end;
+  spans.add(
+    TextSpan(
+      text: text.substring(composingStart, composingEnd),
+      style: style.merge(
+        const TextStyle(decoration: TextDecoration.underline),
+      ),
+    ),
+  );
+
+  if (composingEnd < end) {
+    spans.add(
+      TextSpan(text: text.substring(composingEnd, end), style: style),
+    );
+  }
+
+  return spans;
 }
 
 ComposerTokenCategory? _resolveCategory(
