@@ -402,6 +402,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get acceptPlan => 'プラン承認';
 
   @override
+  String get continuePlanning => '計画を続ける';
+
+  @override
   String get reject => '拒否';
 
   @override

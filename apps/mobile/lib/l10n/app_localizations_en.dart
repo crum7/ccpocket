@@ -405,6 +405,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get acceptPlan => 'Accept Plan';
 
   @override
+  String get continuePlanning => 'Keep Planning';
+
+  @override
   String get reject => 'Reject';
 
   @override

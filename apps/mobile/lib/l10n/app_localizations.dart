@@ -850,6 +850,12 @@ abstract class AppLocalizations {
   /// **'プラン承認'**
   String get acceptPlan;
 
+  /// No description provided for @continuePlanning.
+  ///
+  /// In ja, this message translates to:
+  /// **'計画を続ける'**
+  String get continuePlanning;
+
   /// No description provided for @reject.
   ///
   /// In ja, this message translates to:

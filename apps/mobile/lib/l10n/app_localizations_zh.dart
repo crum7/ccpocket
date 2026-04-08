@@ -400,6 +400,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get acceptPlan => '批准计划';
 
   @override
+  String get continuePlanning => '继续规划';
+
+  @override
   String get reject => '拒绝';
 
   @override

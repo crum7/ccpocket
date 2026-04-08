@@ -173,6 +173,7 @@
   "sendFeedbackKeepPlanning": "フィードバックを送信して計画を続ける",
   "acceptAndClear": "承認 & クリア",
   "acceptPlan": "プラン承認",
+  "continuePlanning": "計画を続ける",
   "reject": "拒否",
   "approve": "承認",
   "always": "常に許可",

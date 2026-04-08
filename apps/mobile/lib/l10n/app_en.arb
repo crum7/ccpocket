@@ -145,6 +145,7 @@
   "sendFeedbackKeepPlanning": "Send feedback & keep planning",
   "acceptAndClear": "Accept & Clear",
   "acceptPlan": "Accept Plan",
+  "continuePlanning": "Keep Planning",
   "reject": "Reject",
   "approve": "Approve",
   "always": "Always",

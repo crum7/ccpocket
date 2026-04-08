@@ -226,6 +226,7 @@
   "sendFeedbackKeepPlanning": "发送反馈并继续规划",
   "acceptAndClear": "批准并清除",
   "acceptPlan": "批准计划",
+  "continuePlanning": "继续规划",
   "reject": "拒绝",
   "approve": "批准",
   "always": "始终",

@@ -1008,7 +1008,7 @@ class _CodexPlanApprovalArea extends StatelessWidget {
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        l.reject,
+                        l.continuePlanning,
                         style: const TextStyle(fontSize: 12),
                       ),
                     ),

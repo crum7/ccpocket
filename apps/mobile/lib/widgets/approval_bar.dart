@@ -364,7 +364,10 @@ class _ApprovalButtons extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
-                child: Text(l.reject, style: const TextStyle(fontSize: 13)),
+                child: Text(
+                  l.continuePlanning,
+                  style: const TextStyle(fontSize: 13),
+                ),
               ),
             ),
             const SizedBox(width: 8),
