@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generate QR code with embedded CC Pocket icon."""
 
+import argparse
 import os
 import sys
 
@@ -14,14 +15,39 @@ except ImportError:
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
-INSTALL_URL = "https://k9i-0.github.io/ccpocket/install"
 ICON_PATH = os.path.join(
     ROOT, "apps/mobile/fastlane/metadata/android/en-US/images/icon.png"
 )
 OUTPUT_QR = os.path.join(ROOT, "docs/images/install-qr.png")
+INSTALL_URL = "https://k9i-0.github.io/ccpocket/install"
 
 
-def generate():
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--url",
+        default=INSTALL_URL,
+        help="URL to encode in the QR code",
+    )
+    parser.add_argument(
+        "--output",
+        default=OUTPUT_QR,
+        help="Output image path",
+    )
+    parser.add_argument(
+        "--fill-color",
+        default="#e0e0e0",
+        help="Foreground QR color",
+    )
+    parser.add_argument(
+        "--back-color",
+        default="#1a1a1a",
+        help="Background color",
+    )
+    return parser.parse_args()
+
+
+def generate(url: str, output: str, fill_color: str, back_color: str):
     # Generate QR code with high error correction (for icon overlay)
     qr = qrcode.QRCode(
         version=3,
@@ -29,9 +55,9 @@ def generate():
         box_size=12,
         border=2,
     )
-    qr.add_data(INSTALL_URL)
+    qr.add_data(url)
     qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="#e0e0e0", back_color="#1a1a1a").convert("RGBA")
+    qr_img = qr.make_image(fill_color=fill_color, back_color=back_color).convert("RGBA")
 
     # Load and resize icon
     icon = Image.open(ICON_PATH).convert("RGBA")
@@ -56,14 +82,15 @@ def generate():
             icon_x + icon_size + padding,
             icon_y + icon_size + padding,
         ],
-        fill="#1a1a1a",
+        fill=back_color,
     )
     qr_img.paste(icon_resized, (icon_x, icon_y), mask)
 
-    os.makedirs(os.path.dirname(OUTPUT_QR), exist_ok=True)
-    qr_img.save(OUTPUT_QR)
-    print(f"✅ QR code: {OUTPUT_QR}")
+    os.makedirs(os.path.dirname(output), exist_ok=True)
+    qr_img.save(output)
+    print(f"✅ QR code: {output}")
 
 
 if __name__ == "__main__":
-    generate()
+    args = parse_args()
+    generate(args.url, args.output, args.fill_color, args.back_color)
