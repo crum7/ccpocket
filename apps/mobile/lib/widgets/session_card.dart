@@ -577,6 +577,7 @@ class _ToolApprovalArea extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final presentation = permission.presentation;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -584,17 +585,69 @@ class _ToolApprovalArea extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ExpandableSummaryText(
-            text: permission.summary,
+          Text(
+            presentation.title,
             style: TextStyle(
               fontSize: 12,
-              fontFamily: 'monospace',
+              fontWeight: FontWeight.w700,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 4),
+          ExpandableSummaryText(
+            text: presentation.summary,
+            style: TextStyle(
+              fontSize: 12,
               color: Theme.of(
                 context,
               ).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
             maxLines: 2,
           ),
+          if (presentation.primaryTarget != null) ...[
+            const SizedBox(height: 6),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+              decoration: BoxDecoration(
+                color: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.45),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                presentation.primaryTarget!,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+          if (presentation.secondaryDetails.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            ...presentation.secondaryDetails
+                .take(2)
+                .map(
+                  (line) => Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Text(
+                      line,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.85),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+          ],
           const SizedBox(height: 6),
           LayoutBuilder(
             builder: (context, constraints) {

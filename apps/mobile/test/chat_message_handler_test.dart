@@ -783,7 +783,8 @@ void main() {
         toolName: 'Bash',
         input: {'command': 'ls -la'},
       );
-      expect(perm.summary, 'ls -la');
+      expect(perm.summary, 'Allow command execution');
+      expect(perm.presentation.primaryTarget, 'ls -la');
     });
 
     test('returns full value without truncation (UI handles display)', () {
@@ -843,6 +844,38 @@ void main() {
       expect(
         perm.detailLines,
         contains('Allowed actions: accept, acceptForSession, decline'),
+      );
+      expect(perm.presentation.scopeLabel, 'Session-wide option available');
+    });
+
+    test('uses reason as the main summary for bash approvals', () {
+      const perm = PermissionRequestMessage(
+        toolUseId: 'tu-bash-reason',
+        toolName: 'Bash',
+        input: {
+          'command': '/bin/zsh -lc "mise ls flutter"',
+          'reason': 'Verify whether Flutter 3.41.6 finished installing',
+        },
+      );
+
+      expect(perm.summary, 'Verify whether Flutter 3.41.6 finished installing');
+      expect(perm.presentation.primaryTarget, '/bin/zsh -lc "mise ls flutter"');
+    });
+
+    test('builds notification copy from structured permission details', () {
+      const perm = PermissionRequestMessage(
+        toolUseId: 'tu-notify',
+        toolName: 'Bash',
+        input: {
+          'command': '/bin/zsh -lc "mise ls flutter"',
+          'reason': 'Verify whether Flutter 3.41.6 finished installing',
+        },
+      );
+
+      expect(perm.notificationCopy.title, '承認待ち - ccpocket');
+      expect(
+        perm.notificationCopy.body,
+        'Verify whether Flutter 3.41.6 finished installing',
       );
     });
   });

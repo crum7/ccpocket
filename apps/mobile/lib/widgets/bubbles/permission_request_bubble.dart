@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 
 import '../../models/messages.dart';
@@ -21,13 +19,9 @@ class _PermissionRequestBubbleState extends State<PermissionRequestBubble> {
   @override
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).extension<AppColors>()!;
-    final detailLines = widget.message.detailLines;
-    final inputStr = const JsonEncoder.withIndent(
-      '  ',
-    ).convert(widget.message.input);
-    final preview = inputStr.length > 200
-        ? '${inputStr.substring(0, 200)}...'
-        : inputStr;
+    final presentation = widget.message.presentation;
+    final detailLines = presentation.secondaryDetails;
+    final inputStr = presentation.rawDetails;
     return Container(
       margin: const EdgeInsets.symmetric(
         vertical: AppSpacing.bubbleMarginV,
@@ -50,7 +44,7 @@ class _PermissionRequestBubbleState extends State<PermissionRequestBubble> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    widget.message.displayToolName,
+                    presentation.title,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
@@ -66,25 +60,74 @@ class _PermissionRequestBubbleState extends State<PermissionRequestBubble> {
             ),
           ),
           const SizedBox(height: 4),
-          if (detailLines.isNotEmpty) ...[
-            for (final line in detailLines)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(
-                  line,
-                  style: TextStyle(fontSize: 11, color: appColors.subtleText),
+          Text(
+            presentation.summary,
+            style: TextStyle(fontSize: 12, color: appColors.subtleText),
+          ),
+          if (presentation.primaryTarget != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: appColors.permissionBubble.withValues(alpha: 0.35),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: appColors.permissionBubbleBorder.withValues(
+                    alpha: 0.7,
+                  ),
                 ),
               ),
-            const SizedBox(height: 4),
-          ],
-          Text(
-            _expanded ? inputStr : preview,
-            style: TextStyle(
-              fontSize: 11,
-              fontFamily: 'monospace',
-              color: appColors.subtleText,
+              child: Text(
+                presentation.primaryTarget!,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: appColors.subtleText,
+                ),
+              ),
             ),
-          ),
+          ],
+          if (detailLines.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            for (final line in detailLines)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 5, right: 6),
+                      child: Icon(
+                        Icons.circle,
+                        size: 5,
+                        color: appColors.subtleText,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        line,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: appColors.subtleText,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          if (_expanded) ...[
+            const SizedBox(height: 8),
+            Text(
+              inputStr,
+              style: TextStyle(
+                fontSize: 11,
+                fontFamily: 'monospace',
+                color: appColors.subtleText,
+              ),
+            ),
+          ],
         ],
       ),
     );

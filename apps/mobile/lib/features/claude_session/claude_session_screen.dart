@@ -387,6 +387,7 @@ class _ChatScreenBody extends HookWidget {
           effects,
           sessionId: sessionId,
           isBackground: isBackground,
+          approval: context.read<ChatSessionCubit>().state.approval,
           collapseToolResults: collapseToolResults,
           planFeedbackController: planFeedbackController,
           scrollToBottom: scroll.scrollToBottom,
@@ -906,6 +907,7 @@ void _executeSideEffects(
   Set<ChatSideEffect> effects, {
   required String sessionId,
   required bool isBackground,
+  required ApprovalState approval,
   required ValueNotifier<int> collapseToolResults,
   required TextEditingController planFeedbackController,
   required VoidCallback scrollToBottom,
@@ -924,26 +926,29 @@ void _executeSideEffects(
         planFeedbackController.clear();
       case ChatSideEffect.notifyApprovalRequired:
         if (isBackground) {
-          NotificationService.instance.show(
-            title: 'Approval Required',
-            body: 'Tool approval needed',
-            id: 1,
-            payload: sessionId,
-          );
+          final permission = _notificationPermissionFor(approval);
+          if (permission != null) {
+            NotificationService.instance.showApprovalNotification(
+              permission,
+              id: 1,
+              payload: sessionId,
+            );
+          }
         }
       case ChatSideEffect.notifyAskQuestion:
         if (isBackground) {
-          NotificationService.instance.show(
-            title: 'Claude is asking',
-            body: 'Question needs your answer',
-            id: 2,
-            payload: sessionId,
-          );
+          final permission = _notificationPermissionFor(approval);
+          if (permission != null) {
+            NotificationService.instance.showApprovalNotification(
+              permission,
+              id: 2,
+              payload: sessionId,
+            );
+          }
         }
       case ChatSideEffect.notifySessionComplete:
         if (isBackground) {
-          NotificationService.instance.show(
-            title: 'Session Complete',
+          NotificationService.instance.showSessionCompleteNotification(
             body: 'Session done',
             id: 3,
             payload: sessionId,
@@ -953,6 +958,20 @@ void _executeSideEffects(
         scrollToBottom();
     }
   }
+}
+
+PermissionRequestMessage? _notificationPermissionFor(ApprovalState approval) {
+  return switch (approval) {
+    ApprovalPermission(:final request) => request,
+    ApprovalAskUser(:final toolUseId, :final toolName, :final input) =>
+      PermissionRequestMessage(
+        toolUseId: toolUseId,
+        toolName: toolName,
+        input: input,
+      ),
+    ApprovalNone() => null,
+    _ => null,
+  };
 }
 
 /// Walk entries in reverse to find the latest [AssistantServerMessage] that

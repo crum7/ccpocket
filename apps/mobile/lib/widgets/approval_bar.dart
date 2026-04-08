@@ -40,16 +40,17 @@ class ApprovalBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final presentation = pendingPermission?.presentation;
     final l = AppLocalizations.of(context);
     final summary = pendingPermission != null
         ? (isPlanApproval ? l.planApprovalSummary : pendingPermission!.summary)
         : l.toolApprovalSummary;
     final toolName = isPlanApproval
         ? l.planApproval
-        : pendingPermission?.displayToolName;
+        : presentation?.title ?? pendingPermission?.displayToolName;
     final detailLines = isPlanApproval
         ? const <String>[]
-        : (pendingPermission?.detailLines ?? const <String>[]);
+        : (presentation?.secondaryDetails ?? const <String>[]);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -77,6 +78,7 @@ class ApprovalBar extends StatelessWidget {
               isPlanApproval: isPlanApproval,
               toolName: toolName,
               summary: summary,
+              presentation: presentation,
               detailLines: detailLines,
               onViewPlan: onViewPlan,
             ),
@@ -112,6 +114,7 @@ class _ApprovalHeader extends StatelessWidget {
   final bool isPlanApproval;
   final String? toolName;
   final String summary;
+  final PermissionPresentation? presentation;
   final List<String> detailLines;
   final VoidCallback? onViewPlan;
 
@@ -120,6 +123,7 @@ class _ApprovalHeader extends StatelessWidget {
     required this.isPlanApproval,
     required this.toolName,
     required this.summary,
+    required this.presentation,
     required this.detailLines,
     this.onViewPlan,
   });
@@ -128,6 +132,9 @@ class _ApprovalHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
+    final primaryTarget = presentation?.primaryTarget;
+    final riskBadge = presentation?.riskBadge;
+    final scopeLabel = presentation?.scopeLabel;
     return Row(
       children: [
         Container(
@@ -162,6 +169,27 @@ class _ApprovalHeader extends StatelessWidget {
                 maxLines: 2,
                 backgroundColor: appColors.approvalBar,
               ),
+              if (!isPlanApproval && primaryTarget != null) ...[
+                const SizedBox(height: 8),
+                _PrimaryTargetCard(
+                  text: primaryTarget,
+                  backgroundColor: appColors.approvalBar.withValues(alpha: 0.7),
+                  borderColor: appColors.approvalBarBorder,
+                  textColor: Theme.of(context).colorScheme.onSurface,
+                ),
+              ],
+              if (!isPlanApproval &&
+                  (riskBadge != null || scopeLabel != null)) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    if (riskBadge != null) _InfoBadge(label: riskBadge),
+                    if (scopeLabel != null) _InfoBadge(label: scopeLabel),
+                  ],
+                ),
+              ],
               if (detailLines.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 ...detailLines.map(
@@ -192,6 +220,68 @@ class _ApprovalHeader extends StatelessWidget {
             padding: EdgeInsets.zero,
           ),
       ],
+    );
+  }
+}
+
+class _PrimaryTargetCard extends StatelessWidget {
+  final String text;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color textColor;
+
+  const _PrimaryTargetCard({
+    required this.text,
+    required this.backgroundColor,
+    required this.borderColor,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor.withValues(alpha: 0.7)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 11,
+          fontFamily: 'monospace',
+          color: textColor,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoBadge extends StatelessWidget {
+  final String label;
+
+  const _InfoBadge({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: cs.onSurfaceVariant,
+        ),
+      ),
     );
   }
 }
@@ -366,75 +456,84 @@ class _ApprovalButtons extends StatelessWidget {
     final isCodex = planApprovalUiMode == PlanApprovalUiMode.codex;
     final alwaysMain = isCodex ? l.approveSessionMain : l.approveAlways;
     final alwaysSub = isCodex ? l.approveSessionSub : l.approveAlwaysSub;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // On wide screens (iPad etc.), show single-line text
-        final isWide = constraints.maxWidth >= 400;
-        return Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                key: const ValueKey('reject_button'),
-                onPressed: onReject,
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                ),
-                child: Text(l.reject, style: const TextStyle(fontSize: 13)),
+    return Row(
+      children: [
+        Expanded(
+          child: _ApprovalActionButton(
+            button: OutlinedButton(
+              key: const ValueKey('reject_button'),
+              onPressed: onReject,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+              child: Text(l.reject, style: const TextStyle(fontSize: 13)),
+            ),
+            hint: 'Stop this action',
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ApprovalActionButton(
+            button: OutlinedButton(
+              key: const ValueKey('approve_always_button'),
+              onPressed: onApproveAlways,
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                foregroundColor: cs.error,
+                side: BorderSide(color: cs.error.withValues(alpha: 0.5)),
+              ),
+              child: Text(
+                isCodex || alwaysSub.isEmpty
+                    ? alwaysMain
+                    : '$alwaysMain $alwaysSub',
+                style: const TextStyle(fontSize: 13),
+                textAlign: TextAlign.center,
               ),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: OutlinedButton(
-                key: const ValueKey('approve_always_button'),
-                onPressed: onApproveAlways,
-                style: OutlinedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: isWide ? 8 : 5),
-                  foregroundColor: cs.error,
-                  side: BorderSide(color: cs.error.withValues(alpha: 0.5)),
-                ),
-                child: isWide || alwaysSub.isEmpty
-                    ? Text(
-                        alwaysSub.isEmpty
-                            ? alwaysMain
-                            : '$alwaysMain $alwaysSub',
-                        style: const TextStyle(fontSize: 13),
-                      )
-                    : Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            alwaysSub,
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w400,
-                              color: cs.error.withValues(alpha: 0.7),
-                            ),
-                          ),
-                          Text(
-                            alwaysMain,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
+            hint: isCodex
+                ? 'Reuse this approval in the current session'
+                : 'Allow future runs without asking again',
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _ApprovalActionButton(
+            button: FilledButton(
+              key: const ValueKey('approve_button'),
+              onPressed: onApprove,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 10),
               ),
+              child: Text(l.approveOnce, style: const TextStyle(fontSize: 13)),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: FilledButton(
-                key: const ValueKey('approve_button'),
-                onPressed: onApprove,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                ),
-                child: Text(
-                  l.approveOnce,
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+            hint: 'Approve only this request',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ApprovalActionButton extends StatelessWidget {
+  final Widget button;
+  final String hint;
+
+  const _ApprovalActionButton({required this.button, required this.hint});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        button,
+        const SizedBox(height: 4),
+        Text(
+          hint,
+          style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 }

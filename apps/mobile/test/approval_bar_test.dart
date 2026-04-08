@@ -63,12 +63,12 @@ void main() {
         ),
       );
 
-      expect(find.text('Bash'), findsOneWidget);
+      expect(find.text('Command Approval'), findsOneWidget);
       expect(find.text('ls -la'), findsOneWidget);
       expect(find.text('Allow Once'), findsOneWidget);
       expect(find.text('Reject'), findsOneWidget);
-      // Wide viewport (800px) → single-line combined text
       expect(find.text('Permanently allow'), findsOneWidget);
+      expect(find.text('Approve only this request'), findsOneWidget);
     });
 
     testWidgets('shows granular approval detail lines', (tester) async {
@@ -97,6 +97,7 @@ void main() {
       );
       expect(find.text('Exec policy: mode=allow'), findsOneWidget);
       expect(find.text('Allowed actions: accept, decline'), findsOneWidget);
+      expect(find.text('Allow command execution'), findsOneWidget);
     });
 
     testWidgets('shows plan approval labels', (tester) async {

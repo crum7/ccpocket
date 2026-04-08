@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../models/messages.dart';
+
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
@@ -110,6 +112,28 @@ class NotificationService {
       title: title,
       body: body,
       notificationDetails: details,
+      payload: payload,
+    );
+  }
+
+  Future<void> showApprovalNotification(
+    PermissionRequestMessage permission, {
+    int id = 1,
+    String? payload,
+  }) {
+    final copy = permission.notificationCopy;
+    return show(title: copy.title, body: copy.body, id: id, payload: payload);
+  }
+
+  Future<void> showSessionCompleteNotification({
+    required String body,
+    int id = 3,
+    String? payload,
+  }) {
+    return show(
+      title: 'Session Complete',
+      body: body,
+      id: id,
       payload: payload,
     );
   }

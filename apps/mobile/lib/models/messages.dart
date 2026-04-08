@@ -1036,6 +1036,11 @@ class PermissionRequestMessage implements ServerMessage {
 
   bool get isPermissionGrantRequest => toolName == 'Permissions';
 
+  PermissionPresentation get presentation => PermissionPresentation.from(this);
+
+  ApprovalNotificationCopy get notificationCopy =>
+      ApprovalNotificationCopy.from(this);
+
   String get displayToolName {
     if (isRequestUserInputApproval) {
       return requestUserInputHeader(input) ?? 'App Tool Approval';
@@ -1053,80 +1058,185 @@ class PermissionRequestMessage implements ServerMessage {
   }
 
   /// Human-readable summary of the permission request input.
-  String get summary {
-    if (isRequestUserInputApproval) {
-      return requestUserInputQuestionText(input) ?? displayToolName;
-    }
-    if (isMcpElicitation) {
-      final message = input['message'] as String?;
-      final url = input['url'] as String?;
-      if (message != null &&
-          message.isNotEmpty &&
-          url != null &&
-          url.isNotEmpty) {
-        return '$message | $url';
-      }
-      return message ?? url ?? displayToolName;
-    }
-    if (isPermissionGrantRequest) {
-      final reason = input['reason'] as String?;
-      if (reason != null && reason.isNotEmpty) return reason;
-      if (input['permissions'] != null) return 'Grant requested permissions';
-    }
-    final parts = <String>[];
-    for (final key in [
-      'command',
-      'file_path',
-      'path',
-      'pattern',
-      'url',
-      'reason',
-    ]) {
-      if (input.containsKey(key)) {
-        final val = input[key].toString();
-        parts.add(val);
-      }
-    }
-    return parts.isNotEmpty ? parts.join(' | ') : toolName;
-  }
+  String get summary => presentation.summary;
 
-  List<String> get detailLines {
-    final lines = <String>[];
+  List<String> get detailLines => presentation.secondaryDetails;
+}
 
-    if (isPermissionGrantRequest) {
-      final permissions = _flattenPermissionValues(input['permissions']);
-      if (permissions.isNotEmpty) {
-        lines.add('Permissions: ${permissions.join(', ')}');
-      }
-    }
+class PermissionPresentation {
+  final String title;
+  final String summary;
+  final String? riskBadge;
+  final String? scopeLabel;
+  final String? primaryTargetLabel;
+  final String? primaryTarget;
+  final List<String> secondaryDetails;
+  final String rawDetails;
 
-    final additionalPermissions = _flattenPermissionValues(
-      input['additionalPermissions'],
-    );
-    if (additionalPermissions.isNotEmpty) {
-      lines.add('Additional permissions: ${additionalPermissions.join(', ')}');
-    }
+  const PermissionPresentation({
+    required this.title,
+    required this.summary,
+    required this.rawDetails,
+    this.riskBadge,
+    this.scopeLabel,
+    this.primaryTargetLabel,
+    this.primaryTarget,
+    this.secondaryDetails = const [],
+  });
 
-    final execAmendment = _stringMapSummary(
-      input['proposedExecpolicyAmendment'],
-    );
-    if (execAmendment != null) {
-      lines.add('Exec policy: $execAmendment');
-    }
-
-    final networkAmendments = _networkPolicySummary(
-      input['proposedNetworkPolicyAmendments'],
-    );
-    if (networkAmendments != null) {
-      lines.add('Network policy: $networkAmendments');
-    }
-
+  factory PermissionPresentation.from(PermissionRequestMessage message) {
+    final input = message.input;
+    final rawDetails = const JsonEncoder.withIndent('  ').convert(input);
     final availableDecisions = _stringList(input['availableDecisions']);
-    if (availableDecisions.isNotEmpty) {
-      lines.add('Allowed actions: ${availableDecisions.join(', ')}');
+    final scopeLabel = _scopeLabel(availableDecisions);
+
+    if (message.isRequestUserInputApproval) {
+      return PermissionPresentation(
+        title: message.displayToolName,
+        summary: requestUserInputQuestionText(input) ?? message.displayToolName,
+        rawDetails: rawDetails,
+        riskBadge: 'App Tool',
+        scopeLabel: scopeLabel,
+        secondaryDetails: _buildCommonSecondaryDetails(
+          input,
+          includePermissions: false,
+        ),
+      );
     }
 
-    return lines;
+    if (message.isMcpElicitation) {
+      final summary = _mcpSummary(input) ?? message.displayToolName;
+      return PermissionPresentation(
+        title: message.displayToolName,
+        summary: summary,
+        rawDetails: rawDetails,
+        riskBadge: 'MCP',
+        scopeLabel: scopeLabel,
+        primaryTargetLabel: input['url'] is String ? 'URL' : null,
+        primaryTarget: input['url'] as String?,
+        secondaryDetails: _buildCommonSecondaryDetails(
+          input,
+          includePermissions: false,
+        ),
+      );
+    }
+
+    if (message.isPermissionGrantRequest) {
+      final permissions = _flattenPermissionValues(input['permissions']);
+      return PermissionPresentation(
+        title: 'Additional Permissions',
+        summary:
+            _nonEmptyString(input['reason']) ??
+            (permissions.isNotEmpty
+                ? 'Grant additional access for this task'
+                : message.displayToolName),
+        rawDetails: rawDetails,
+        riskBadge: 'Permissions',
+        scopeLabel: scopeLabel,
+        primaryTargetLabel: permissions.isNotEmpty ? 'Requested' : null,
+        primaryTarget: permissions.isNotEmpty ? permissions.join(', ') : null,
+        secondaryDetails: _buildCommonSecondaryDetails(
+          input,
+          includePermissions: true,
+        ),
+      );
+    }
+
+    switch (message.toolName) {
+      case 'Bash':
+        return PermissionPresentation(
+          title: 'Command Approval',
+          summary:
+              _nonEmptyString(input['reason']) ?? 'Allow command execution',
+          rawDetails: rawDetails,
+          riskBadge: 'Command',
+          scopeLabel: scopeLabel,
+          primaryTargetLabel: input['command'] is String ? 'Command' : null,
+          primaryTarget: input['command'] as String?,
+          secondaryDetails: _buildCommonSecondaryDetails(
+            input,
+            includePermissions: false,
+          ),
+        );
+      case 'FileChange':
+        final changes = _changePaths(input['changes']);
+        return PermissionPresentation(
+          title: 'File Change Approval',
+          summary:
+              _nonEmptyString(input['reason']) ??
+              _fileChangeSummary(changes) ??
+              'Allow file changes',
+          rawDetails: rawDetails,
+          riskBadge: 'File Changes',
+          scopeLabel: scopeLabel,
+          primaryTargetLabel: changes.isNotEmpty ? 'Files' : null,
+          primaryTarget: changes.isNotEmpty
+              ? _compactFileTargets(changes)
+              : null,
+          secondaryDetails: [
+            if (_nonEmptyString(input['grantRoot']) case final grantRoot?)
+              'Grant root: $grantRoot',
+            ..._buildCommonSecondaryDetails(
+              input,
+              includePermissions: false,
+              includeReason: false,
+              includeAllowedActions: true,
+            ),
+          ],
+        );
+      default:
+        final fallbackPrimary = _firstInputValue(input, const [
+          'command',
+          'file_path',
+          'path',
+          'pattern',
+          'url',
+        ]);
+        return PermissionPresentation(
+          title: message.displayToolName,
+          summary:
+              _nonEmptyString(input['reason']) ??
+              fallbackPrimary ??
+              message.displayToolName,
+          rawDetails: rawDetails,
+          riskBadge: message.displayToolName,
+          scopeLabel: scopeLabel,
+          primaryTargetLabel: fallbackPrimary != null ? 'Target' : null,
+          primaryTarget: fallbackPrimary,
+          secondaryDetails: _buildCommonSecondaryDetails(
+            input,
+            includePermissions: false,
+          ),
+        );
+    }
+  }
+}
+
+class ApprovalNotificationCopy {
+  final String title;
+  final String body;
+
+  const ApprovalNotificationCopy({required this.title, required this.body});
+
+  factory ApprovalNotificationCopy.from(PermissionRequestMessage message) {
+    if (message.toolName == 'AskUserQuestion' || message.isMcpElicitation) {
+      return ApprovalNotificationCopy(
+        title: '質問があります - ccpocket',
+        body: message.summary,
+      );
+    }
+    if (message.toolName == 'ExitPlanMode') {
+      return const ApprovalNotificationCopy(
+        title: '承認待ち - ccpocket',
+        body: '作成したプランの確認が必要です',
+      );
+    }
+
+    final presentation = message.presentation;
+    return ApprovalNotificationCopy(
+      title: '承認待ち - ccpocket',
+      body: presentation.summary,
+    );
   }
 }
 
@@ -1173,6 +1283,115 @@ String? _networkPolicySummary(dynamic value) {
       .toList();
   if (parts.isEmpty) return null;
   return parts.join(' | ');
+}
+
+String? _mcpSummary(Map<String, dynamic> input) {
+  final message = input['message'] as String?;
+  final url = input['url'] as String?;
+  if (message != null && message.isNotEmpty && url != null && url.isNotEmpty) {
+    return '$message | $url';
+  }
+  return _nonEmptyString(message) ?? _nonEmptyString(url);
+}
+
+String? _nonEmptyString(dynamic value) {
+  if (value is! String) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
+}
+
+String? _firstInputValue(Map<String, dynamic> input, List<String> keys) {
+  for (final key in keys) {
+    final value = _nonEmptyString(input[key]);
+    if (value != null) return value;
+  }
+  return null;
+}
+
+List<String> _changePaths(dynamic value) {
+  if (value is! List) return const [];
+  return value
+      .map((entry) {
+        if (entry is! Map) return null;
+        return _nonEmptyString(entry['file']) ??
+            _nonEmptyString(entry['path']) ??
+            _nonEmptyString(entry['target']);
+      })
+      .whereType<String>()
+      .toList();
+}
+
+String? _fileChangeSummary(List<String> changes) {
+  if (changes.isEmpty) return null;
+  if (changes.length == 1) return 'Allow changes to ${changes.first}';
+  return 'Allow changes to ${changes.length} files';
+}
+
+String _compactFileTargets(List<String> changes) {
+  if (changes.isEmpty) return '';
+  if (changes.length == 1) return changes.first;
+  return '${changes.first} +${changes.length - 1} more';
+}
+
+String? _scopeLabel(List<String> decisions) {
+  if (decisions.any((d) => d == 'acceptForSession')) {
+    return 'Session-wide option available';
+  }
+  if (decisions.any((d) => d == 'accept')) {
+    return 'One-time approval';
+  }
+  return null;
+}
+
+List<String> _buildCommonSecondaryDetails(
+  Map<String, dynamic> input, {
+  required bool includePermissions,
+  bool includeReason = true,
+  bool includeAllowedActions = true,
+}) {
+  final lines = <String>[];
+
+  if (includeReason) {
+    final reason = _nonEmptyString(input['reason']);
+    if (reason != null) {
+      lines.add('Why: $reason');
+    }
+  }
+
+  if (includePermissions) {
+    final permissions = _flattenPermissionValues(input['permissions']);
+    if (permissions.isNotEmpty) {
+      lines.add('Permissions: ${permissions.join(', ')}');
+    }
+  }
+
+  final additionalPermissions = _flattenPermissionValues(
+    input['additionalPermissions'],
+  );
+  if (additionalPermissions.isNotEmpty) {
+    lines.add('Additional permissions: ${additionalPermissions.join(', ')}');
+  }
+
+  final execAmendment = _stringMapSummary(input['proposedExecpolicyAmendment']);
+  if (execAmendment != null) {
+    lines.add('Exec policy: $execAmendment');
+  }
+
+  final networkAmendments = _networkPolicySummary(
+    input['proposedNetworkPolicyAmendments'],
+  );
+  if (networkAmendments != null) {
+    lines.add('Network policy: $networkAmendments');
+  }
+
+  if (includeAllowedActions) {
+    final availableDecisions = _stringList(input['availableDecisions']);
+    if (availableDecisions.isNotEmpty) {
+      lines.add('Allowed actions: ${availableDecisions.join(', ')}');
+    }
+  }
+
+  return lines;
 }
 
 List<String> _stringList(dynamic value) {

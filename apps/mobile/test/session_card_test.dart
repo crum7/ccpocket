@@ -403,6 +403,43 @@ void main() {
       expect(find.byKey(const ValueKey('reject_button')), findsOneWidget);
     });
 
+    testWidgets('shows structured codex command approval summary', (
+      tester,
+    ) async {
+      final session = SessionInfo(
+        id: 'codex-command',
+        provider: 'codex',
+        projectPath: '/home/user/my-app',
+        status: 'waiting_approval',
+        createdAt: DateTime.now().toIso8601String(),
+        lastActivityAt: DateTime.now().toIso8601String(),
+        pendingPermission: const PermissionRequestMessage(
+          toolUseId: 'tool-codex-cmd-1',
+          toolName: 'Bash',
+          input: {
+            'command': '/bin/zsh -lc "mise ls flutter"',
+            'reason': 'Verify whether Flutter 3.41.6 finished installing',
+            'availableDecisions': ['accept', 'acceptForSession', 'decline'],
+          },
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(RunningSessionCard(session: session, onTap: () {})),
+      );
+
+      expect(find.text('Command Approval'), findsOneWidget);
+      expect(
+        find.text('Verify whether Flutter 3.41.6 finished installing'),
+        findsOneWidget,
+      );
+      expect(find.text('/bin/zsh -lc "mise ls flutter"'), findsOneWidget);
+      expect(
+        find.text('Allowed actions: accept, acceptForSession, decline'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('ask user custom input does not send on keyboard done', (
       tester,
     ) async {
