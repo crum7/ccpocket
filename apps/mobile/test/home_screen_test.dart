@@ -394,5 +394,16 @@ void main() {
       expect(restored.claudeForkSession, isTrue);
       expect(restored.claudePersistSession, isFalse);
     });
+
+    test('migrates deprecated codex defaults to the fallback first model', () {
+      final restored = sessionStartDefaultsFromJson({
+        'projectPath': '/tmp/project-d',
+        'provider': Provider.codex.value,
+        'model': 'gpt-5.2-codex',
+      });
+
+      expect(restored, isNotNull);
+      expect(restored!.model, defaultCodexModels.first);
+    });
   });
 }

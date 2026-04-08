@@ -213,6 +213,30 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     httpServer.close();
   });
 
+  it("sends codex model list without deprecated models", () => {
+    const bridge = new BridgeWebSocketServer({ server: httpServer });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+
+    (bridge as any).sendSessionList(ws);
+
+    const sessionList = ws.send.mock.calls
+      .map((c: unknown[]) => JSON.parse(c[0] as string))
+      .find((msg: any) => msg.type === "session_list");
+
+    expect(sessionList.codexModels).toEqual([
+      "gpt-5.4",
+      "gpt-5.4-mini",
+      "gpt-5.3-codex",
+      "gpt-5.3-codex-spark",
+    ]);
+    expect(sessionList.codexModels).not.toContain("gpt-5.2-codex");
+
+    bridge.close();
+  });
+
   it("does not send past_history on resume_session and sends it on get_history with sessionId", async () => {
     getSessionHistoryMock.mockResolvedValue([
       {

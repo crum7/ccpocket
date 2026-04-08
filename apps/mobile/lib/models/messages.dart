@@ -119,6 +119,43 @@ String? sanitizeCodexModelName(String? model) {
   return normalized;
 }
 
+const defaultCodexModels = <String>[
+  'gpt-5.4',
+  'gpt-5.4-mini',
+  'gpt-5.3-codex',
+  'gpt-5.3-codex-spark',
+];
+
+const _deprecatedCodexModels = <String>{'gpt-5.2-codex'};
+
+bool isDeprecatedCodexModel(String? model) {
+  final normalized = sanitizeCodexModelName(model);
+  return normalized != null && _deprecatedCodexModels.contains(normalized);
+}
+
+String? normalizeCodexModelForAvailableList(
+  String? model,
+  Iterable<String> availableModels,
+) {
+  final normalized = sanitizeCodexModelName(model);
+  if (normalized == null) return null;
+  if (!isDeprecatedCodexModel(normalized)) return normalized;
+
+  final candidates = availableModels.toList();
+  final effectiveModels = candidates.isNotEmpty
+      ? candidates
+      : defaultCodexModels;
+  for (final candidate in effectiveModels) {
+    final sanitizedCandidate = sanitizeCodexModelName(candidate);
+    if (sanitizedCandidate == null ||
+        isDeprecatedCodexModel(sanitizedCandidate)) {
+      continue;
+    }
+    return sanitizedCandidate;
+  }
+  return null;
+}
+
 // ---- Permission mode ----
 
 enum PermissionMode {

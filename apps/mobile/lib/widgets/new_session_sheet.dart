@@ -157,6 +157,10 @@ Map<String, dynamic> sessionStartDefaultsToJson(NewSessionParams params) {
 NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
   final projectPath = json['projectPath'] as String?;
   if (projectPath == null || projectPath.isEmpty) return null;
+  final codexModel = normalizeCodexModelForAvailableList(
+    json['model'] as String?,
+    _defaultCodexModels,
+  );
   return NewSessionParams(
     projectPath: projectPath,
     provider: _providerFromRaw(json['provider'] as String?),
@@ -165,9 +169,8 @@ NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
       provider: json['provider'] as String?,
       permissionMode: json['permissionMode'] as String?,
     ),
-    codexApprovalPolicy: codexApprovalPolicyFromRaw(
-          json['codexApprovalPolicy'] as String?,
-        ) ??
+    codexApprovalPolicy:
+        codexApprovalPolicyFromRaw(json['codexApprovalPolicy'] as String?) ??
         codexApprovalPolicyFromLegacyExecutionMode(
           json['executionMode'] as String?,
         ),
@@ -176,7 +179,7 @@ NewSessionParams? sessionStartDefaultsFromJson(Map<String, dynamic> json) {
       permissionMode: json['permissionMode'] as String?,
     ),
     // useWorktree, worktreeBranch, existingWorktreePath default to off/null
-    model: json['model'] as String?,
+    model: codexModel ?? json['model'] as String?,
     sandboxMode: sandboxModeFromRaw(json['sandboxMode'] as String?),
     modelReasoningEffort: reasoningEffortFromRaw(
       json['modelReasoningEffort'] as String?,
@@ -269,13 +272,7 @@ enum _WorktreeMode {
 }
 
 /// Fallback Codex models when Bridge hasn't delivered a list yet.
-const _defaultCodexModels = <String>[
-  'gpt-5.4',
-  'gpt-5.4-mini',
-  'gpt-5.3-codex',
-  'gpt-5.3-codex-spark',
-  'gpt-5.2-codex',
-];
+const _defaultCodexModels = defaultCodexModels;
 
 /// Fallback Claude models when Bridge hasn't delivered a list yet.
 const _defaultClaudeModels = <String>[
@@ -497,7 +494,13 @@ class _NewSessionSheetContentState extends State<_NewSessionSheetContent> {
     _planMode = p.planMode;
     _useWorktree = p.useWorktree || p.existingWorktreePath != null;
     _branchController.text = p.worktreeBranch ?? "";
-    _selectedModel = _codexModelList.contains(p.model) ? p.model : null;
+    final normalizedCodexModel = normalizeCodexModelForAvailableList(
+      p.model,
+      _codexModelList,
+    );
+    _selectedModel = _codexModelList.contains(normalizedCodexModel)
+        ? normalizedCodexModel
+        : null;
     if (p.provider == Provider.claude) {
       _claudeSandboxMode = p.sandboxMode ?? SandboxMode.off;
     } else {

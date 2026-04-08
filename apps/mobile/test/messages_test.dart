@@ -131,6 +131,33 @@ void main() {
 
       expect(message.model, isEmpty);
     });
+
+    test('normalizes deprecated codex model to first available model', () {
+      expect(
+        normalizeCodexModelForAvailableList('gpt-5.2-codex', [
+          'gpt-5.3-codex',
+          'gpt-5.4-mini',
+        ]),
+        'gpt-5.3-codex',
+      );
+    });
+
+    test('uses default codex list when available list is empty', () {
+      expect(
+        normalizeCodexModelForAvailableList('gpt-5.2-codex', const []),
+        defaultCodexModels.first,
+      );
+    });
+
+    test('skips deprecated entries when selecting replacement model', () {
+      expect(
+        normalizeCodexModelForAvailableList('gpt-5.2-codex', [
+          'gpt-5.2-codex',
+          'gpt-5.4-mini',
+        ]),
+        'gpt-5.4-mini',
+      );
+    });
   });
 
   group('Claude advanced options', () {

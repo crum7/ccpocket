@@ -657,6 +657,7 @@ class _SessionListScreenState extends State<SessionListScreen>
     final provider = session.provider == Provider.codex.value
         ? Provider.codex
         : Provider.claude;
+    final codexModels = context.read<BridgeService>().codexModels;
     final existingWorktreePath = session.resumeCwd;
     final hasExistingWorktree =
         existingWorktreePath != null && existingWorktreePath.isNotEmpty;
@@ -687,7 +688,12 @@ class _SessionListScreenState extends State<SessionListScreen>
       useWorktree: hasExistingWorktree,
       worktreeBranch: session.gitBranch.isNotEmpty ? session.gitBranch : null,
       existingWorktreePath: hasExistingWorktree ? existingWorktreePath : null,
-      model: session.codexModel,
+      model:
+          normalizeCodexModelForAvailableList(
+            session.codexModel,
+            codexModels,
+          ) ??
+          session.codexModel,
       sandboxMode: provider == Provider.codex
           ? sandboxModeFromRaw(session.codexSandboxMode)
           : sandboxModeFromRaw(sessionSettings?['sandboxMode'] as String?),
@@ -965,7 +971,12 @@ class _SessionListScreenState extends State<SessionListScreen>
     final persistSession =
         sessionSettings?['claudePersistSession'] as bool? ??
         claudeDefaults?.claudePersistSession;
-    final codexModel = sanitizeCodexModelName(session.codexModel);
+    final codexModel =
+        normalizeCodexModelForAvailableList(
+          session.codexModel,
+          context.read<BridgeService>().codexModels,
+        ) ??
+        sanitizeCodexModelName(session.codexModel);
 
     context.read<BridgeService>().resumeSession(
       session.sessionId,
@@ -1061,7 +1072,13 @@ class _SessionListScreenState extends State<SessionListScreen>
       persistSession: !isCodex ? edited.claudePersistSession : null,
       provider: session.provider,
       sandboxMode: edited.sandboxMode?.value,
-      model: isCodex ? edited.model : edited.claudeModel,
+      model: isCodex
+          ? (normalizeCodexModelForAvailableList(
+                  edited.model,
+                  context.read<BridgeService>().codexModels,
+                ) ??
+                edited.model)
+          : edited.claudeModel,
       modelReasoningEffort: isCodex ? edited.modelReasoningEffort?.value : null,
       networkAccessEnabled: isCodex ? edited.networkAccessEnabled : null,
       webSearchMode: isCodex ? edited.webSearchMode?.value : null,
