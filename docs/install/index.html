@@ -205,7 +205,7 @@
       -webkit-text-fill-color: transparent;
       margin-bottom: 24px;
     }
-    .hero-title span {
+    .hero-title span.highlight {
       background: linear-gradient(135deg, var(--cyan) 0%, var(--blue) 100%);
       background-clip: text;
       -webkit-background-clip: text;
@@ -301,7 +301,7 @@
     .mobile-screenshot {
       width: 100%;
       max-width: 400px;
-      border-radius: 32px;
+      border-radius: 16px;
       box-shadow: 0 40px 80px rgba(0,0,0,0.5);
       animation: float-mockup 8s infinite ease-in-out;
       cursor: zoom-in;
@@ -575,7 +575,7 @@
       const clone = document.createElement('img');
       clone.src = img.src;
       Object.assign(clone.style, {
-        maxWidth: '92%', maxHeight: '92%', borderRadius: '32px',
+        maxWidth: '92%', maxHeight: '92%', borderRadius: '16px',
         boxShadow: '0 60px 120px rgba(0,0,0,0.8)',
         transform: 'scale(0.85) translateY(20px)', opacity: '0', transition: 'all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)'
       });
@@ -631,7 +631,7 @@
           <span class="blinking-dot" aria-hidden="true"></span>
           <span data-i18n="eyebrow">Mobile control for your coding agent</span>
         </div>
-        <h1 class="hero-title"><span data-i18n="titleBefore">Run </span><span>Codex</span><span data-i18n="titleAnd"> and </span><span>Claude Code</span><span data-i18n="titleAfter"> from your phone.</span></h1>
+        <h1 class="hero-title"><span data-i18n="titleBefore">Run </span><span class="highlight">Codex</span><span data-i18n="titleAnd"> and </span><span class="highlight">Claude Code</span><span data-i18n="titleAfter"> from your phone.</span></h1>
         <p class="hero-subtitle" data-i18n="subtitle">
           Start sessions, handle approvals, and review diffs seamlessly. Your Mac does the heavy lifting, your phone acts as the remote.
         </p>
