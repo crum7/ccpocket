@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.57.0] - 2026-04-08
+
+### Added
+- Enhance approval UI with permission details and push notifications
+
+### Fixed
+- Route McpElicitation through permission path for proper approval UI in Codex sessions
+- Simplify approval bar UI
+- Remove deprecated gpt-5.2-codex model from Codex model list
+
 ## [1.56.1] - 2026-04-08
 
 ### Fixed
