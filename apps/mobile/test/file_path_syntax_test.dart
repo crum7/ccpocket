@@ -18,6 +18,24 @@ List<String> _detectFilePaths(String input, Set<String> knownSuffixes) {
   return paths;
 }
 
+/// Parses [input] with both [FilePathSyntax] and [BareFilePathSyntax].
+List<String> _detectAllFilePaths(String input, Set<String> knownSuffixes) {
+  final doc = md.Document(
+    inlineSyntaxes: [
+      FilePathSyntax(knownPathSuffixes: knownSuffixes),
+      BareFilePathSyntax(knownPathSuffixes: knownSuffixes),
+    ],
+  );
+  final nodes = doc.parseInline(input);
+  final paths = <String>[];
+  for (final node in nodes) {
+    if (node is md.Element && node.tag == 'filePath') {
+      paths.add(node.attributes['path']!);
+    }
+  }
+  return paths;
+}
+
 void main() {
   group('FilePathSyntax.buildSuffixSet', () {
     test('generates all suffixes for a path', () {
@@ -124,6 +142,13 @@ void main() {
       expect(paths, ['file_path_syntax.dart']);
     });
 
+    test('backtick paths still detected with both syntaxes', () {
+      final paths = _detectAllFilePaths(
+        'See `lib/main.dart` for details',
+        suffixes,
+      );
+      expect(paths, ['lib/main.dart']);
+    });
     test('preserves line number in display text', () {
       final doc = md.Document(
         inlineSyntaxes: [FilePathSyntax(knownPathSuffixes: suffixes)],
@@ -136,6 +161,77 @@ void main() {
       expect(fileNode.attributes['path'], 'main.dart');
       // display text should keep the line number
       expect(fileNode.textContent, 'main.dart:42');
+    });
+  });
+
+  group('BareFilePathSyntax — real session messages', () {
+    // Real file list from ccpocket project (subset)
+    final knownFiles = [
+      'docs/install/index.html',
+      'README.ja.md',
+      'apps/mobile/lib/features/claude_session/claude_session_screen.dart',
+      'apps/mobile/lib/features/codex_session/codex_session_screen.dart',
+      'apps/mobile/test/regressions/file_peek_file_list_refresh_test.dart',
+      'lib/main.dart',
+      'pubspec.yaml',
+    ];
+    final suffixes = FilePathSyntax.buildSuffixSet(knownFiles);
+
+    test('detects bare file paths from actual Codex session', () {
+      // Actual message text from running session 2dfd0f83
+      final paths = _detectAllFilePaths(
+        'docs/install/index.html の軽改修',
+        suffixes,
+      );
+      expect(paths, ['docs/install/index.html']);
+    });
+
+    test('detects bare file path in mid-sentence', () {
+      final paths = _detectAllFilePaths(
+        '詳細は README.ja.md に集約',
+        suffixes,
+      );
+      expect(paths, ['README.ja.md']);
+    });
+
+    test('detects both backtick and bare paths in same message', () {
+      final paths = _detectAllFilePaths(
+        '`claude_session_screen.dart` と docs/install/index.html を修正',
+        suffixes,
+      );
+      expect(paths, ['claude_session_screen.dart', 'docs/install/index.html']);
+    });
+
+    test('does not match version numbers', () {
+      final paths = _detectAllFilePaths(
+        'mise exec flutter@3.41.6 -- flutter test',
+        suffixes,
+      );
+      expect(paths, isEmpty);
+    });
+
+    test('does not match bare text without file extension match', () {
+      final paths = _detectAllFilePaths(
+        'use_build_context_synchronously info が2件',
+        suffixes,
+      );
+      expect(paths, isEmpty);
+    });
+
+    test('does not match when suffix set is empty', () {
+      final paths = _detectAllFilePaths(
+        'docs/install/index.html の軽改修',
+        const {},
+      );
+      expect(paths, isEmpty);
+    });
+
+    test('detects test file path', () {
+      final paths = _detectAllFilePaths(
+        '回帰テストは追加済みです: file_peek_file_list_refresh_test.dart',
+        suffixes,
+      );
+      expect(paths, ['file_peek_file_list_refresh_test.dart']);
     });
   });
 }

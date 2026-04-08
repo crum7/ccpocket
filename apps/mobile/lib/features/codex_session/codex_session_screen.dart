@@ -46,6 +46,15 @@ import '../claude_session/widgets/rewind_message_list_sheet.dart'
     show UserMessageHistorySheet;
 import 'state/codex_session_cubit.dart';
 
+const _fileListRefreshToolNames = {
+  'Edit',
+  'FileEdit',
+  'MultiEdit',
+  'Write',
+  'NotebookEdit',
+  'Bash',
+};
+
 /// Codex-specific chat screen.
 ///
 /// Simpler than [ClaudeSessionScreen] — no rewind.
@@ -411,7 +420,25 @@ class _CodexChatBody extends HookWidget {
       bridge.requestSessionList();
       bridge.refreshBranch(sessionId);
       return null;
-    }, [sessionId]);
+    }, [sessionId, projectPath]);
+
+    useEffect(() {
+      if (projectPath == null || projectPath!.isEmpty) return null;
+
+      final bridge = context.read<BridgeService>();
+      final sub = bridge.messagesForSession(sessionId).listen((msg) {
+        if (msg case ToolResultMessage(
+          :final toolName,
+        ) when _fileListRefreshToolNames.contains(toolName)) {
+          bridge.requestFileList(projectPath!);
+        } else if (msg case ResultMessage(
+          :final fileEdits,
+        ) when (fileEdits ?? 0) > 0) {
+          bridge.requestFileList(projectPath!);
+        }
+      });
+      return sub.cancel;
+    }, [sessionId, projectPath]);
 
     // --- Listen for branch updates ---
     useEffect(() {
@@ -949,12 +976,11 @@ void _executeSideEffects(
 PermissionRequestMessage? _notificationPermissionFor(ApprovalState approval) {
   return switch (approval) {
     ApprovalPermission(:final request) => request,
-    ApprovalAskUser(:final toolUseId, :final input) =>
-      PermissionRequestMessage(
-        toolUseId: toolUseId,
-        toolName: 'AskUserQuestion',
-        input: input,
-      ),
+    ApprovalAskUser(:final toolUseId, :final input) => PermissionRequestMessage(
+      toolUseId: toolUseId,
+      toolName: 'AskUserQuestion',
+      input: input,
+    ),
     ApprovalNone() => null,
     _ => null,
   };

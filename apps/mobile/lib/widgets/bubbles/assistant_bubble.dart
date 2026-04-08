@@ -245,6 +245,11 @@ class _DefaultLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fileSuffixes = onFileTap != null
+        ? FilePathSyntax.buildSuffixSet(
+            context.watch<FileListCubit>().state,
+          )
+        : const <String>{};
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -266,12 +271,14 @@ class _DefaultLayout extends StatelessWidget {
                       styleSheet: buildMarkdownStyle(context),
                       onTapLink: handleMarkdownLink,
                       inlineSyntaxes: [
-                        if (onFileTap != null)
+                        if (onFileTap != null) ...[
                           FilePathSyntax(
-                            knownPathSuffixes: FilePathSyntax.buildSuffixSet(
-                              context.read<FileListCubit>().state,
-                            ),
+                            knownPathSuffixes: fileSuffixes,
                           ),
+                          BareFilePathSyntax(
+                            knownPathSuffixes: fileSuffixes,
+                          ),
+                        ],
                         ...colorCodeInlineSyntaxes,
                       ],
                       builders: {

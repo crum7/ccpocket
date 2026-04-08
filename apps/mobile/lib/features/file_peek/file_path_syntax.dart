@@ -88,6 +88,46 @@ class FilePathSyntax extends md.InlineSyntax {
   }
 }
 
+/// Inline syntax that detects bare file paths (without backticks) in text
+/// by matching path-like patterns against the known project file list.
+///
+/// Matches sequences like `docs/install/index.html` or `README.ja.md`
+/// that appear as plain text (not inside backticks). Must be added AFTER
+/// [FilePathSyntax] in [inlineSyntaxes] so backtick-enclosed paths are
+/// handled first.
+class BareFilePathSyntax extends md.InlineSyntax {
+  final Set<String> _knownPathSuffixes;
+
+  BareFilePathSyntax({Set<String> knownPathSuffixes = const {}})
+    : _knownPathSuffixes = knownPathSuffixes,
+      // Path-like string: word chars / dots / slashes / hyphens,
+      // must contain at least one dot (file extension).
+      super(r'([\w][\w./-]*\.[\w]+)');
+
+  @override
+  bool tryMatch(md.InlineParser parser, [int? startMatchPos]) {
+    startMatchPos ??= parser.pos;
+    if (_knownPathSuffixes.isEmpty) return false;
+
+    final match = pattern.matchAsPrefix(parser.source, startMatchPos);
+    if (match == null) return false;
+
+    final text = match[1]!;
+    if (!_knownPathSuffixes.contains(text)) return false;
+
+    final el = md.Element('filePath', [md.Text(text)]);
+    el.attributes['path'] = text;
+
+    parser.writeText();
+    parser.addNode(el);
+    parser.consume(match[0]!.length);
+    return true;
+  }
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) => false;
+}
+
 /// Builds a tappable widget for file path elements.
 class FilePathBuilder extends MarkdownElementBuilder {
   final FilePathTapCallback? onTap;

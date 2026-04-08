@@ -47,6 +47,15 @@ import 'widgets/rewind_action_sheet.dart';
 import 'widgets/rewind_message_list_sheet.dart' show UserMessageHistorySheet;
 import 'widgets/usage_summary_bar.dart';
 
+const _fileListRefreshToolNames = {
+  'Edit',
+  'FileEdit',
+  'MultiEdit',
+  'Write',
+  'NotebookEdit',
+  'Bash',
+};
+
 /// Outer widget that creates screen-scoped [ChatSessionCubit] and
 /// [StreamingStateCubit] via [MultiBlocProvider], replacing Riverpod's
 /// Family (autoDispose) pattern.
@@ -85,6 +94,7 @@ class ClaudeSessionScreen extends StatefulWidget {
 
 class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
   late String _sessionId;
+  late String? _projectPath;
   late String? _worktreePath;
   late String? _gitBranch;
   late bool _isPending;
@@ -97,6 +107,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
   void initState() {
     super.initState();
     _sessionId = widget.sessionId;
+    _projectPath = widget.projectPath;
     _worktreePath = widget.worktreePath;
     _gitBranch = widget.gitBranch;
     _isPending = widget.isPending;
@@ -179,6 +190,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     draftService.migrateImageDraft(oldId, newId);
     setState(() {
       _sessionId = newId;
+      _projectPath = msg.projectPath ?? _projectPath;
       _worktreePath = msg.worktreePath ?? _worktreePath;
       _gitBranch = msg.worktreeBranch ?? _gitBranch;
       _permissionMode =
@@ -199,6 +211,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     draftService.migrateImageDraft(oldId, newId);
     setState(() {
       _sessionId = newId;
+      _projectPath = msg.projectPath ?? _projectPath;
       _worktreePath = msg.worktreePath ?? _worktreePath;
       _gitBranch = msg.worktreeBranch ?? _gitBranch;
       _permissionMode =
@@ -237,7 +250,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     return _ChatScreenProviders(
       key: ValueKey(_sessionId),
       sessionId: _sessionId,
-      projectPath: widget.projectPath,
+      projectPath: _projectPath,
       gitBranch: _gitBranch,
       worktreePath: _worktreePath,
       permissionMode: _permissionMode,
@@ -405,7 +418,25 @@ class _ChatScreenBody extends HookWidget {
       bridge.requestSessionList();
       bridge.refreshBranch(sessionId);
       return null;
-    }, [sessionId]);
+    }, [sessionId, projectPath]);
+
+    useEffect(() {
+      if (projectPath == null || projectPath!.isEmpty) return null;
+
+      final bridge = context.read<BridgeService>();
+      final sub = bridge.messagesForSession(sessionId).listen((msg) {
+        if (msg case ToolResultMessage(
+          :final toolName,
+        ) when _fileListRefreshToolNames.contains(toolName)) {
+          bridge.requestFileList(projectPath!);
+        } else if (msg case ResultMessage(
+          :final fileEdits,
+        ) when (fileEdits ?? 0) > 0) {
+          bridge.requestFileList(projectPath!);
+        }
+      });
+      return sub.cancel;
+    }, [sessionId, projectPath]);
 
     // --- Listen for branch updates ---
     useEffect(() {
@@ -964,12 +995,11 @@ void _executeSideEffects(
 PermissionRequestMessage? _notificationPermissionFor(ApprovalState approval) {
   return switch (approval) {
     ApprovalPermission(:final request) => request,
-    ApprovalAskUser(:final toolUseId, :final input) =>
-      PermissionRequestMessage(
-        toolUseId: toolUseId,
-        toolName: 'AskUserQuestion',
-        input: input,
-      ),
+    ApprovalAskUser(:final toolUseId, :final input) => PermissionRequestMessage(
+      toolUseId: toolUseId,
+      toolName: 'AskUserQuestion',
+      input: input,
+    ),
     ApprovalNone() => null,
     _ => null,
   };
