@@ -70,6 +70,39 @@ If you file an Issue for one of these environments, please include:
 
 ## Pull Requests
 
+### Preferred PR Shape
+
+For most contributions, the easiest PR to review is:
+
+- One user-visible goal per PR
+- Small enough that the intent is obvious from the diff
+- Built on `main`, not on top of another open PR
+- Accompanied by tests or concrete validation notes
+
+As a rule of thumb, if your change introduces a new feature, a new package,
+multiple architectural ideas at once, or a large amount of design/docs/code in
+one PR, please open a **Prompt Request** or **Issue** first and align on scope
+before sending code.
+
+If a PR depends on another open PR, say so clearly and link the base PR.
+Otherwise, we may ask you to restack it onto `main`, split it up, or close it
+and continue discussion in an Issue instead.
+
+### Review Expectations
+
+CC Pocket is maintained as a personal project.
+PR review happens on an availability basis, not in submission order.
+
+Opening a PR does **not** guarantee immediate review.
+Large PRs may remain untouched until:
+
+- the author explicitly asks for review
+- the scope is clarified
+- the PR is split into reviewable pieces
+
+If a PR is large, stacked, or architectural, silence usually means "not ready
+for review yet" rather than "merged soon."
+
 ### Environment-Dependent PRs — Especially Welcome
 
 We develop primarily on macOS and don't always have easy access to Linux, WSL, or Windows environments.
@@ -105,12 +138,26 @@ We are more likely to merge changes that are easy to reason about and low risk f
 
 For changes that don't require a specific environment, we recommend opening a **Prompt Request** or **Issue** first.
 
+Please treat this as effectively required for large or architectural changes.
+In particular, open an Issue / Prompt Request before sending a PR if any of
+these apply:
+
+- The PR adds a new package, app surface, or workflow
+- The PR mixes CLI, Bridge, mobile, and docs changes in one branch
+- The PR is difficult to review commit-by-commit without prior context
+- The PR is stacked on another unmerged PR
+- The main value is the idea / prompt / workflow, not a narrowly scoped fix
+
 If you do send a PR, we may close it and re-implement the change ourselves to fit the codebase's conventions and architecture. In that case:
 
 - Your contribution will be credited via `Co-authored-by` in the commit
 - We'll comment on the PR explaining what we incorporated and what we adjusted
 
 This isn't a rejection of your work — it's how we maintain consistency while honoring your contribution.
+
+We may also ask for a PR to be split before review if it combines multiple
+independent ideas, broad refactors, or large planning/spec documentation that
+isn't required to validate the change.
 
 ### Labels You May See
 
@@ -165,12 +212,51 @@ If you discover a vulnerability, please report it privately via [GitHub Security
 
 環境依存でない変更は、先に **Prompt Request** や **Issue** で相談いただくのがスムーズです。
 
+特に、次のような変更は **事前相談をほぼ必須** と考えてください:
+
+- 新しい package / workflow / UI 導線を追加する
+- CLI / Bridge / mobile / docs をまとめて大きく変える
+- 事前文脈なしだと commit 単位でもレビューが重い
+- 未マージの別PRの上に積んでいる
+- 狭いバグ修正というより、アイデアやプロンプト共有の価値が中心である
+
 PR を送っていただいた場合でも、コードベースの規約やアーキテクチャに合わせるため、クローズした上でメンテナ側で再実装することがあります。その際は:
 
 - コミットに `Co-authored-by` を付与して貢献をクレジットします
 - PR コメントで、何を取り込み何を調整したかを説明します
 
 これは PR の否定ではなく、一貫性を保ちつつ貢献を活かすための運用です。
+
+また、複数の独立した変更や広いリファクタ、検証に必須ではない大量の設計ドキュメントを
+1本のPRにまとめた場合は、レビュー前に分割をお願いすることがあります。
+
+#### 望ましい PR の形
+
+レビューしやすい PR の目安は次の通りです。
+
+- 1PR 1テーマで、ユーザー価値が明確
+- 差分を読むだけで意図が追える規模
+- `main` ベースで、未マージPRの上に積まない
+- テストまたは具体的な検証結果が付いている
+
+未マージPRに依存する場合は、そのことを本文に明記して base PR をリンクしてください。
+明記がない stacked PR については、`main` に積み直すか、分割するか、Issue での相談に
+切り替えていただくことがあります。
+
+#### レビュー方針
+
+CC Pocket は個人プロジェクトとして運営しており、PR レビューは投稿順ではなく
+メンテナの余力ベースで行います。
+
+PR を開いただけでは、すぐにレビューが始まるとは限りません。
+特に大きい PR は、次のいずれかが揃うまで保留になることがあります:
+
+- 投稿者から明確にレビュー依頼がある
+- スコープが整理されている
+- 分割されてレビュー可能な大きさになっている
+
+大規模・stacked・アーキテクチャ寄りの PR に対して反応がない場合、それは
+「近いうちに取り込む予定」ではなく、「まだレビュー可能な状態ではない」という意味です。
 
 ### バグ報告・機能提案
 
