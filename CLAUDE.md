@@ -184,7 +184,7 @@ launchctl unload ~/Library/LaunchAgents/com.ccpocket.bridge.plist
 | ランタイムエラー | **MCP** | dart-mcp `get_runtime_errors` |
 | ウィジェットツリー | **MCP** | dart-mcp `get_widget_tree` |
 | UI要素一覧 | **MCP** | marionette `get_interactive_elements` |
-| UI操作 | **MCP** | marionette `tap` / `enter_text` |
+| UI操作 | **MCP** | marionette `tap` / `enter_text` / `scroll_to` / `double_tap` / `long_press` / `swipe` / `pinch_zoom` / `press_back_button` |
 | デバイス一覧 | CLI | `flutter devices` |
 | 静的解析 | CLI | `dart analyze apps/mobile` |
 | フォーマット | CLI | `dart format apps/mobile` |

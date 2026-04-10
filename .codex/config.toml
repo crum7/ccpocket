@@ -10,7 +10,12 @@ enabled_tools = [
   "get_logs",
   "scroll_to",
   "tap",
+  "double_tap",
+  "long_press",
   "enter_text",
+  "swipe",
+  "pinch_zoom",
+  "press_back_button",
   "take_screenshots",
   "list_custom_extensions",
   "call_custom_extension",
@@ -34,7 +39,22 @@ approval_mode = "approve"
 [mcp_servers.marionette.tools.tap]
 approval_mode = "approve"
 
+[mcp_servers.marionette.tools.double_tap]
+approval_mode = "approve"
+
+[mcp_servers.marionette.tools.long_press]
+approval_mode = "approve"
+
 [mcp_servers.marionette.tools.enter_text]
+approval_mode = "approve"
+
+[mcp_servers.marionette.tools.swipe]
+approval_mode = "approve"
+
+[mcp_servers.marionette.tools.pinch_zoom]
+approval_mode = "approve"
+
+[mcp_servers.marionette.tools.press_back_button]
 approval_mode = "approve"
 
 [mcp_servers.marionette.tools.take_screenshots]
