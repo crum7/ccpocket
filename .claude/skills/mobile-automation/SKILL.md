@@ -310,6 +310,13 @@ cd <プロジェクトルート> && BRIDGE_PORT=8766 npm run bridge &
 - `enter_text`: key パラメータでテキストフィールドを指定する
 - `get_logs`: Marionette接続後のログのみ取得。起動時のログは `get_app_logs` (dart-mcp) で取得
 - `hot_reload`: UIの微調整に便利。ただしconst定義の変更やdependency更新には `hot_restart` が必要
+- `long_press`: `InkWell.onLongPress` や `GestureDetector.onLongPress` に繋がる。CC Pocket の recent/running session card では長押しでアクションシートを開ける
+- `long_press` の検証対象は実画面を優先する。ストアスクリーンショット用のモック `Session List` は `onLongPressRecentSession` / `onLongPressRunningSession` が no-op のため、長押し挙動の確認には使えない
+- `swipe`: `Slidable` と `Dismissible` の両方で有効。CC Pocket では recent session card のアーカイブ action pane 表示や、Git画面の stage / unstage / revert に使える
+- `swipe` 実行後は必ず `get_interactive_elements` を再取得して、action pane が開いたか、対象セルが横移動したかを確認する
+- クリップボード系アクションは Marionette から直接読み出せない。`copy_resume_command` のような機能は、長押しでシートが出ること、対象項目をタップできること、シートが閉じることをもってUIフロー確認とする
+- recent session card は `Slidable` の key が要素一覧に出るので、`swipe(key: "recent_session_<id>", direction: "left")` のように key 指定で狙うのが安定
+- 長押し対象に key が無い場合は、まず `get_interactive_elements` で bounds を確認し、`long_press(coordinates: {x, y})` を使うと成功率が高い
 
 ### Dart MCP Tips
 - `launch_app`: root は絶対パスで指定。返り値のPIDは必ず保存する
