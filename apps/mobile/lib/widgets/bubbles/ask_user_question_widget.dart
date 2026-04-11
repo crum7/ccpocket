@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/request_user_input.dart';
 
 const _buttonHeight = 44.0;
 
@@ -50,6 +51,10 @@ class _AskUserQuestionWidgetState extends State<AskUserQuestionWidget> {
     if (!_isSingleQuestion || _questions.isEmpty) return false;
     final q = _questions.first as Map<String, dynamic>;
     return q['multiSelect'] as bool? ?? false;
+  }
+
+  bool get _singleQuestionAllowsCustomInput {
+    return !isMcpApprovalRequestUserInput(widget.input);
   }
 
   @override
@@ -248,6 +253,7 @@ class _AskUserQuestionWidgetState extends State<AskUserQuestionWidget> {
   }
 
   void _showCustomInput(int questionIndex) {
+    if (!_singleQuestionAllowsCustomInput && !_isMultiQuestion) return;
     setState(() {
       _customInputs.add(questionIndex);
     });
@@ -425,6 +431,7 @@ class _AskUserQuestionWidgetState extends State<AskUserQuestionWidget> {
                       questionIndex: index,
                       isMultiQuestion: true,
                       scrollable: widget.scrollable,
+                      allowsCustomInput: true,
                       singleAnswers: _singleAnswers,
                       multiAnswers: _multiAnswers,
                       customInputs: _customInputs,
@@ -445,6 +452,7 @@ class _AskUserQuestionWidgetState extends State<AskUserQuestionWidget> {
                 questionIndex: 0,
                 isMultiQuestion: false,
                 scrollable: widget.scrollable,
+                allowsCustomInput: _singleQuestionAllowsCustomInput,
                 singleAnswers: _singleAnswers,
                 multiAnswers: _multiAnswers,
                 customInputs: _customInputs,
@@ -455,7 +463,9 @@ class _AskUserQuestionWidgetState extends State<AskUserQuestionWidget> {
                 onSubmitCustomText: _submitCustomText,
                 onCustomTextChanged: _onCustomTextChanged,
                 onShowCustomInput: _showCustomInput,
-                alwaysShowTextInput: !_singleQuestionIsMultiSelect,
+                alwaysShowTextInput:
+                    !_singleQuestionIsMultiSelect &&
+                    _singleQuestionAllowsCustomInput,
               ),
             ],
             if (_singleQuestionIsMultiSelect) ...[
@@ -490,6 +500,7 @@ class _AskQuestionLayout extends StatelessWidget {
   final bool isMultiQuestion;
   final bool scrollable;
   final bool alwaysShowTextInput;
+  final bool allowsCustomInput;
   final Map<int, String> singleAnswers;
   final Map<int, Set<String>> multiAnswers;
   final Set<int> customInputs;
@@ -506,6 +517,7 @@ class _AskQuestionLayout extends StatelessWidget {
     required this.questionIndex,
     required this.isMultiQuestion,
     required this.scrollable,
+    required this.allowsCustomInput,
     required this.singleAnswers,
     required this.multiAnswers,
     required this.customInputs,
@@ -601,7 +613,7 @@ class _AskQuestionLayout extends StatelessWidget {
             showSendButton: true,
             submitLabel: l.send,
           ),
-        ] else ...[
+        ] else if (allowsCustomInput) ...[
           const SizedBox(height: 4),
           _AskOtherAnswerSection(
             questionIndex: questionIndex,

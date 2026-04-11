@@ -212,6 +212,35 @@ void main() {
       await tester.pumpAndSettle();
       expect(sendButton().onPressed, isNull);
     });
+
+    testWidgets('approval prompt hides free text input', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          AskUserQuestionWidget(
+            toolUseId: 'test-3d',
+            input: {
+              'questions': [
+                {
+                  'question': 'Allow this request?',
+                  'header': 'Approve app tool call?',
+                  'options': [
+                    {'label': 'Allow', 'description': ''},
+                    {'label': 'Allow for this session', 'description': ''},
+                    {'label': 'Cancel', 'description': ''},
+                  ],
+                  'multiSelect': false,
+                },
+              ],
+            },
+            onAnswer: (_, _) {},
+          ),
+        ),
+      );
+
+      expect(find.byKey(const ValueKey('ask_custom_text_input')), findsNothing);
+      expect(find.text('Other answer...'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+    });
   });
 
   group('AskUserQuestionWidget - multiple questions', () {

@@ -747,6 +747,40 @@ void main() {
     });
   });
 
+  group('PermissionRequestMessage for McpElicitation questions', () {
+    test(
+      'question-based MCP elicitation sets askToolUseId instead of pendingPermission',
+      () {
+        final update = handler.handle(
+          const PermissionRequestMessage(
+            toolUseId: 'tu-mcp-ask',
+            toolName: 'McpElicitation',
+            input: {
+              'questions': [
+                {
+                  'header': 'Approve app tool call?',
+                  'question': 'Allow this request?',
+                  'options': [
+                    {'label': 'Allow', 'description': ''},
+                    {'label': 'Allow for this session', 'description': ''},
+                    {'label': 'Always allow', 'description': ''},
+                    {'label': 'Cancel', 'description': ''},
+                  ],
+                },
+              ],
+            },
+          ),
+          isBackground: false,
+        );
+
+        expect(update.askToolUseId, 'tu-mcp-ask');
+        expect(update.askInput, isNotNull);
+        expect(update.pendingPermission, isNull);
+        expect(update.pendingToolUseId, isNull);
+      },
+    );
+  });
+
   group('PermissionRequestMessage.summary', () {
     test('uses approval question text for MCP approval requestUserInput', () {
       const perm = PermissionRequestMessage(
@@ -775,6 +809,33 @@ void main() {
         perm.summary,
         'The dart-mcp MCP server wants to run the tool "dart_format".',
       );
+    });
+
+    test('uses approval question text for MCP elicitation approval', () {
+      const perm = PermissionRequestMessage(
+        toolUseId: 'tu-mcp-elicit',
+        toolName: 'McpElicitation',
+        input: {
+          'questions': [
+            {
+              'header': 'Approve app tool call?',
+              'question':
+                  'Allow the revenuecat MCP server to run tool '
+                  '"delete-package-from-offering"?',
+              'options': [
+                {'label': 'Allow', 'description': ''},
+                {'label': 'Allow for this session', 'description': ''},
+                {'label': 'Always allow', 'description': ''},
+                {'label': 'Cancel', 'description': ''},
+              ],
+            },
+          ],
+        },
+      );
+
+      expect(perm.isQuestionApproval, isTrue);
+      expect(perm.displayToolName, 'Approve app tool call?');
+      expect(perm.summary, contains('delete-package-from-offering'));
     });
 
     test('extracts command from input', () {

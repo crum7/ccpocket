@@ -1,8 +1,28 @@
 const mcpApprovalHeader = 'Approve app tool call?';
 const mcpApprovalApproveOnce = 'Approve Once';
 const mcpApprovalApproveSession = 'Approve this Session';
+const mcpApprovalAllow = 'Allow';
+const mcpApprovalAllowSession = 'Allow for this session';
+const mcpApprovalAlways = 'Always allow';
+const mcpApprovalAllowAndRemember = "Allow and don't ask me again";
 const mcpApprovalDeny = 'Deny';
+const mcpApprovalDecline = 'Decline';
 const mcpApprovalCancel = 'Cancel';
+
+const _mcpApprovalAcceptLabels = {mcpApprovalApproveOnce, mcpApprovalAllow};
+
+const _mcpApprovalSessionLabels = {
+  mcpApprovalApproveSession,
+  mcpApprovalAllowSession,
+};
+
+const _mcpApprovalAlwaysLabels = {
+  mcpApprovalAlways,
+  mcpApprovalAllowAndRemember,
+};
+
+const _mcpApprovalDeclineLabels = {mcpApprovalDeny, mcpApprovalDecline};
+
 Map<String, dynamic>? firstRequestUserInputQuestion(
   Map<String, dynamic> input,
 ) {
@@ -33,10 +53,31 @@ String? requestUserInputQuestionText(Map<String, dynamic> input) {
   return firstRequestUserInputQuestion(input)?['question'] as String?;
 }
 
+bool hasRequestUserInputQuestions(Map<String, dynamic> input) {
+  final questions = input['questions'];
+  return questions is List && questions.isNotEmpty;
+}
+
+bool _containsAny(Set<String> labels, Set<String> candidates) =>
+    labels.any(candidates.contains);
+
 bool isMcpApprovalRequestUserInput(Map<String, dynamic> input) {
   if (requestUserInputHeader(input) != mcpApprovalHeader) return false;
   final labels = requestUserInputOptionLabels(input).toSet();
-  return labels.contains(mcpApprovalApproveOnce) &&
-      labels.contains(mcpApprovalDeny) &&
+  final hasApprove =
+      _containsAny(labels, _mcpApprovalAcceptLabels) ||
+      _containsAny(labels, _mcpApprovalSessionLabels) ||
+      _containsAny(labels, _mcpApprovalAlwaysLabels);
+  final hasDismiss =
+      _containsAny(labels, _mcpApprovalDeclineLabels) ||
       labels.contains(mcpApprovalCancel);
+  return hasApprove && hasDismiss;
+}
+
+bool isMcpApprovalOptionLabel(String label) {
+  return _mcpApprovalAcceptLabels.contains(label) ||
+      _mcpApprovalSessionLabels.contains(label) ||
+      _mcpApprovalAlwaysLabels.contains(label) ||
+      _mcpApprovalDeclineLabels.contains(label) ||
+      label == mcpApprovalCancel;
 }

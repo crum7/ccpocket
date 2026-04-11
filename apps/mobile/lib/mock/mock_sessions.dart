@@ -730,7 +730,7 @@ SessionInfo mockSessionCodexMcpApproval() => SessionInfo(
   codexApprovalPolicy: 'on-request',
   pendingPermission: const PermissionRequestMessage(
     toolUseId: 'tool-codex-mcp-sl-1',
-    toolName: 'AskUserQuestion',
+    toolName: 'McpElicitation',
     input: {
       'questions': [
         {
@@ -738,16 +738,18 @@ SessionInfo mockSessionCodexMcpApproval() => SessionInfo(
               'Tool call: postgres.query(sql: "SELECT * FROM users LIMIT 10")',
           'header': 'Approve app tool call?',
           'options': [
+            {'label': 'Allow', 'description': 'Run the tool and continue.'},
             {
-              'label': 'Approve Once',
-              'description': 'Allow this single tool call.',
+              'label': 'Allow for this session',
+              'description':
+                  'Run the tool and remember this choice for this session.',
             },
             {
-              'label': 'Approve this Session',
-              'description': 'Allow all calls to this tool for this session.',
+              'label': 'Always allow',
+              'description':
+                  'Run the tool and remember this choice for future tool calls.',
             },
-            {'label': 'Deny', 'description': 'Reject this tool call.'},
-            {'label': 'Cancel', 'description': 'Cancel and go back.'},
+            {'label': 'Cancel', 'description': 'Cancel this tool call.'},
           ],
           'multiSelect': false,
         },

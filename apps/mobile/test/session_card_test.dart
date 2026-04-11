@@ -673,8 +673,8 @@ void main() {
       expect(answered, isNull);
     });
 
-    testWidgets('MCP approval requestUserInput uses approval UI and answers '
-        'with approval labels', (tester) async {
+    testWidgets('MCP tool approval prompt uses question UI and preserves '
+        'dynamic option labels', (tester) async {
       String? answered;
       final session = SessionInfo(
         id: 'ask-mcp-approval',
@@ -685,19 +685,18 @@ void main() {
         lastActivityAt: DateTime.now().toIso8601String(),
         pendingPermission: const PermissionRequestMessage(
           toolUseId: 'ask-tool-approval',
-          toolName: 'AskUserQuestion',
+          toolName: 'McpElicitation',
           input: {
             'questions': [
               {
                 'header': 'Approve app tool call?',
                 'question':
-                    'The dart-mcp MCP server wants to run the tool '
-                    '"dart_format", which may modify or delete data. '
-                    'Allow this action?',
+                    'Allow the revenuecat MCP server to run tool '
+                    '"delete-package-from-offering"?',
                 'options': [
-                  {'label': 'Approve Once', 'description': ''},
-                  {'label': 'Approve this Session', 'description': ''},
-                  {'label': 'Deny', 'description': ''},
+                  {'label': 'Allow', 'description': ''},
+                  {'label': 'Allow for this session', 'description': ''},
+                  {'label': 'Always allow', 'description': ''},
                   {'label': 'Cancel', 'description': ''},
                 ],
               },
@@ -717,19 +716,63 @@ void main() {
       );
 
       expect(find.text('Approve tool call'), findsOneWidget);
-      expect(find.text('Approve'), findsOneWidget);
-      // Wide viewport (800px) → single-line combined text
-      expect(find.text('This Session allow'), findsOneWidget);
-      expect(find.text('Reject'), findsOneWidget);
-      expect(find.text('Other answer...'), findsNothing);
-
-      final alwaysButton = tester.widget<OutlinedButton>(
-        find.byType(OutlinedButton).at(1),
+      expect(
+        find.text(
+          'Allow the revenuecat MCP server to run tool '
+          '"delete-package-from-offering"?',
+        ),
+        findsOneWidget,
       );
-      alwaysButton.onPressed!.call();
+      expect(find.text('Allow'), findsOneWidget);
+      expect(find.text('Allow for this session'), findsOneWidget);
+      expect(find.text('Always allow'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Other answer...'), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+
+      await tester.tap(find.text('Always allow'));
       await tester.pump();
 
-      expect(answered, 'Approve this Session');
+      expect(answered, 'Always allow');
+    });
+
+    testWidgets('MCP approval prompt omits always allow when unavailable', (
+      tester,
+    ) async {
+      final session = SessionInfo(
+        id: 'ask-mcp-approval-session-only',
+        provider: 'codex',
+        projectPath: '/home/user/my-app',
+        status: 'waiting_approval',
+        createdAt: DateTime.now().toIso8601String(),
+        lastActivityAt: DateTime.now().toIso8601String(),
+        pendingPermission: const PermissionRequestMessage(
+          toolUseId: 'ask-tool-approval-session-only',
+          toolName: 'McpElicitation',
+          input: {
+            'questions': [
+              {
+                'header': 'Approve app tool call?',
+                'question': 'Allow this request?',
+                'options': [
+                  {'label': 'Allow', 'description': ''},
+                  {'label': 'Allow for this session', 'description': ''},
+                  {'label': 'Cancel', 'description': ''},
+                ],
+              },
+            ],
+          },
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(RunningSessionCard(session: session, onTap: () {})),
+      );
+
+      expect(find.text('Allow'), findsOneWidget);
+      expect(find.text('Allow for this session'), findsOneWidget);
+      expect(find.text('Always allow'), findsNothing);
+      expect(find.text('Cancel'), findsOneWidget);
     });
 
     testWidgets('shows Cancel label when codex approval exposes cancel', (

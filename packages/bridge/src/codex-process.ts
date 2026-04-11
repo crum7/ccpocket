@@ -95,7 +95,11 @@ interface PendingUserInputRequest {
   toolName: string;
   questions: PendingUserInputQuestion[];
   input: Record<string, unknown>;
-  kind: "questions" | "elicitation_form" | "elicitation_url";
+  kind:
+    | "questions"
+    | "elicitation_form"
+    | "elicitation_url"
+    | "elicitation_approval";
 }
 
 interface PendingTurnCompletion {
@@ -2633,6 +2637,10 @@ function buildElicitationResponse(
     };
   }
 
+  if (pending.kind === "elicitation_approval") {
+    return buildApprovalElicitationResponse(pending, rawResult);
+  }
+
   const parsed = parseResultObject(rawResult);
   const content: Record<string, unknown> = {};
 
@@ -2660,6 +2668,57 @@ function buildElicitationResponse(
     action: "accept",
     content: Object.keys(content).length > 0 ? content : null,
     _meta: null,
+  };
+}
+
+function buildApprovalElicitationResponse(
+  pending: PendingUserInputRequest,
+  rawResult: string,
+): Record<string, unknown> {
+  const selection = resolveApprovalElicitationSelection(pending, rawResult);
+  const normalized = selection.trim().toLowerCase();
+
+  if (
+    normalized === "cancel" ||
+    normalized.includes("cancel")
+  ) {
+    return {
+      action: "cancel",
+      content: null,
+      _meta: null,
+    };
+  }
+
+  if (
+    normalized === "deny" ||
+    normalized === "decline" ||
+    normalized.includes("decline") ||
+    normalized.includes("deny")
+  ) {
+    return {
+      action: "decline",
+      content: null,
+      _meta: null,
+    };
+  }
+
+  let meta: Record<string, unknown> | null = null;
+  if (
+    normalized === "approve this session" ||
+    normalized === "allow for this session"
+  ) {
+    meta = { persist: "session" };
+  } else if (
+    normalized === "always allow" ||
+    normalized === "allow and don't ask me again"
+  ) {
+    meta = { persist: "always" };
+  }
+
+  return {
+    action: "accept",
+    content: null,
+    _meta: meta,
   };
 }
 
@@ -2729,6 +2788,31 @@ function createElicitationInput(params: Record<string, unknown>): {
   }
 
   const schema = asRecord(params.requestedSchema);
+  const elicitationMeta = asRecord(params._meta);
+  if (isToolApprovalElicitation(schema, elicitationMeta)) {
+    const questionId = "approval";
+    return {
+      kind: "elicitation_approval",
+      questions: [{ id: questionId, question: message }],
+      input: {
+        mode: "form",
+        serverName,
+        message,
+        _meta: elicitationMeta ?? null,
+        questions: [
+          {
+            id: questionId,
+            header: "Approve app tool call?",
+            question: message,
+            options: buildToolApprovalElicitationOptions(elicitationMeta),
+            multiSelect: false,
+            isOther: false,
+            isSecret: false,
+          },
+        ],
+      },
+    };
+  }
   const properties = asRecord(schema?.properties) ?? {};
   const requiredFields = new Set(
     Array.isArray(schema?.required)
@@ -2794,6 +2878,7 @@ function createElicitationInput(params: Record<string, unknown>): {
       mode: "form",
       serverName,
       message,
+      _meta: elicitationMeta ?? null,
       requestedSchema: schema,
       questions: normalizedQuestions.map((question) => ({
         id: question.id,
@@ -2806,6 +2891,92 @@ function createElicitationInput(params: Record<string, unknown>): {
       })),
     },
   };
+}
+
+function isToolApprovalElicitation(
+  schema: Record<string, unknown> | undefined,
+  meta: Record<string, unknown> | undefined,
+): boolean {
+  if (meta?.codex_approval_kind !== "mcp_tool_call") return false;
+  return isEmptyObjectSchema(schema);
+}
+
+function isEmptyObjectSchema(
+  schema: Record<string, unknown> | undefined,
+): boolean {
+  if (!schema) return false;
+  if (schema.type !== "object") return false;
+  const properties = asRecord(schema.properties);
+  return properties != null && Object.keys(properties).length === 0;
+}
+
+function buildToolApprovalElicitationOptions(
+  meta: Record<string, unknown> | undefined,
+): Array<{ label: string; description: string }> {
+  const persistModes = extractPersistModes(meta);
+  const options = [
+    { label: "Allow", description: "Run the tool and continue." },
+  ];
+  if (persistModes.has("session")) {
+    options.push({
+      label: "Allow for this session",
+      description: "Run the tool and remember this choice for this session.",
+    });
+  }
+  if (persistModes.has("always")) {
+    options.push({
+      label: "Always allow",
+      description: "Run the tool and remember this choice for future tool calls.",
+    });
+  }
+  options.push({
+    label: "Cancel",
+    description: "Cancel this tool call.",
+  });
+  return options;
+}
+
+function extractPersistModes(
+  meta: Record<string, unknown> | undefined,
+): Set<"session" | "always"> {
+  const persist = meta?.persist;
+  const modes = new Set<"session" | "always">();
+
+  if (typeof persist === "string") {
+    if (persist === "session" || persist === "always") {
+      modes.add(persist);
+    }
+    return modes;
+  }
+
+  if (Array.isArray(persist)) {
+    for (const entry of persist) {
+      if (entry === "session" || entry === "always") {
+        modes.add(entry);
+      }
+    }
+  }
+
+  return modes;
+}
+
+function resolveApprovalElicitationSelection(
+  pending: PendingUserInputRequest,
+  rawResult: string,
+): string {
+  const parsed = parseResultObject(rawResult);
+
+  for (const question of pending.questions) {
+    const candidate =
+      parsed.byId[question.id] ?? parsed.byQuestion[question.question];
+    const answers = normalizeAnswerValues(candidate);
+    if (answers.length > 0) return answers[0];
+  }
+
+  const directAnswers = normalizeAnswerValues(rawResult);
+  if (directAnswers.length > 0) return directAnswers[0];
+
+  return rawResult;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | undefined {

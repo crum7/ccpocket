@@ -189,7 +189,7 @@ class ChatMessageHandler {
           '[handler] permission_request: '
           'tool=$toolName id=$toolUseId',
         );
-        if (toolName == 'AskUserQuestion') {
+        if (msg.isQuestionPrompt) {
           return ChatStateUpdate(
             entriesToAdd: [ServerChatEntry(msg)],
             askToolUseId: toolUseId,
@@ -545,8 +545,8 @@ class ChatMessageHandler {
         }
         // Track pending permission request
         if (m is PermissionRequestMessage) {
-          if (m.toolName == 'AskUserQuestion') {
-            // Codex sends AskUserQuestion as permission_request directly
+          if (m.isQuestionPrompt) {
+            // Codex may send question-based prompts directly as permission_request.
             lastAskToolUseId = m.toolUseId;
             lastAskInput = m.input;
           } else {

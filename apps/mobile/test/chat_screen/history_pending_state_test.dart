@@ -87,6 +87,47 @@ void main() {
       },
     );
 
+    patrolWidgetTest(
+      'L2b: History with question-based McpElicitation shows question widget',
+      ($) async {
+        await $.pumpWidget(await buildTestChatScreen(bridge: bridge));
+        await pumpN($.tester);
+
+        await emitAndPump($.tester, bridge, [
+          HistoryMessage(
+            messages: const [
+              PermissionRequestMessage(
+                toolUseId: 'mcp-hist-1',
+                toolName: 'McpElicitation',
+                input: {
+                  'questions': [
+                    {
+                      'header': 'Approve app tool call?',
+                      'question': 'Allow this request?',
+                      'options': [
+                        {'label': 'Allow', 'description': ''},
+                        {'label': 'Allow for this session', 'description': ''},
+                        {'label': 'Always allow', 'description': ''},
+                        {'label': 'Cancel', 'description': ''},
+                      ],
+                      'multiSelect': false,
+                    },
+                  ],
+                },
+              ),
+              StatusMessage(status: ProcessStatus.waitingApproval),
+            ],
+          ),
+        ]);
+        await pumpN($.tester);
+
+        expect($(AskUserQuestionWidget), findsOneWidget);
+        expect(find.text('Allow this request?'), findsOneWidget);
+        expect($(ApprovalBar), findsNothing);
+        expect($(ChatInputWithOverlays), findsNothing);
+      },
+    );
+
     patrolWidgetTest('L3: History with mixed resolved/unresolved permissions', (
       $,
     ) async {
