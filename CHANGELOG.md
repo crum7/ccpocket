@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.59.0] - 2026-04-11
+
+### Added
+- Link Claude usage settings to the official billing and subscription pages from Settings
+
+### Changed
+- Upgrade Marionette Flutter integration to 0.5.0
+
+### Fixed
+- Deduplicate Codex approval "why" copy in the mobile UI
+
 ## [1.58.0] - 2026-04-08
 
 ### Added
