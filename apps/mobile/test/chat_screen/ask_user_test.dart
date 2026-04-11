@@ -1,6 +1,7 @@
 import 'package:ccpocket/features/chat_session/widgets/chat_input_with_overlays.dart';
 import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/widgets/bubbles/ask_user_question_widget.dart';
+import 'package:ccpocket/widgets/approval_bar.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol_finders/patrol_finders.dart';
 
@@ -211,6 +212,42 @@ void main() {
 
         // ChatInputWithOverlays (approval bar container) should NOT be shown
         expect($(ChatInputWithOverlays), findsNothing);
+      },
+    );
+
+    patrolWidgetTest(
+      'E7: question-based McpElicitation uses AskUserQuestionWidget',
+      ($) async {
+        await $.pumpWidget(await buildTestChatScreen(bridge: bridge));
+        await pumpN($.tester);
+
+        await emitAndPump($.tester, bridge, [
+          const PermissionRequestMessage(
+            toolUseId: 'mcp-approval',
+            toolName: 'McpElicitation',
+            input: {
+              'questions': [
+                {
+                  'header': 'Approve app tool call?',
+                  'question': 'Allow this request?',
+                  'options': [
+                    {'label': 'Allow', 'description': ''},
+                    {'label': 'Allow for this session', 'description': ''},
+                    {'label': 'Always allow', 'description': ''},
+                    {'label': 'Cancel', 'description': ''},
+                  ],
+                  'multiSelect': false,
+                },
+              ],
+            },
+          ),
+          const StatusMessage(status: ProcessStatus.waitingApproval),
+        ]);
+        await pumpN($.tester);
+
+        expect($(AskUserQuestionWidget), findsOneWidget);
+        expect(find.text('Allow this request?'), findsOneWidget);
+        expect($(ApprovalBar), findsNothing);
       },
     );
   });

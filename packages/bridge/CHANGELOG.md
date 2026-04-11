@@ -2,6 +2,11 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.36.0] - 2026-04-11
+
+### Added
+- Support always-allow approvals for MCP tool requests in Codex sessions
+
 ## [1.35.0] - 2026-04-11
 
 ### Changed

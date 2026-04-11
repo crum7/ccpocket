@@ -1071,6 +1071,14 @@ class PermissionRequestMessage implements ServerMessage {
 
   bool get isMcpElicitation => toolName == 'McpElicitation';
 
+  bool get hasQuestions => hasRequestUserInputQuestions(input);
+
+  bool get isQuestionPrompt =>
+      (toolName == 'AskUserQuestion' || isMcpElicitation) && hasQuestions;
+
+  bool get isQuestionApproval =>
+      isQuestionPrompt && isMcpApprovalRequestUserInput(input);
+
   bool get isPermissionGrantRequest => toolName == 'Permissions';
 
   List<String> get availableDecisions =>
@@ -1098,7 +1106,7 @@ class PermissionRequestMessage implements ServerMessage {
       ApprovalNotificationCopy.from(this);
 
   String get displayToolName {
-    if (isRequestUserInputApproval) {
+    if (isQuestionApproval) {
       return requestUserInputHeader(input) ?? 'App Tool Approval';
     }
     if (isMcpElicitation) {
@@ -1144,12 +1152,28 @@ class PermissionPresentation {
     final input = message.input;
     final rawDetails = const JsonEncoder.withIndent('  ').convert(input);
 
-    if (message.isRequestUserInputApproval) {
+    if (message.isQuestionApproval) {
       return PermissionPresentation(
         title: message.displayToolName,
         summary: requestUserInputQuestionText(input) ?? message.displayToolName,
         rawDetails: rawDetails,
         riskBadge: 'App Tool',
+        secondaryDetails: _buildCommonSecondaryDetails(
+          input,
+          includePermissions: false,
+        ),
+      );
+    }
+
+    if (message.isQuestionPrompt) {
+      return PermissionPresentation(
+        title: requestUserInputHeader(input) ?? message.displayToolName,
+        summary:
+            requestUserInputQuestionText(input) ??
+            _mcpSummary(input) ??
+            message.displayToolName,
+        rawDetails: rawDetails,
+        riskBadge: message.isMcpElicitation ? 'MCP' : 'Question',
         secondaryDetails: _buildCommonSecondaryDetails(
           input,
           includePermissions: false,
@@ -1272,7 +1296,7 @@ class ApprovalNotificationCopy {
   const ApprovalNotificationCopy({required this.title, required this.body});
 
   factory ApprovalNotificationCopy.from(PermissionRequestMessage message) {
-    if (message.toolName == 'AskUserQuestion' || message.isMcpElicitation) {
+    if (message.isQuestionPrompt || message.isMcpElicitation) {
       return ApprovalNotificationCopy(
         title: '質問があります - ccpocket',
         body: message.summary,

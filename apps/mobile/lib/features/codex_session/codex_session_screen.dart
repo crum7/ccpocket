@@ -392,17 +392,18 @@ class _CodexChatBody extends HookWidget {
     final diffSelectionFromNav = useState<DiffSelection?>(null);
 
     // --- Bloc state ---
+    final chatSessionCubit = context.read<ChatSessionCubit>();
     final sessionState = context.watch<ChatSessionCubit>().state;
     final bridgeState = context.watch<ConnectionCubit>().state;
 
     // --- Side effects subscription ---
     useEffect(() {
-      final sub = context.read<ChatSessionCubit>().sideEffects.listen(
+      final sub = chatSessionCubit.sideEffects.listen(
         (effects) => _executeSideEffects(
           effects,
           sessionId: sessionId,
           isBackground: isBackground,
-          approval: context.read<ChatSessionCubit>().state.approval,
+          approval: chatSessionCubit.state.approval,
           collapseToolResults: collapseToolResults,
           planFeedbackController: planFeedbackController,
           scrollToBottom: scroll.scrollToBottom,

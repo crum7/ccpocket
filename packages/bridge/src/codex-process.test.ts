@@ -608,6 +608,166 @@ describe("CodexProcess (app-server)", () => {
     proc.stop();
   });
 
+  it("maps MCP tool approval elicitation to dynamic options and always allow response", async () => {
+    const proc = new CodexProcess("linux");
+    const messages: unknown[] = [];
+    proc.on("message", (msg) => messages.push(msg));
+
+    proc.start("/tmp/project-mcp-approval");
+    const child = fakeChildren[0];
+
+    await tick();
+    const initReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: initReq.id, result: {} })}\n`,
+    );
+    await tick();
+    nextOutgoingNotification(child);
+    const threadReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: threadReq.id, result: { thread: { id: "thr_mcp_approval" } } })}\n`,
+    );
+
+    await tick();
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({
+        id: "req-mcp-approval-1",
+        method: "mcpServer/elicitation/request",
+        params: {
+          threadId: "thr_mcp_approval",
+          turnId: "turn_mcp_approval",
+          serverName: "revenuecat",
+          mode: "form",
+          _meta: {
+            codex_approval_kind: "mcp_tool_call",
+            persist: ["session", "always"],
+          },
+          message: 'Allow the revenuecat MCP server to run tool "delete-package-from-offering"?',
+          requestedSchema: {
+            type: "object",
+            properties: {},
+          },
+        },
+      })}\n`,
+    );
+
+    await tick();
+
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: "permission_request",
+        toolUseId: "req-mcp-approval-1",
+        toolName: "McpElicitation",
+        input: expect.objectContaining({
+          questions: [
+            expect.objectContaining({
+              header: "Approve app tool call?",
+              options: [
+                expect.objectContaining({ label: "Allow" }),
+                expect.objectContaining({ label: "Allow for this session" }),
+                expect.objectContaining({ label: "Always allow" }),
+                expect.objectContaining({ label: "Cancel" }),
+              ],
+            }),
+          ],
+        }),
+      }),
+    );
+
+    proc.answer("req-mcp-approval-1", "Always allow");
+    await tick();
+
+    const response = nextOutgoingResponse(child);
+    expect(response).toMatchObject({
+      id: "req-mcp-approval-1",
+      result: {
+        action: "accept",
+        content: null,
+        _meta: {
+          persist: "always",
+        },
+      },
+    });
+
+    proc.stop();
+  });
+
+  it("omits session remember choices when MCP approval persist modes are absent", async () => {
+    const proc = new CodexProcess("linux");
+    const messages: unknown[] = [];
+    proc.on("message", (msg) => messages.push(msg));
+
+    proc.start("/tmp/project-mcp-approval-basic");
+    const child = fakeChildren[0];
+
+    await tick();
+    const initReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: initReq.id, result: {} })}\n`,
+    );
+    await tick();
+    nextOutgoingNotification(child);
+    const threadReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: threadReq.id, result: { thread: { id: "thr_mcp_basic" } } })}\n`,
+    );
+
+    await tick();
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({
+        id: "req-mcp-approval-2",
+        method: "mcpServer/elicitation/request",
+        params: {
+          threadId: "thr_mcp_basic",
+          turnId: "turn_mcp_basic",
+          serverName: "revenuecat",
+          mode: "form",
+          _meta: {
+            codex_approval_kind: "mcp_tool_call",
+          },
+          message: 'Allow the revenuecat MCP server to run tool "delete-package-from-offering"?',
+          requestedSchema: {
+            type: "object",
+            properties: {},
+          },
+        },
+      })}\n`,
+    );
+
+    await tick();
+
+    expect(messages).toContainEqual(
+      expect.objectContaining({
+        type: "permission_request",
+        toolUseId: "req-mcp-approval-2",
+        toolName: "McpElicitation",
+        input: expect.objectContaining({
+          questions: [
+            expect.objectContaining({
+              options: [
+                expect.objectContaining({ label: "Allow" }),
+                expect.objectContaining({ label: "Cancel" }),
+              ],
+            }),
+          ],
+        }),
+      }),
+    );
+
+    expect(proc.getPendingPermission("req-mcp-approval-2")).toMatchObject({
+      toolUseId: "req-mcp-approval-2",
+      toolName: "McpElicitation",
+    });
+
+    proc.stop();
+  });
+
   it("clears pending requests when serverRequest/resolved arrives", async () => {
     const proc = new CodexProcess("linux");
     const messages: unknown[] = [];

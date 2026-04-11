@@ -1718,7 +1718,7 @@ final _codexMcpApproval = MockScenario(
             ),
             const ToolUseContent(
               id: 'tool-codex-mcp-1',
-              name: 'AskUserQuestion',
+              name: 'McpElicitation',
               input: {
                 'questions': [
                   {
@@ -1727,19 +1727,23 @@ final _codexMcpApproval = MockScenario(
                     'header': 'Approve app tool call?',
                     'options': [
                       {
-                        'label': 'Approve Once',
-                        'description': 'Allow this single tool call.',
+                        'label': 'Allow',
+                        'description': 'Run the tool and continue.',
                       },
                       {
-                        'label': 'Approve this Session',
+                        'label': 'Allow for this session',
                         'description':
-                            'Allow all calls to this tool for this session.',
+                            'Run the tool and remember this choice for this session.',
                       },
                       {
-                        'label': 'Deny',
-                        'description': 'Reject this tool call.',
+                        'label': 'Always allow',
+                        'description':
+                            'Run the tool and remember this choice for future tool calls.',
                       },
-                      {'label': 'Cancel', 'description': 'Cancel and go back.'},
+                      {
+                        'label': 'Cancel',
+                        'description': 'Cancel this tool call.',
+                      },
                     ],
                     'multiSelect': false,
                   },
@@ -1755,7 +1759,7 @@ final _codexMcpApproval = MockScenario(
       delay: const Duration(milliseconds: 1000),
       message: const PermissionRequestMessage(
         toolUseId: 'tool-codex-mcp-1',
-        toolName: 'AskUserQuestion',
+        toolName: 'McpElicitation',
         input: {
           'questions': [
             {
@@ -1763,17 +1767,18 @@ final _codexMcpApproval = MockScenario(
                   'Tool call: filesystem.readFile(path: "/src/main.ts")',
               'header': 'Approve app tool call?',
               'options': [
+                {'label': 'Allow', 'description': 'Run the tool and continue.'},
                 {
-                  'label': 'Approve Once',
-                  'description': 'Allow this single tool call.',
-                },
-                {
-                  'label': 'Approve this Session',
+                  'label': 'Allow for this session',
                   'description':
-                      'Allow all calls to this tool for this session.',
+                      'Run the tool and remember this choice for this session.',
                 },
-                {'label': 'Deny', 'description': 'Reject this tool call.'},
-                {'label': 'Cancel', 'description': 'Cancel and go back.'},
+                {
+                  'label': 'Always allow',
+                  'description':
+                      'Run the tool and remember this choice for future tool calls.',
+                },
+                {'label': 'Cancel', 'description': 'Cancel this tool call.'},
               ],
               'multiSelect': false,
             },

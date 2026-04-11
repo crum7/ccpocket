@@ -6,7 +6,6 @@ import '../models/messages.dart';
 import '../theme/app_theme.dart';
 import '../theme/provider_style.dart';
 import '../utils/command_parser.dart';
-import '../utils/request_user_input.dart';
 import 'codex_environment_summary.dart';
 import 'plan_detail_sheet.dart';
 import 'expandable_summary_text.dart';
@@ -117,8 +116,7 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
     final isCodexSession = session.provider == Provider.codex.value;
     final isPlanApproval =
         hasPermission && permission.toolName == 'ExitPlanMode';
-    final isRequestUserInputApproval =
-        hasPermission && permission.isRequestUserInputApproval;
+    final hasQuestionPrompt = hasPermission && permission.isQuestionPrompt;
     if (isPlanApproval) {
       _syncPlanApprovalState(permission);
     } else {
@@ -213,8 +211,7 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                             onReject: () =>
                                 widget.onReject?.call(permission.toolUseId),
                           )
-                        : permission.toolName == 'AskUserQuestion' &&
-                              !isRequestUserInputApproval
+                        : hasQuestionPrompt
                         ? _AskUserArea(
                             permission: permission,
                             statusColor: statusColor,
@@ -228,50 +225,25 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                             permission: permission,
                             statusColor: statusColor,
                             isCodex: isCodexSession,
-                            onApprove: () {
-                              if (isRequestUserInputApproval) {
-                                widget.onAnswer?.call(
-                                  permission.toolUseId,
-                                  mcpApprovalApproveOnce,
-                                );
-                                return;
-                              }
-                              widget.onApprove?.call(
-                                permission.toolUseId,
-                                clearContext: false,
-                              );
-                            },
-                            onApproveAlways: isRequestUserInputApproval
-                                ? () => widget.onAnswer?.call(
-                                    permission.toolUseId,
-                                    mcpApprovalApproveSession,
-                                  )
-                                : () => widget.onApproveAlways?.call(
-                                    permission.toolUseId,
-                                  ),
-                            onReject: () {
-                              if (isRequestUserInputApproval) {
-                                widget.onAnswer?.call(
-                                  permission.toolUseId,
-                                  mcpApprovalDeny,
-                                );
-                                return;
-                              }
-                              widget.onReject?.call(permission.toolUseId);
-                            },
+                            onApprove: () => widget.onApprove?.call(
+                              permission.toolUseId,
+                              clearContext: false,
+                            ),
+                            onApproveAlways: () => widget.onApproveAlways?.call(
+                              permission.toolUseId,
+                            ),
+                            onReject: () =>
+                                widget.onReject?.call(permission.toolUseId),
                           ))
                   : switch (permission.toolName) {
-                      'AskUserQuestion'
-                          when !permission.isRequestUserInputApproval =>
-                        _AskUserArea(
-                          permission: permission,
-                          statusColor: statusColor,
-                          onAnswer: (result) => widget.onAnswer?.call(
-                            permission.toolUseId,
-                            result,
-                          ),
-                          onTap: widget.onTap,
-                        ),
+                      'AskUserQuestion' ||
+                      'McpElicitation' when hasQuestionPrompt => _AskUserArea(
+                        permission: permission,
+                        statusColor: statusColor,
+                        onAnswer: (result) =>
+                            widget.onAnswer?.call(permission.toolUseId, result),
+                        onTap: widget.onTap,
+                      ),
                       'ExitPlanMode' => _PlanApprovalArea(
                         statusColor: statusColor,
                         planFeedbackController: _planFeedbackController,
@@ -304,37 +276,14 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                         permission: permission,
                         statusColor: statusColor,
                         isCodex: isCodexSession,
-                        onApprove: () {
-                          if (isRequestUserInputApproval) {
-                            widget.onAnswer?.call(
-                              permission.toolUseId,
-                              mcpApprovalApproveOnce,
-                            );
-                            return;
-                          }
-                          widget.onApprove?.call(
-                            permission.toolUseId,
-                            clearContext: false,
-                          );
-                        },
-                        onApproveAlways: isRequestUserInputApproval
-                            ? () => widget.onAnswer?.call(
-                                permission.toolUseId,
-                                mcpApprovalApproveSession,
-                              )
-                            : () => widget.onApproveAlways?.call(
-                                permission.toolUseId,
-                              ),
-                        onReject: () {
-                          if (isRequestUserInputApproval) {
-                            widget.onAnswer?.call(
-                              permission.toolUseId,
-                              mcpApprovalDeny,
-                            );
-                            return;
-                          }
-                          widget.onReject?.call(permission.toolUseId);
-                        },
+                        onApprove: () => widget.onApprove?.call(
+                          permission.toolUseId,
+                          clearContext: false,
+                        ),
+                        onApproveAlways: () =>
+                            widget.onApproveAlways?.call(permission.toolUseId),
+                        onReject: () =>
+                            widget.onReject?.call(permission.toolUseId),
                       ),
                     },
             // Content (same structure as RecentSessionCard)
@@ -1097,6 +1046,8 @@ class _AskUserAreaState extends State<_AskUserArea> {
 
   bool get _isMultiQuestion => _questions.length > 1;
 
+  bool get _allowsCustomInput => !widget.permission.isQuestionApproval;
+
   @override
   void initState() {
     super.initState();
@@ -1255,6 +1206,7 @@ class _AskUserAreaState extends State<_AskUserArea> {
   }
 
   void _showCustomInput(int questionIndex) {
+    if (!_allowsCustomInput) return;
     setState(() {
       _customInputs.add(questionIndex);
     });
@@ -1303,6 +1255,7 @@ class _AskUserAreaState extends State<_AskUserArea> {
               pageController: _pageController,
               statusColor: widget.statusColor,
               isMultiQuestion: _isMultiQuestion,
+              allowsCustomInput: _allowsCustomInput,
               singleAnswers: _singleAnswers,
               multiAnswers: _multiAnswers,
               customInputs: _customInputs,
@@ -1324,6 +1277,7 @@ class _AskUserAreaState extends State<_AskUserArea> {
               questionIndex: 0,
               statusColor: widget.statusColor,
               isMultiQuestion: _isMultiQuestion,
+              allowsCustomInput: _allowsCustomInput,
               singleAnswers: _singleAnswers,
               multiAnswers: _multiAnswers,
               customInputs: _customInputs,
@@ -1701,6 +1655,7 @@ class _QuestionLayout extends StatelessWidget {
   final int questionIndex;
   final Color statusColor;
   final bool isMultiQuestion;
+  final bool allowsCustomInput;
   final Map<int, String> singleAnswers;
   final Map<int, Set<String>> multiAnswers;
   final Set<int> customInputs;
@@ -1717,6 +1672,7 @@ class _QuestionLayout extends StatelessWidget {
     required this.questionIndex,
     required this.statusColor,
     required this.isMultiQuestion,
+    required this.allowsCustomInput,
     required this.singleAnswers,
     required this.multiAnswers,
     required this.customInputs,
@@ -1756,16 +1712,17 @@ class _QuestionLayout extends StatelessWidget {
             statusColor: statusColor,
             onAnswerSingle: onAnswerSingle,
           ),
-        _OtherAnswerSection(
-          questionIndex: questionIndex,
-          isCustomInputShown: customInputs.contains(questionIndex),
-          isMultiQuestion: isMultiQuestion,
-          statusColor: statusColor,
-          controller: getOrCreateController(questionIndex),
-          onCustomTextChanged: onCustomTextChanged,
-          onSubmitCustomText: onSubmitCustomText,
-          onShowCustomInput: onShowCustomInput,
-        ),
+        if (allowsCustomInput)
+          _OtherAnswerSection(
+            questionIndex: questionIndex,
+            isCustomInputShown: customInputs.contains(questionIndex),
+            isMultiQuestion: isMultiQuestion,
+            statusColor: statusColor,
+            controller: getOrCreateController(questionIndex),
+            onCustomTextChanged: onCustomTextChanged,
+            onSubmitCustomText: onSubmitCustomText,
+            onShowCustomInput: onShowCustomInput,
+          ),
         if (isMulti && !isMultiQuestion)
           _ConfirmButton(
             questionIndex: questionIndex,
@@ -1785,6 +1742,7 @@ class _QuestionPageView extends StatelessWidget {
   final PageController pageController;
   final Color statusColor;
   final bool isMultiQuestion;
+  final bool allowsCustomInput;
   final Map<int, String> singleAnswers;
   final Map<int, Set<String>> multiAnswers;
   final Set<int> customInputs;
@@ -1806,6 +1764,7 @@ class _QuestionPageView extends StatelessWidget {
     required this.pageController,
     required this.statusColor,
     required this.isMultiQuestion,
+    required this.allowsCustomInput,
     required this.singleAnswers,
     required this.multiAnswers,
     required this.customInputs,
@@ -1895,6 +1854,7 @@ class _QuestionPageView extends StatelessWidget {
               questionIndex: index,
               statusColor: statusColor,
               isMultiQuestion: isMultiQuestion,
+              allowsCustomInput: allowsCustomInput,
               singleAnswers: singleAnswers,
               multiAnswers: multiAnswers,
               customInputs: customInputs,

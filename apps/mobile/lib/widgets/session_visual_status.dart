@@ -30,10 +30,15 @@ SessionVisualStatus sessionVisualStatusFor({
     final detail = switch (pendingPermission.toolName) {
       'ExitPlanMode' => 'Review plan',
       'AskUserQuestion' =>
-        pendingPermission.isRequestUserInputApproval
+        pendingPermission.isQuestionApproval
             ? 'Approve tool call'
             : 'Answer question',
-      'McpElicitation' => 'Answer MCP request',
+      'McpElicitation' =>
+        pendingPermission.isQuestionApproval
+            ? 'Approve tool call'
+            : pendingPermission.isQuestionPrompt
+            ? 'Answer question'
+            : 'Answer MCP request',
       'Permissions' => 'Grant permissions',
       _ => 'Approve ${pendingPermission.toolName}',
     };
