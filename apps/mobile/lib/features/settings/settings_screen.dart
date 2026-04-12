@@ -371,11 +371,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 8),
 
-              // ── Usage ──
-              UsageSection(bridgeService: bridge),
-              const SizedBox(height: 8),
-
               if (isConnected) ...[
+                // ── Usage ──
+                UsageSection(bridgeService: bridge),
+                const SizedBox(height: 8),
+
                 // ── Backup ──
                 BackupSection(
                   bridgeService: bridge,

@@ -40,9 +40,8 @@ class _UsageSectionState extends State<UsageSection> {
   @override
   void initState() {
     super.initState();
-    // Show cached data immediately if available
     final cached = widget.bridgeService.lastUsageResult;
-    if (cached != null) {
+    if (widget.bridgeService.isConnected && cached != null) {
       _providers = cached.providers;
     }
     _sub = widget.bridgeService.usageResults.listen((msg) {
@@ -88,7 +87,6 @@ class _UsageSectionState extends State<UsageSection> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isConnected = widget.bridgeService.isConnected;
     final codexInfo = _codexInfo;
 
     return Column(
@@ -117,7 +115,7 @@ class _UsageSectionState extends State<UsageSection> {
                     color: cs.onSurfaceVariant,
                   ),
                 )
-              else if (isConnected)
+              else
                 GestureDetector(
                   onTap: () => _fetchUsage(force: true),
                   child: Icon(
@@ -134,26 +132,6 @@ class _UsageSectionState extends State<UsageSection> {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             key: const ValueKey('codex_usage_card'),
             child: _ProviderUsageTile(info: codexInfo),
-          )
-        else if (!isConnected)
-          Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            key: const ValueKey('codex_usage_card'),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.cloud_off, size: 20, color: cs.onSurfaceVariant),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      AppLocalizations.of(context).usageConnectToView,
-                      style: TextStyle(color: cs.onSurfaceVariant),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           )
         else if (_providers == null)
           Card(
