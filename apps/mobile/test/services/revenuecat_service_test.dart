@@ -130,7 +130,10 @@ void main() {
       expect(service.catalogState.value.packages, hasLength(1));
       expect(service.catalogState.value.summary.oneTimeSupportCount, 3);
       expect(service.catalogState.value.summary.coffeeSupportCount, 2);
-      expect(service.catalogState.value.summary.supporterSince, DateTime(2026, 1, 10));
+      expect(
+        service.catalogState.value.summary.supporterSince,
+        DateTime(2026, 1, 10),
+      );
     });
 
     test('updates state when customer info changes', () async {

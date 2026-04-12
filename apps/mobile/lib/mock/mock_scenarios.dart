@@ -16,7 +16,7 @@ enum MockScenarioProvider { claude, codex }
 enum MockScenarioSection {
   chat('Chat Session', Icons.chat_bubble_outline),
   sessionList('Session List', Icons.list_alt),
-  settings('Settings', Icons.settings_outlined),
+  supporter('Supporter', Icons.favorite_border),
   storeScreenshot('Store Screenshots', Icons.photo_camera);
 
   final String label;
@@ -92,6 +92,7 @@ final List<MockScenario> mockScenarios = [
   _sessionListCodexFileChangeApproval,
   _sessionListCodexMcpApproval,
   sessionListNewSession20Projects,
+  settingsSupportEntriesPreview,
   supporterPreviewInactive,
   supporterPreviewActive,
   supporterPreviewVeteran,
@@ -2723,27 +2724,35 @@ const sessionListNewSession20Projects = MockScenario(
   steps: [],
 );
 
+const settingsSupportEntriesPreview = MockScenario(
+  name: 'Settings Support Entries',
+  icon: Icons.settings_outlined,
+  description: 'Settings support entry cards for inactive and active states',
+  section: MockScenarioSection.supporter,
+  steps: [],
+);
+
 const supporterPreviewInactive = MockScenario(
-  name: 'Supporter (Inactive)',
+  name: 'Supporter Screen (Inactive)',
   icon: Icons.favorite_border,
-  description: 'Support section with products visible before any purchase',
-  section: MockScenarioSection.settings,
+  description: 'Supporter screen with products visible before any purchase',
+  section: MockScenarioSection.supporter,
   steps: [],
 );
 
 const supporterPreviewActive = MockScenario(
-  name: 'Supporter (Active)',
+  name: 'Supporter Screen (Active)',
   icon: Icons.favorite,
-  description: 'Active monthly supporter with a few one-time supports',
-  section: MockScenarioSection.settings,
+  description: 'Supporter screen for an active monthly supporter',
+  section: MockScenarioSection.supporter,
   steps: [],
 );
 
 const supporterPreviewVeteran = MockScenario(
-  name: 'Supporter (Veteran)',
+  name: 'Supporter Screen (Veteran)',
   icon: Icons.workspace_premium,
-  description: 'Long-running supporter with heavier one-time support history',
-  section: MockScenarioSection.settings,
+  description: 'Supporter screen for a long-running supporter',
+  section: MockScenarioSection.supporter,
   steps: [],
 );
 

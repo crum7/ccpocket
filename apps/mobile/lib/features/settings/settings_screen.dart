@@ -88,6 +88,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
               ],
 
+              ValueListenableBuilder<SupportCatalogState>(
+                valueListenable: revenueCat.catalogState,
+                builder: (context, supportState, _) {
+                  if (!supportState.isAvailable &&
+                      supportState.errorMessage == null) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Column(
+                    children: [
+                      _SectionHeader(title: l.sectionSupport),
+                      const SupportSectionCard(),
+                      const SizedBox(height: 8),
+                    ],
+                  );
+                },
+              ),
+
               // ── General ──
               _SectionHeader(title: l.sectionGeneral),
               Card(
@@ -309,24 +327,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 8),
               ],
-
-              ValueListenableBuilder<SupportCatalogState>(
-                valueListenable: revenueCat.catalogState,
-                builder: (context, supportState, _) {
-                  if (!supportState.isAvailable &&
-                      supportState.errorMessage == null) {
-                    return const SizedBox.shrink();
-                  }
-
-                  return Column(
-                    children: [
-                      _SectionHeader(title: l.sectionSupport),
-                      const SupportSectionCard(),
-                      const SizedBox(height: 8),
-                    ],
-                  );
-                },
-              ),
 
               // ── Editor ──
               _SectionHeader(title: l.sectionEditor),

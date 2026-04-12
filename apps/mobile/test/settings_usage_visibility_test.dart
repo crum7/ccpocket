@@ -58,10 +58,7 @@ class _FakeBridgeService extends BridgeService {
 }
 
 class _SeededSettingsCubit extends SettingsCubit {
-  _SeededSettingsCubit(
-    super.prefs, {
-    required String? activeMachineId,
-  }) {
+  _SeededSettingsCubit(super.prefs, {required String? activeMachineId}) {
     emit(state.copyWith(activeMachineId: activeMachineId));
   }
 }

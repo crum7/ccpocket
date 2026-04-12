@@ -1,6 +1,7 @@
 import 'package:ccpocket/features/settings/widgets/support_section.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/services/revenuecat_service.dart';
+import 'package:ccpocket/widgets/supporter_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -12,30 +13,6 @@ class FakeRevenueCatService extends RevenueCatService {
   }) : super(publicApiKey: '', platform: TargetPlatform.iOS) {
     catalogState.value = catalog;
     supporterState.value = supporter;
-  }
-
-  int refreshCalls = 0;
-  int restoreCalls = 0;
-  String? lastPurchaseId;
-
-  @override
-  Future<void> refresh() async {
-    refreshCalls += 1;
-  }
-
-  @override
-  Future<SupportActionResult> purchasePackage(String packageId) async {
-    lastPurchaseId = packageId;
-    return SupportActionResult(
-      type: SupportActionResultType.success,
-      packageId: packageId,
-    );
-  }
-
-  @override
-  Future<SupportActionResult> restorePurchases() async {
-    restoreCalls += 1;
-    return const SupportActionResult(type: SupportActionResultType.success);
   }
 }
 
@@ -50,19 +27,17 @@ Widget _wrap(RevenueCatService revenueCatService) {
   );
 }
 
+AppLocalizations _localizations(WidgetTester tester) {
+  return AppLocalizations.of(tester.element(find.byType(SupportSectionCard)));
+}
+
 void main() {
-  testWidgets('renders packages and restore action', (tester) async {
+  testWidgets('renders inactive support entry only', (tester) async {
     final service = FakeRevenueCatService(
       catalog: SupportCatalogState(
         isAvailable: true,
         isLoading: false,
         isSupporter: false,
-        summary: SupportHistorySummary(
-          supporterSince: DateTime(2026, 1, 10),
-          oneTimeSupportCount: 3,
-          coffeeSupportCount: 2,
-          lunchSupportCount: 1,
-        ),
         packages: [
           SupportPackage(
             id: r'$rc_monthly',
@@ -84,40 +59,49 @@ void main() {
     );
 
     await tester.pumpWidget(_wrap(service));
+    final l = _localizations(tester);
 
-    expect(find.text('Supporter Monthly'), findsOneWidget);
-    expect(find.text('Coffee Support'), findsOneWidget);
-    expect(find.text('Restore'), findsOneWidget);
-    expect(find.text('About Supporter'), findsOneWidget);
-    expect(find.text('Your support'), findsOneWidget);
-    expect(find.text('One-time ×3'), findsOneWidget);
-    expect(find.text('Coffee ×2'), findsOneWidget);
-    expect(find.text('Lunch ×1'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('supporter_entry_button')),
+      findsOneWidget,
+    );
+    expect(find.text(l.supporterTitle), findsAtLeastNWidgets(1));
+    expect(find.text(l.supporterStatusInactive), findsOneWidget);
+    expect(find.byType(SupporterBadge), findsNothing);
+    expect(find.text('Supporter Monthly'), findsNothing);
+    expect(find.text('Coffee Support'), findsNothing);
+    expect(find.text(l.supporterRestoreButton), findsNothing);
   });
 
-  testWidgets('purchase button invokes service', (tester) async {
+  testWidgets('renders active support entry with badge', (tester) async {
     final service = FakeRevenueCatService(
       catalog: const SupportCatalogState(
         isAvailable: true,
         isLoading: false,
-        isSupporter: false,
+        isSupporter: true,
         packages: [
           SupportPackage(
-            id: r'$rc_custom_lunch',
-            productId: 'support_lunch_10',
-            title: '\$10 Lunch',
+            id: r'$rc_monthly',
+            productId: 'supporter_monthly_10',
+            title: 'Supporter \$10/mo',
             priceLabel: '\$10.00',
-            kind: SupportPackageKind.lunch,
+            kind: SupportPackageKind.monthly,
           ),
         ],
       ),
-      supporter: const SupporterState.inactive(),
+      supporter: const SupporterState.active(),
     );
 
     await tester.pumpWidget(_wrap(service));
-    await tester.tap(find.text('Support'));
-    await tester.pump();
+    final l = _localizations(tester);
 
-    expect(service.lastPurchaseId, r'$rc_custom_lunch');
+    expect(
+      find.byKey(const ValueKey('supporter_entry_button')),
+      findsOneWidget,
+    );
+    expect(find.text(l.supporterTitle), findsAtLeastNWidgets(1));
+    expect(find.text(l.supporterStatusActive), findsOneWidget);
+    expect(find.byType(SupporterBadge), findsOneWidget);
+    expect(find.text('Supporter Monthly'), findsNothing);
   });
 }

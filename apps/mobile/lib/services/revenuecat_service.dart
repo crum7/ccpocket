@@ -312,7 +312,9 @@ class PurchasesRevenueCatGateway implements RevenueCatGateway {
       activeEntitlementIds: info.entitlements.active.keys.toSet(),
       historySummary: SupportHistorySummary(
         supporterSince: _parseDate(entitlement?.originalPurchaseDate),
-        latestSubscriptionPurchaseAt: _parseDate(entitlement?.latestPurchaseDate),
+        latestSubscriptionPurchaseAt: _parseDate(
+          entitlement?.latestPurchaseDate,
+        ),
         oneTimeSupportCount: oneTimeTransactions.length,
         coffeeSupportCount: coffeeCount,
         lunchSupportCount: lunchCount,

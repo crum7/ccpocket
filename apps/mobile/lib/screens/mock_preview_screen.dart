@@ -9,6 +9,7 @@ import '../l10n/app_localizations.dart';
 import '../features/session_list/state/session_list_cubit.dart';
 import '../features/session_list/state/session_list_state.dart';
 import '../features/session_list/widgets/home_content.dart';
+import '../features/settings/supporter_screen.dart';
 import '../features/settings/widgets/support_section.dart';
 import '../features/git/widgets/diff_image_viewer.dart';
 import '../mock/mock_image_data.dart';
@@ -130,11 +131,13 @@ class _ScenariosTab extends StatelessWidget {
           builder: (_) => _MockSessionListWrapper(scenario: scenario),
         ),
       );
-    } else if (scenario.section == MockScenarioSection.settings) {
+    } else if (scenario.section == MockScenarioSection.supporter) {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => _MockSupporterSettingsWrapper(scenario: scenario),
+          builder: (_) => scenario == settingsSupportEntriesPreview
+              ? const _MockSupporterSettingsComparisonWrapper()
+              : _MockSupporterScreenWrapper(scenario: scenario),
         ),
       );
     } else {
@@ -539,42 +542,110 @@ class _ReplayTabState extends State<_ReplayTab> {
   }
 }
 
-class _MockSupporterSettingsWrapper extends StatelessWidget {
-  const _MockSupporterSettingsWrapper({required this.scenario});
+class _MockSupporterSettingsComparisonWrapper extends StatelessWidget {
+  const _MockSupporterSettingsComparisonWrapper();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Settings Support Entries')),
+      body: ListView(
+        children: [
+          const _MockSupportSettingsHeader(),
+          const _MockSupportEntryPreview(
+            label: 'Inactive',
+            catalog: _inactiveSupportCatalog,
+            supporter: SupporterState.inactive(),
+          ),
+          const SizedBox(height: 12),
+          _MockSupportEntryPreview(
+            label: 'Active',
+            catalog: _activeSupportCatalog,
+            supporter: SupporterState.active(),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _MockSupportSettingsHeader extends StatelessWidget {
+  const _MockSupportSettingsHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+      child: Text(
+        l.settingsTitle,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.8,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+}
+
+class _MockSupportEntryPreview extends StatelessWidget {
+  const _MockSupportEntryPreview({
+    required this.label,
+    required this.catalog,
+    required this.supporter,
+  });
+
+  final String label;
+  final SupportCatalogState catalog;
+  final SupporterState supporter;
+
+  @override
+  Widget build(BuildContext context) {
+    final service = _MockRevenueCatService(
+      catalog: catalog,
+      supporter: supporter,
+    );
+
+    return RepositoryProvider<RevenueCatService>.value(
+      value: service,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: Text(
+              label,
+              style: Theme.of(
+                context,
+              ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SupportSectionCard(),
+        ],
+      ),
+    );
+  }
+}
+
+class _MockSupporterScreenWrapper extends StatelessWidget {
+  const _MockSupporterScreenWrapper({required this.scenario});
 
   final MockScenario scenario;
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     final service = _MockRevenueCatService(
-      catalog: _catalogForScenario(scenario),
-      supporter: _supporterForScenario(scenario),
+      catalog: _catalogForSupporterScenario(scenario),
+      supporter: _supporterForSupporterScenario(scenario),
     );
 
     return RepositoryProvider<RevenueCatService>.value(
       value: service,
-      child: Scaffold(
-        appBar: AppBar(title: Text(scenario.name)),
-        body: ListView(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-              child: Text(
-                l.settingsTitle,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.8,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SupportSectionCard(),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
+      child: const SupporterScreen(),
     );
   }
 }
@@ -605,76 +676,83 @@ class _MockRevenueCatService extends RevenueCatService {
   }
 }
 
-SupportCatalogState _catalogForScenario(MockScenario scenario) {
-  const packages = [
-    SupportPackage(
-      id: r'$rc_monthly',
-      productId: 'supporter_monthly_10_ios',
-      title: 'Supporter Monthly',
-      priceLabel: r'$9.99',
-      kind: SupportPackageKind.monthly,
-    ),
-    SupportPackage(
-      id: r'$rc_custom_coffee',
-      productId: 'support_coffee_5',
-      title: 'Coffee Support',
-      priceLabel: r'$4.99',
-      kind: SupportPackageKind.coffee,
-    ),
-    SupportPackage(
-      id: r'$rc_custom_lunch',
-      productId: 'support_lunch_10',
-      title: 'Lunch Support',
-      priceLabel: r'$9.99',
-      kind: SupportPackageKind.lunch,
-    ),
-  ];
+const _supportPackages = [
+  SupportPackage(
+    id: r'$rc_monthly',
+    productId: 'supporter_monthly_10_ios',
+    title: 'Supporter Monthly',
+    priceLabel: r'$9.99',
+    kind: SupportPackageKind.monthly,
+  ),
+  SupportPackage(
+    id: r'$rc_custom_coffee',
+    productId: 'support_coffee_5',
+    title: 'Coffee Support',
+    priceLabel: r'$4.99',
+    kind: SupportPackageKind.coffee,
+  ),
+  SupportPackage(
+    id: r'$rc_custom_lunch',
+    productId: 'support_lunch_10',
+    title: 'Lunch Support',
+    priceLabel: r'$9.99',
+    kind: SupportPackageKind.lunch,
+  ),
+];
 
+const _inactiveSupportCatalog = SupportCatalogState(
+  isAvailable: true,
+  isLoading: false,
+  isSupporter: false,
+  packages: _supportPackages,
+  summary: SupportHistorySummary(
+    oneTimeSupportCount: 2,
+    coffeeSupportCount: 1,
+    lunchSupportCount: 1,
+  ),
+);
+
+final _activeSupportCatalog = SupportCatalogState(
+  isAvailable: true,
+  isLoading: false,
+  isSupporter: true,
+  packages: _supportPackages,
+  summary: SupportHistorySummary(
+    supporterSince: DateTime(2026, 2, 14),
+    latestSubscriptionPurchaseAt: DateTime(2026, 4, 10),
+    oneTimeSupportCount: 3,
+    coffeeSupportCount: 2,
+    lunchSupportCount: 1,
+  ),
+);
+
+final _veteranSupportCatalog = SupportCatalogState(
+  isAvailable: true,
+  isLoading: false,
+  isSupporter: true,
+  packages: _supportPackages,
+  summary: SupportHistorySummary(
+    supporterSince: DateTime(2025, 6, 3),
+    latestSubscriptionPurchaseAt: DateTime(2026, 4, 10),
+    oneTimeSupportCount: 8,
+    coffeeSupportCount: 5,
+    lunchSupportCount: 3,
+  ),
+);
+
+SupportCatalogState _catalogForSupporterScenario(MockScenario scenario) {
   if (scenario == supporterPreviewActive) {
-    return SupportCatalogState(
-      isAvailable: true,
-      isLoading: false,
-      isSupporter: true,
-      packages: packages,
-      summary: SupportHistorySummary(
-        supporterSince: DateTime(2026, 2, 14),
-        latestSubscriptionPurchaseAt: DateTime(2026, 4, 10),
-        oneTimeSupportCount: 3,
-        coffeeSupportCount: 2,
-        lunchSupportCount: 1,
-      ),
-    );
+    return _activeSupportCatalog;
   }
   if (scenario == supporterPreviewVeteran) {
-    return SupportCatalogState(
-      isAvailable: true,
-      isLoading: false,
-      isSupporter: true,
-      packages: packages,
-      summary: SupportHistorySummary(
-        supporterSince: DateTime(2025, 6, 3),
-        latestSubscriptionPurchaseAt: DateTime(2026, 4, 10),
-        oneTimeSupportCount: 8,
-        coffeeSupportCount: 5,
-        lunchSupportCount: 3,
-      ),
-    );
+    return _veteranSupportCatalog;
   }
-  return SupportCatalogState(
-    isAvailable: true,
-    isLoading: false,
-    isSupporter: false,
-    packages: packages,
-    summary: SupportHistorySummary(
-      oneTimeSupportCount: 2,
-      coffeeSupportCount: 1,
-      lunchSupportCount: 1,
-    ),
-  );
+  return _inactiveSupportCatalog;
 }
 
-SupporterState _supporterForScenario(MockScenario scenario) {
-  if (scenario == supporterPreviewActive || scenario == supporterPreviewVeteran) {
+SupporterState _supporterForSupporterScenario(MockScenario scenario) {
+  if (scenario == supporterPreviewActive ||
+      scenario == supporterPreviewVeteran) {
     return const SupporterState.active();
   }
   return const SupporterState.inactive();
