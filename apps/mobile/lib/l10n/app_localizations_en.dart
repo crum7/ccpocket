@@ -1509,15 +1509,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterMonthlyDescription =>
-      'I\'d appreciate steady support to keep the app improving over time.';
+      'I\'d appreciate ongoing support to keep the app improving over time.';
 
   @override
   String get supporterCoffeeDescription =>
-      'If you feel like buying me a drink, this is the one.';
+      'If you feel like buying me a drink, I\'d really appreciate the support.';
 
   @override
   String get supporterLunchDescription =>
-      'If you feel like buying me lunch, this is the one.';
+      'If you feel like buying me lunch, I\'d really appreciate the support.';
 
   @override
   String get supporterBuyButton => 'Support';
@@ -1591,14 +1591,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supporterSummaryStreakLabel => 'Active for';
 
   @override
-  String get supporterImpactTitle => 'What your support helps cover';
+  String get supporterImpactTitle => 'What support helps make possible';
 
   @override
   String get supporterImpactBody =>
-      'If you like CC Pocket, I\'d appreciate your support for ongoing development. CC Pocket will stay available as free OSS.';
+      'If you like CC Pocket, I\'d really appreciate your support for ongoing development. The app will continue as free OSS.';
 
   @override
-  String get supporterImpactAiTitle => 'Development costs';
+  String get supporterImpactAiTitle => 'Development and operating costs';
 
   @override
   String get supporterImpactAiBody =>
@@ -1626,7 +1626,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterSubscriptionGroupBody =>
-      'For ongoing support that keeps development moving.';
+      'I\'d really appreciate ongoing support here.';
 
   @override
   String get supporterOneTimeGroupTitle => 'One-time support';
@@ -1646,14 +1646,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supporterPurchaseInfoLink => 'Learn more';
 
   @override
-  String get supporterLearnMoreTitle => 'How Supporter works';
+  String get supporterLearnMoreTitle => 'About purchases and support';
 
   @override
   String get supporterLearnMoreBody =>
       'Read why CC Pocket stays free, how restore works, and what Supporter includes.';
 
   @override
-  String get supporterOpenLinkFailed => 'Could not open the Supporter guide.';
+  String get supporterOpenLinkFailed => 'Could not open the info page.';
 
   @override
   String get supporterPurchaseSuccess => 'Thanks for supporting CC Pocket!';

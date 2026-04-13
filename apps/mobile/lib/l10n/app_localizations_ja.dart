@@ -1460,13 +1460,14 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get supporterMonthlyDescription => '継続的に、開発を後押ししてもらえるとうれしいです。';
+  String get supporterMonthlyDescription => '継続的に開発を後押ししてもらえるとうれしいです。';
 
   @override
-  String get supporterCoffeeDescription => 'ドリンクを 1 杯おごる気持ちになったらお願いします。';
+  String get supporterCoffeeDescription =>
+      'ドリンクを1杯おごる気持ちになったら、応援してもらえるとうれしいです。';
 
   @override
-  String get supporterLunchDescription => 'ランチを 1 食おごる気持ちになったらお願いします。';
+  String get supporterLunchDescription => 'ランチを1食おごる気持ちになったら、応援してもらえるとうれしいです。';
 
   @override
   String get supporterBuyButton => '応援する';
@@ -1533,14 +1534,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterSummaryStreakLabel => '継続';
 
   @override
-  String get supporterImpactTitle => '応援が支えるもの';
+  String get supporterImpactTitle => '応援でできること';
 
   @override
   String get supporterImpactBody =>
-      'CC Pocket が気に入ったら、継続開発のために応援してもらえるとうれしいです。CC Pocket は無料の OSS として公開を続けます。';
+      'CC Pocket が気に入ったら、継続開発を応援してもらえるとうれしいです。アプリはこれからも無料の OSS として続けていきます。';
 
   @override
-  String get supporterImpactAiTitle => '開発にかかるコスト';
+  String get supporterImpactAiTitle => '開発と運用のコスト';
 
   @override
   String get supporterImpactAiBody => 'AI 利用料、実機確認、テスト、配布まわりなどの継続コストを支えます。';
@@ -1566,7 +1567,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterSubscriptionGroupTitle => '毎月応援';
 
   @override
-  String get supporterSubscriptionGroupBody => '継続的に応援したい人向けです。';
+  String get supporterSubscriptionGroupBody => '継続的に応援してもらえるとうれしいです。';
 
   @override
   String get supporterOneTimeGroupTitle => '単発で応援';
@@ -1586,13 +1587,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterPurchaseInfoLink => '詳しくはこちら';
 
   @override
-  String get supporterLearnMoreTitle => 'Supporter について';
+  String get supporterLearnMoreTitle => '購入と応援について';
 
   @override
   String get supporterLearnMoreBody => '無料で提供し続ける考え方や、購入の復元の仕組みを確認できます。';
 
   @override
-  String get supporterOpenLinkFailed => 'Supporter ガイドを開けませんでした。';
+  String get supporterOpenLinkFailed => '案内ページを開けませんでした。';
 
   @override
   String get supporterPurchaseSuccess => 'CC Pocket を応援してくれてありがとうございます。';

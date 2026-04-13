@@ -1444,13 +1444,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get supporterMonthlyDescription => '如果你愿意持续支持，帮我把开发继续下去，我会很开心。';
+  String get supporterMonthlyDescription => '如果你愿意持续支持，帮助这个应用继续改进，我会很开心。';
 
   @override
-  String get supporterCoffeeDescription => '如果你想请我喝一杯饮料，就选这个。';
+  String get supporterCoffeeDescription => '如果你想请我喝一杯饮料，我会很感谢这份支持。';
 
   @override
-  String get supporterLunchDescription => '如果你想请我吃一顿午餐，就选这个。';
+  String get supporterLunchDescription => '如果你想请我吃一顿午餐，我会很感谢这份支持。';
 
   @override
   String get supporterBuyButton => '支持';
@@ -1517,14 +1517,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterSummaryStreakLabel => '持续时间';
 
   @override
-  String get supporterImpactTitle => '你的支持会帮助到';
+  String get supporterImpactTitle => '支持能带来什么';
 
   @override
   String get supporterImpactBody =>
-      '如果你喜欢 CC Pocket，愿意支持持续开发的话我会很开心。CC Pocket 会继续以免费的 OSS 形式提供。';
+      '如果你喜欢 CC Pocket，愿意支持持续开发的话我会很开心。这个应用会继续作为免费的 OSS 提供。';
 
   @override
-  String get supporterImpactAiTitle => '开发成本';
+  String get supporterImpactAiTitle => '开发与维护成本';
 
   @override
   String get supporterImpactAiBody => 'AI 使用、真机验证、测试和发布都会带来持续成本。';
@@ -1548,7 +1548,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterSubscriptionGroupTitle => '每月支持';
 
   @override
-  String get supporterSubscriptionGroupBody => '适合想持续支持、慢慢推动开发的人。';
+  String get supporterSubscriptionGroupBody => '如果你愿意持续支持，我会很感谢。';
 
   @override
   String get supporterOneTimeGroupTitle => '单次支持';
@@ -1567,13 +1567,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterPurchaseInfoLink => '了解更多';
 
   @override
-  String get supporterLearnMoreTitle => '关于 Supporter';
+  String get supporterLearnMoreTitle => '关于购买与支持';
 
   @override
   String get supporterLearnMoreBody => '了解为什么 CC Pocket 保持免费，以及恢复购买与隐私设计的方式。';
 
   @override
-  String get supporterOpenLinkFailed => '无法打开 Supporter 指南。';
+  String get supporterOpenLinkFailed => '无法打开说明页面。';
 
   @override
   String get supporterPurchaseSuccess => '感谢你支持 CC Pocket！';

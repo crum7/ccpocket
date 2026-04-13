@@ -2815,19 +2815,19 @@ abstract class AppLocalizations {
   /// No description provided for @supporterMonthlyDescription.
   ///
   /// In ja, this message translates to:
-  /// **'継続的に、開発を後押ししてもらえるとうれしいです。'**
+  /// **'継続的に開発を後押ししてもらえるとうれしいです。'**
   String get supporterMonthlyDescription;
 
   /// No description provided for @supporterCoffeeDescription.
   ///
   /// In ja, this message translates to:
-  /// **'ドリンクを 1 杯おごる気持ちになったらお願いします。'**
+  /// **'ドリンクを1杯おごる気持ちになったら、応援してもらえるとうれしいです。'**
   String get supporterCoffeeDescription;
 
   /// No description provided for @supporterLunchDescription.
   ///
   /// In ja, this message translates to:
-  /// **'ランチを 1 食おごる気持ちになったらお願いします。'**
+  /// **'ランチを1食おごる気持ちになったら、応援してもらえるとうれしいです。'**
   String get supporterLunchDescription;
 
   /// No description provided for @supporterBuyButton.
@@ -2935,19 +2935,19 @@ abstract class AppLocalizations {
   /// No description provided for @supporterImpactTitle.
   ///
   /// In ja, this message translates to:
-  /// **'応援が支えるもの'**
+  /// **'応援でできること'**
   String get supporterImpactTitle;
 
   /// No description provided for @supporterImpactBody.
   ///
   /// In ja, this message translates to:
-  /// **'CC Pocket が気に入ったら、継続開発のために応援してもらえるとうれしいです。CC Pocket は無料の OSS として公開を続けます。'**
+  /// **'CC Pocket が気に入ったら、継続開発を応援してもらえるとうれしいです。アプリはこれからも無料の OSS として続けていきます。'**
   String get supporterImpactBody;
 
   /// No description provided for @supporterImpactAiTitle.
   ///
   /// In ja, this message translates to:
-  /// **'開発にかかるコスト'**
+  /// **'開発と運用のコスト'**
   String get supporterImpactAiTitle;
 
   /// No description provided for @supporterImpactAiBody.
@@ -2995,7 +2995,7 @@ abstract class AppLocalizations {
   /// No description provided for @supporterSubscriptionGroupBody.
   ///
   /// In ja, this message translates to:
-  /// **'継続的に応援したい人向けです。'**
+  /// **'継続的に応援してもらえるとうれしいです。'**
   String get supporterSubscriptionGroupBody;
 
   /// No description provided for @supporterOneTimeGroupTitle.
@@ -3031,7 +3031,7 @@ abstract class AppLocalizations {
   /// No description provided for @supporterLearnMoreTitle.
   ///
   /// In ja, this message translates to:
-  /// **'Supporter について'**
+  /// **'購入と応援について'**
   String get supporterLearnMoreTitle;
 
   /// No description provided for @supporterLearnMoreBody.
@@ -3043,7 +3043,7 @@ abstract class AppLocalizations {
   /// No description provided for @supporterOpenLinkFailed.
   ///
   /// In ja, this message translates to:
-  /// **'Supporter ガイドを開けませんでした。'**
+  /// **'案内ページを開けませんでした。'**
   String get supporterOpenLinkFailed;
 
   /// No description provided for @supporterPurchaseSuccess.
