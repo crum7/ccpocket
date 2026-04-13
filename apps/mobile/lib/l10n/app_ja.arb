@@ -459,7 +459,7 @@
 
   "settingsTitle": "設定",
   "sectionGeneral": "一般",
-  "sectionSupport": "支援",
+  "sectionSupport": "応援",
   "sectionEditor": "エディタ",
   "indentSize": "インデント幅",
   "indentSizeSubtitle": "箇条書きのインデントに使用するスペース数",
@@ -666,24 +666,35 @@
   "rateOnStore": "App Store で評価する",
   "rateOnStoreAndroid": "Google Play で評価する",
   "supporterTitle": "Supporter",
-  "supporterMonthlyTitle": "Supporter Monthly",
-  "supporterCoffeeTitle": "Coffee Support",
-  "supporterLunchTitle": "Lunch Support",
-  "supporterStatusActive": "CC Pocket の支援ありがとうございます！",
-  "supporterStatusInactive": "ここからOSS支援を扱います。アプリ本体は無料のままです。",
-  "supporterStatusLoading": "支援状態を確認しています...",
-  "supporterMonthlyDescription": "Supporter バッジ付きの月額支援です。",
-  "supporterCoffeeDescription": "気軽に入れられる 1 回限りの支援です。",
-  "supporterLunchDescription": "少し大きめの 1 回限りの支援です。",
-  "supporterBuyButton": "支援する",
-  "supporterActiveButton": "利用中",
-  "supporterRestoreButton": "復元",
+  "supporterMonthlyTitle": "月額サポーター",
+  "supporterCoffeeTitle": "コーヒーで応援",
+  "supporterLunchTitle": "ランチで応援",
+  "supporterStatusActive": "CC Pocket を応援してくれてありがとうございます。",
+  "supporterStatusInactive": "アプリは無料のまま。継続開発を応援できます。",
+  "supporterStatusLoading": "応援状態を確認しています...",
+  "supportEntryInactiveTitle": "応援する",
+  "supportEntryInactiveSubtitle": "CC Pocket が気に入ったら、継続開発を応援してもらえるとうれしいです。",
+  "supportEntryOneTimeTitle": "応援ありがとう",
+  "supportEntryOneTimeSubtitle": "これまでの応援、ありがとうございます。",
+  "supportEntryActiveTitle": "応援中",
+  "supportEntryActiveSubtitle": "いつもありがとうございます。{date}から応援中です。",
+  "@supportEntryActiveSubtitle": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "supporterMonthlyDescription": "Supporter バッジ付きで、毎月継続して応援できます。",
+  "supporterCoffeeDescription": "AI 利用料や開発コストの足しになる、気軽な 1 回の応援です。",
+  "supporterLunchDescription": "実機確認や継続改善の後押しになる、少し大きめの 1 回の応援です。",
+  "supporterBuyButton": "応援する",
+  "supporterActiveButton": "応援中",
+  "supporterRestoreButton": "購入を復元",
   "supporterRetryButton": "再試行",
-  "supporterProductsUnavailable": "現在利用できる支援商品がありません。",
-  "supporterRestoreNoticeTitle": "復元について",
-  "supporterRestoreNoticeBody": "購入の復元は同じ Apple ID または Google アカウントで利用できます。iOS と Android の間では支援状態は共有されません。",
-  "supporterSummaryTitle": "支援サマリー",
-  "supporterSummarySinceChip": "{date}から支援中",
+  "supporterProductsUnavailable": "現在利用できる応援プランがありません。",
+  "supporterRestoreNoticeTitle": "購入の復元について",
+  "supporterRestoreNoticeBody": "購入の復元は同じ Apple ID または Google アカウントで利用できます。iOS と Android の間で応援状態は共有されません。",
+  "supporterSummaryTitle": "応援サマリー",
+  "supporterSummarySinceChip": "{date}から応援中",
   "@supporterSummarySinceChip": {
     "placeholders": {
       "date": { "type": "String" }
@@ -701,13 +712,13 @@
       "count": { "type": "int" }
     }
   },
-  "supporterSummaryCoffeeCount": "Coffee ×{count}",
+  "supporterSummaryCoffeeCount": "コーヒー ×{count}",
   "@supporterSummaryCoffeeCount": {
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "supporterSummaryLunchCount": "Lunch ×{count}",
+  "supporterSummaryLunchCount": "ランチ ×{count}",
   "@supporterSummaryLunchCount": {
     "placeholders": {
       "count": { "type": "int" }
@@ -720,15 +731,19 @@
       "count": { "type": "int" }
     }
   },
-  "supporterLearnMoreTitle": "支援について",
-  "supporterLearnMoreBody": "支援の仕組み、復元、プライバシー方針の考え方を確認できます。",
-  "supporterOpenLinkFailed": "支援ガイドを開けませんでした。",
-  "supporterPurchaseSuccess": "{title} で CC Pocket を支援してくれてありがとうございます。",
-  "@supporterPurchaseSuccess": {
-    "placeholders": {
-      "title": { "type": "String" }
-    }
-  },
+  "supporterImpactTitle": "応援が支えるもの",
+  "supporterImpactBody": "CC Pocket は無料のまま使えます。応援は、継続して改善していくためのコストと勢いを支えます。",
+  "supporterImpactAiTitle": "AI 利用料",
+  "supporterImpactAiBody": "Claude や Codex など、開発と検証に使う AI のコストに充てます。",
+  "supporterImpactDevicesTitle": "端末とテスト",
+  "supporterImpactDevicesBody": "実機確認や OS アップデート追従など、安定運用に必要なコストを支えます。",
+  "supporterImpactMotivationTitle": "継続するモチベーション",
+  "supporterImpactMotivationBody": "使ってくれている実感が、改善を続けるいちばんの後押しになります。",
+  "supporterPackagesTitle": "応援の方法",
+  "supporterLearnMoreTitle": "Supporter について",
+  "supporterLearnMoreBody": "無料で提供し続ける考え方や、購入の復元の仕組みを確認できます。",
+  "supporterOpenLinkFailed": "Supporter ガイドを開けませんでした。",
+  "supporterPurchaseSuccess": "CC Pocket を応援してくれてありがとうございます。",
   "supporterPurchaseCancelled": "購入をキャンセルしました。",
   "supporterPurchaseFailed": "購入に失敗しました: {message}",
   "@supporterPurchaseFailed": {

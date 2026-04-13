@@ -22,7 +22,7 @@ class SupporterScreen extends StatelessWidget {
     final l = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.supporterTitle)),
+      appBar: AppBar(title: Text(l.sectionSupport)),
       body: ValueListenableBuilder<SupportCatalogState>(
         valueListenable: revenueCat.catalogState,
         builder: (context, state, _) {

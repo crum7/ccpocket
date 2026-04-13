@@ -558,6 +558,12 @@ class _MockSupporterSettingsComparisonWrapper extends StatelessWidget {
             supporter: SupporterState.inactive(),
           ),
           const SizedBox(height: 12),
+          const _MockSupportEntryPreview(
+            label: 'One-time',
+            catalog: _oneTimeSupportCatalog,
+            supporter: SupporterState.inactive(),
+          ),
+          const SizedBox(height: 12),
           _MockSupportEntryPreview(
             label: 'Active',
             catalog: _activeSupportCatalog,
@@ -701,6 +707,14 @@ const _supportPackages = [
 ];
 
 const _inactiveSupportCatalog = SupportCatalogState(
+  isAvailable: true,
+  isLoading: false,
+  isSupporter: false,
+  packages: _supportPackages,
+  summary: SupportHistorySummary.empty(),
+);
+
+const _oneTimeSupportCatalog = SupportCatalogState(
   isAvailable: true,
   isLoading: false,
   isSupporter: false,

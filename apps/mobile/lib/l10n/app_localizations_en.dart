@@ -1032,7 +1032,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sectionGeneral => 'GENERAL';
 
   @override
-  String get sectionSupport => 'SUPPORT';
+  String get sectionSupport => 'Support';
 
   @override
   String get sectionEditor => 'EDITOR';
@@ -1468,35 +1468,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supporterTitle => 'Supporter';
 
   @override
-  String get supporterMonthlyTitle => 'Supporter Monthly';
+  String get supporterMonthlyTitle => 'Monthly Supporter';
 
   @override
-  String get supporterCoffeeTitle => 'Coffee Support';
+  String get supporterCoffeeTitle => 'Buy Me a Coffee';
 
   @override
-  String get supporterLunchTitle => 'Lunch Support';
+  String get supporterLunchTitle => 'Buy Me Lunch';
 
   @override
-  String get supporterStatusActive => 'Thanks for supporting CC Pocket!';
+  String get supporterStatusActive => 'Thanks for backing CC Pocket.';
 
   @override
   String get supporterStatusInactive =>
-      'OSS support is available here. The app stays fully free.';
+      'CC Pocket stays fully free. You can support ongoing development here.';
 
   @override
   String get supporterStatusLoading => 'Checking supporter status...';
 
   @override
+  String get supportEntryInactiveTitle => 'Support';
+
+  @override
+  String get supportEntryInactiveSubtitle =>
+      'If CC Pocket has been useful, I\'d appreciate your support for ongoing development.';
+
+  @override
+  String get supportEntryOneTimeTitle => 'Thanks for your support';
+
+  @override
+  String get supportEntryOneTimeSubtitle => 'Thanks for supporting CC Pocket.';
+
+  @override
+  String get supportEntryActiveTitle => 'Supporting';
+
+  @override
+  String supportEntryActiveSubtitle(String date) {
+    return 'Thank you. You’ve been supporting CC Pocket since $date.';
+  }
+
+  @override
   String get supporterMonthlyDescription =>
-      'Monthly support with the Supporter badge.';
+      'Recurring support that includes the Supporter badge.';
 
   @override
   String get supporterCoffeeDescription =>
-      'One-time support for a small coffee.';
+      'A small one-time thank-you that helps cover AI usage and development costs.';
 
   @override
   String get supporterLunchDescription =>
-      'One-time support for a bigger thank-you.';
+      'A larger one-time boost for devices, testing, and ongoing work.';
 
   @override
   String get supporterBuyButton => 'Support';
@@ -1512,14 +1533,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterProductsUnavailable =>
-      'No support products are currently available.';
+      'No support options are currently available.';
 
   @override
   String get supporterRestoreNoticeTitle => 'About restore';
 
   @override
   String get supporterRestoreNoticeBody =>
-      'Restore works with the same Apple ID or Google account. Support status is not shared between iOS and Android.';
+      'Restore works with the same Apple ID or Google account. Supporter status does not carry between iOS and Android.';
 
   @override
   String get supporterSummaryTitle => 'Your support';
@@ -1564,19 +1585,48 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get supporterLearnMoreTitle => 'About Supporter';
+  String get supporterImpactTitle => 'What your support helps cover';
+
+  @override
+  String get supporterImpactBody =>
+      'CC Pocket stays free to use. Support helps pay for the tools and momentum needed to keep improving it.';
+
+  @override
+  String get supporterImpactAiTitle => 'AI usage';
+
+  @override
+  String get supporterImpactAiBody =>
+      'Claude, Codex, and other tools used to design, test, and ship updates.';
+
+  @override
+  String get supporterImpactDevicesTitle => 'Devices and testing';
+
+  @override
+  String get supporterImpactDevicesBody =>
+      'Keeping the app reliable across phones, tablets, and platform updates.';
+
+  @override
+  String get supporterImpactMotivationTitle => 'Momentum to keep going';
+
+  @override
+  String get supporterImpactMotivationBody =>
+      'A direct signal that the app is useful and worth continuous improvement.';
+
+  @override
+  String get supporterPackagesTitle => 'Choose a way to support';
+
+  @override
+  String get supporterLearnMoreTitle => 'How Supporter works';
 
   @override
   String get supporterLearnMoreBody =>
-      'Read how support, restore, and privacy work in CC Pocket.';
+      'Read why CC Pocket stays free, how restore works, and what Supporter includes.';
 
   @override
   String get supporterOpenLinkFailed => 'Could not open the Supporter guide.';
 
   @override
-  String supporterPurchaseSuccess(String title) {
-    return 'Thanks for supporting CC Pocket with $title!';
-  }
+  String get supporterPurchaseSuccess => 'Thanks for supporting CC Pocket!';
 
   @override
   String get supporterPurchaseCancelled => 'Purchase cancelled.';

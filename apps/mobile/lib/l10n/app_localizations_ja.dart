@@ -990,7 +990,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get sectionGeneral => '一般';
 
   @override
-  String get sectionSupport => '支援';
+  String get sectionSupport => '応援';
 
   @override
   String get sectionEditor => 'エディタ';
@@ -1421,60 +1421,81 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterTitle => 'Supporter';
 
   @override
-  String get supporterMonthlyTitle => 'Supporter Monthly';
+  String get supporterMonthlyTitle => '月額サポーター';
 
   @override
-  String get supporterCoffeeTitle => 'Coffee Support';
+  String get supporterCoffeeTitle => 'コーヒーで応援';
 
   @override
-  String get supporterLunchTitle => 'Lunch Support';
+  String get supporterLunchTitle => 'ランチで応援';
 
   @override
-  String get supporterStatusActive => 'CC Pocket の支援ありがとうございます！';
+  String get supporterStatusActive => 'CC Pocket を応援してくれてありがとうございます。';
 
   @override
-  String get supporterStatusInactive => 'ここからOSS支援を扱います。アプリ本体は無料のままです。';
+  String get supporterStatusInactive => 'アプリは無料のまま。継続開発を応援できます。';
 
   @override
-  String get supporterStatusLoading => '支援状態を確認しています...';
+  String get supporterStatusLoading => '応援状態を確認しています...';
 
   @override
-  String get supporterMonthlyDescription => 'Supporter バッジ付きの月額支援です。';
+  String get supportEntryInactiveTitle => '応援する';
 
   @override
-  String get supporterCoffeeDescription => '気軽に入れられる 1 回限りの支援です。';
+  String get supportEntryInactiveSubtitle =>
+      'CC Pocket が気に入ったら、継続開発を応援してもらえるとうれしいです。';
 
   @override
-  String get supporterLunchDescription => '少し大きめの 1 回限りの支援です。';
+  String get supportEntryOneTimeTitle => '応援ありがとう';
 
   @override
-  String get supporterBuyButton => '支援する';
+  String get supportEntryOneTimeSubtitle => 'これまでの応援、ありがとうございます。';
 
   @override
-  String get supporterActiveButton => '利用中';
+  String get supportEntryActiveTitle => '応援中';
 
   @override
-  String get supporterRestoreButton => '復元';
+  String supportEntryActiveSubtitle(String date) {
+    return 'いつもありがとうございます。$dateから応援中です。';
+  }
+
+  @override
+  String get supporterMonthlyDescription => 'Supporter バッジ付きで、毎月継続して応援できます。';
+
+  @override
+  String get supporterCoffeeDescription => 'AI 利用料や開発コストの足しになる、気軽な 1 回の応援です。';
+
+  @override
+  String get supporterLunchDescription => '実機確認や継続改善の後押しになる、少し大きめの 1 回の応援です。';
+
+  @override
+  String get supporterBuyButton => '応援する';
+
+  @override
+  String get supporterActiveButton => '応援中';
+
+  @override
+  String get supporterRestoreButton => '購入を復元';
 
   @override
   String get supporterRetryButton => '再試行';
 
   @override
-  String get supporterProductsUnavailable => '現在利用できる支援商品がありません。';
+  String get supporterProductsUnavailable => '現在利用できる応援プランがありません。';
 
   @override
-  String get supporterRestoreNoticeTitle => '復元について';
+  String get supporterRestoreNoticeTitle => '購入の復元について';
 
   @override
   String get supporterRestoreNoticeBody =>
-      '購入の復元は同じ Apple ID または Google アカウントで利用できます。iOS と Android の間では支援状態は共有されません。';
+      '購入の復元は同じ Apple ID または Google アカウントで利用できます。iOS と Android の間で応援状態は共有されません。';
 
   @override
-  String get supporterSummaryTitle => '支援サマリー';
+  String get supporterSummaryTitle => '応援サマリー';
 
   @override
   String supporterSummarySinceChip(String date) {
-    return '$dateから支援中';
+    return '$dateから応援中';
   }
 
   @override
@@ -1489,12 +1510,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String supporterSummaryCoffeeCount(int count) {
-    return 'Coffee ×$count';
+    return 'コーヒー ×$count';
   }
 
   @override
   String supporterSummaryLunchCount(int count) {
-    return 'Lunch ×$count';
+    return 'ランチ ×$count';
   }
 
   @override
@@ -1506,18 +1527,47 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get supporterLearnMoreTitle => '支援について';
+  String get supporterImpactTitle => '応援が支えるもの';
 
   @override
-  String get supporterLearnMoreBody => '支援の仕組み、復元、プライバシー方針の考え方を確認できます。';
+  String get supporterImpactBody =>
+      'CC Pocket は無料のまま使えます。応援は、継続して改善していくためのコストと勢いを支えます。';
 
   @override
-  String get supporterOpenLinkFailed => '支援ガイドを開けませんでした。';
+  String get supporterImpactAiTitle => 'AI 利用料';
 
   @override
-  String supporterPurchaseSuccess(String title) {
-    return '$title で CC Pocket を支援してくれてありがとうございます。';
-  }
+  String get supporterImpactAiBody =>
+      'Claude や Codex など、開発と検証に使う AI のコストに充てます。';
+
+  @override
+  String get supporterImpactDevicesTitle => '端末とテスト';
+
+  @override
+  String get supporterImpactDevicesBody =>
+      '実機確認や OS アップデート追従など、安定運用に必要なコストを支えます。';
+
+  @override
+  String get supporterImpactMotivationTitle => '継続するモチベーション';
+
+  @override
+  String get supporterImpactMotivationBody =>
+      '使ってくれている実感が、改善を続けるいちばんの後押しになります。';
+
+  @override
+  String get supporterPackagesTitle => '応援の方法';
+
+  @override
+  String get supporterLearnMoreTitle => 'Supporter について';
+
+  @override
+  String get supporterLearnMoreBody => '無料で提供し続ける考え方や、購入の復元の仕組みを確認できます。';
+
+  @override
+  String get supporterOpenLinkFailed => 'Supporter ガイドを開けませんでした。';
+
+  @override
+  String get supporterPurchaseSuccess => 'CC Pocket を応援してくれてありがとうございます。';
 
   @override
   String get supporterPurchaseCancelled => '購入をキャンセルしました。';
