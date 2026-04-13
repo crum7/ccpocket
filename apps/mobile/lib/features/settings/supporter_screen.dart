@@ -43,7 +43,7 @@ class _SupporterScreenState extends State<SupporterScreen> {
           return _SupportEmojiSeedScope(
             seed: _emojiSeed,
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
                 _SupportHeroArea(state: state),
                 const SizedBox(height: 24),
@@ -102,13 +102,15 @@ class _SupportHeroArea extends StatelessWidget {
           color: cs.primary.withValues(alpha: 0.3),
           width: 1.5,
         ),
-        boxShadow: Theme.of(context).brightness == Brightness.light ? [
-          BoxShadow(
-            color: cs.primary.withValues(alpha: 0.15),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          ),
-        ] : null,
+        boxShadow: Theme.of(context).brightness == Brightness.light
+            ? [
+                BoxShadow(
+                  color: cs.primary.withValues(alpha: 0.15),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ]
+            : null,
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -748,58 +750,84 @@ class _SupportPackageTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final revenueCat = context.read<RevenueCatService>();
     final isCurrentSubscription = package.isSubscription && state.isSupporter;
     final isPurchasing = state.purchasingPackageId == package.id;
 
-    return ListTile(
-      leading: _SupportPackageLeading(package: package),
-      title: Row(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          _SupportPackageLeading(package: package),
+          const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              _titleForPackage(l, package),
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  _titleForPackage(l, package),
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _descriptionForPackage(l, package),
+                  style: textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  package.priceLabel,
+                  style: textTheme.titleLarge?.copyWith(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
-          Text(
-            package.priceLabel,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: cs.primary,
-              fontWeight: FontWeight.w700,
-            ),
+          const SizedBox(width: 12),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  minimumSize: const Size(0, 44),
+                ),
+                onPressed: state.isBusy || isCurrentSubscription
+                    ? null
+                    : () async {
+                        final result = await revenueCat.purchasePackage(
+                          package.id,
+                        );
+                        if (!context.mounted) return;
+                        _showResultSnackBar(context, result);
+                      },
+                child: isPurchasing
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(
+                        isCurrentSubscription
+                            ? l.supporterActiveButton
+                            : l.supporterBuyButton,
+                      ),
+              ),
+            ],
           ),
         ],
-      ),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4.0),
-        child: Text(_descriptionForPackage(l, package)),
-      ),
-      trailing: FilledButton(
-        style: FilledButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-        ),
-        onPressed: state.isBusy || isCurrentSubscription
-            ? null
-            : () async {
-                final result = await revenueCat.purchasePackage(package.id);
-                if (!context.mounted) return;
-                _showResultSnackBar(context, result);
-              },
-        child: isPurchasing
-            ? const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Text(
-                isCurrentSubscription
-                    ? l.supporterActiveButton
-                    : l.supporterBuyButton,
-              ),
       ),
     );
   }
