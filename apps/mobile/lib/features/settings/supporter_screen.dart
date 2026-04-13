@@ -43,7 +43,7 @@ class _SupporterScreenState extends State<SupporterScreen> {
           return _SupportEmojiSeedScope(
             seed: _emojiSeed,
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               children: [
                 _SupportHeroArea(state: state),
                 const SizedBox(height: 24),
@@ -90,36 +90,25 @@ class _SupportHeroArea extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isActive = state.isSupporter;
 
-    if (!isActive) {
-      return Card(
-        margin: EdgeInsets.zero,
-        color: cs.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: cs.outlineVariant, width: 1),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: _SupportStatusTile(state: state),
-        ),
-      );
-    }
+    if (!isActive) return const SizedBox.shrink();
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.primaryContainer,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? cs.primary.withValues(alpha: 0.12)
+            : cs.primaryContainer,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: cs.primary.withValues(alpha: 0.3),
           width: 1.5,
         ),
-        boxShadow: [
+        boxShadow: Theme.of(context).brightness == Brightness.light ? [
           BoxShadow(
-            color: cs.primary.withValues(alpha: 0.1),
-            blurRadius: 20,
+            color: cs.primary.withValues(alpha: 0.15),
+            blurRadius: 24,
             offset: const Offset(0, 8),
           ),
-        ],
+        ] : null,
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -566,7 +555,7 @@ class _SupportSummaryContent extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.38),
+        color: cs.surfaceContainerHigh.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: cs.primary.withValues(alpha: 0.12)),
       ),
@@ -638,7 +627,7 @@ class _SupportSummaryStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.5),
+        color: cs.surfaceContainerHigh.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: cs.primary.withValues(alpha: 0.1)),
       ),
@@ -851,15 +840,15 @@ class _SupportPackageLeading extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final emoji = _emojiForPackage(context, package);
-    if (emoji != null) {
-      return Container(
-        width: 40,
-        height: 40,
-        alignment: Alignment.center,
-        child: Text(emoji, style: const TextStyle(fontSize: 28)),
-      );
-    }
-    return Icon(_iconForPackage(package), color: cs.primary, size: 28);
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: Center(
+        child: emoji != null
+            ? Text(emoji, style: const TextStyle(fontSize: 28))
+            : Icon(_iconForPackage(package), color: cs.primary, size: 28),
+      ),
+    );
   }
 
   IconData _iconForPackage(SupportPackage package) {
