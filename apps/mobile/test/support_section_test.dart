@@ -1,7 +1,6 @@
 import 'package:ccpocket/features/settings/widgets/support_section.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/services/revenuecat_service.dart';
-import 'package:ccpocket/widgets/supporter_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -65,9 +64,8 @@ void main() {
       find.byKey(const ValueKey('supporter_entry_button')),
       findsOneWidget,
     );
-    expect(find.text(l.supporterTitle), findsAtLeastNWidgets(1));
-    expect(find.text(l.supporterStatusInactive), findsOneWidget);
-    expect(find.byType(SupporterBadge), findsNothing);
+    expect(find.text(l.supportEntryInactiveTitle), findsOneWidget);
+    expect(find.text(l.supportEntryInactiveSubtitle), findsOneWidget);
     expect(find.text('Supporter Monthly'), findsNothing);
     expect(find.text('Coffee Support'), findsNothing);
     expect(find.text(l.supporterRestoreButton), findsNothing);
@@ -99,9 +97,8 @@ void main() {
       find.byKey(const ValueKey('supporter_entry_button')),
       findsOneWidget,
     );
-    expect(find.text(l.supporterTitle), findsAtLeastNWidgets(1));
-    expect(find.text(l.supporterStatusActive), findsOneWidget);
-    expect(find.byType(SupporterBadge), findsOneWidget);
+    expect(find.text(l.supportEntryActiveTitle), findsOneWidget);
+    expect(find.textContaining('CC Pocket'), findsOneWidget);
     expect(find.text('Supporter Monthly'), findsNothing);
   });
 }
