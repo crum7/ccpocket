@@ -45,13 +45,16 @@ void main() {
 
       await tester.tap(find.text('Open'));
       await tester.pumpAndSettle();
+      final l = AppLocalizations.of(
+        tester.element(find.byType(Scaffold).last),
+      );
 
       expect(find.text('ダーク'), findsOneWidget);
       expect(
         find.byKey(const ValueKey('app_icon_supporter_divider')),
         findsOneWidget,
       );
-      expect(find.text('月額Supporter特典'), findsOneWidget);
+      expect(find.text(l.appIconSupporterSectionLabel), findsOneWidget);
       expect(find.text('ライト'), findsOneWidget);
       expect(find.text('メタリック'), findsOneWidget);
     });
