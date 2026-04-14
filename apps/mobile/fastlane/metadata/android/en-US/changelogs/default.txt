@@ -1,3 +1,3 @@
-- Better Codex composer with token highlighting and skill completion
-- Separated slash and dollar completions for cleaner Codex input
-- Minor fixes and stability improvements
+- Added optional Supporter purchases with one-time and monthly support options
+- New Support screen with purchase history summaries and restore flow
+- Monthly supporters can now unlock alternate app icons

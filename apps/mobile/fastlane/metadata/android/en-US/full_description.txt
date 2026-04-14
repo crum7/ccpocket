@@ -28,6 +28,9 @@ Watch your agent think and code live. View inline diffs, thinking blocks, and st
 <b>PUSH NOTIFICATIONS</b>
 Get notified instantly when your agent needs approval or completes a task. Never miss a permission request again.
 
+<b>OPTIONAL SUPPORTER</b>
+CC Pocket remains fully usable for free. If you want to support ongoing development, the app also includes optional one-time and monthly Supporter purchases, a Support screen with purchase history summaries, and alternate app icon perks for monthly supporters.
+
 <b>FLEXIBLE CONNECTIONS</b>
 Connect to your self-hosted Bridge Server via saved machines, QR code, mDNS auto-discovery, or manual URL. Optionally manage remote servers over SSH.
 
