@@ -1496,7 +1496,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get supporterMonthlyDescription => '継続的な開発を後押し';
+  String get supporterMonthlyDescription => '継続的な開発を後押し。アプリアイコン変更特典つき';
 
   @override
   String get supporterCoffeeDescription => 'ドリンクを1杯おごる';
@@ -1609,7 +1609,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get supporterOneTimeGroupBody =>
-      'ドリンクやランチをおごる気持ちになったら、応援してもらえるとうれしいです。';
+      'ランチやドリンクをおごる気持ちになったら、応援してもらえるとうれしいです。';
 
   @override
   String get supporterPurchaseInfoTitle => '購入について';

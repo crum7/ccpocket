@@ -250,9 +250,13 @@ class _SupportPackageSection extends StatelessWidget {
       final recurringPackages = state.packages
           .where((package) => package.isSubscription)
           .toList();
-      final oneTimePackages = state.packages
-          .where((package) => !package.isSubscription)
-          .toList();
+      final oneTimePackages =
+          state.packages.where((package) => !package.isSubscription).toList()
+            ..sort(
+              (a, b) => _packageDisplayPriority(
+                a,
+              ).compareTo(_packageDisplayPriority(b)),
+            );
 
       if (recurringPackages.isNotEmpty) {
         children.add(
@@ -544,13 +548,13 @@ class _SupportSummaryContent extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final summary = state.summary;
     final activityChips = <Widget>[
-      if (summary.coffeeSupportCount > 0)
-        _SupportSummaryBadge(
-          label: l.supporterSummaryCoffeeCount(summary.coffeeSupportCount),
-        ),
       if (summary.lunchSupportCount > 0)
         _SupportSummaryBadge(
           label: l.supporterSummaryLunchCount(summary.lunchSupportCount),
+        ),
+      if (summary.coffeeSupportCount > 0)
+        _SupportSummaryBadge(
+          label: l.supporterSummaryCoffeeCount(summary.coffeeSupportCount),
         ),
     ];
 
@@ -857,6 +861,15 @@ class _SupportPackageTile extends StatelessWidget {
         return package.title;
     }
   }
+}
+
+int _packageDisplayPriority(SupportPackage package) {
+  return switch (package.kind) {
+    SupportPackageKind.monthly => 0,
+    SupportPackageKind.lunch => 1,
+    SupportPackageKind.coffee => 2,
+    SupportPackageKind.other => 3,
+  };
 }
 
 class _SupportPackageLeading extends StatelessWidget {

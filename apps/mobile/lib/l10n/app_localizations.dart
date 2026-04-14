@@ -2887,7 +2887,7 @@ abstract class AppLocalizations {
   /// No description provided for @supporterMonthlyDescription.
   ///
   /// In ja, this message translates to:
-  /// **'継続的な開発を後押し'**
+  /// **'継続的な開発を後押し。アプリアイコン変更特典つき'**
   String get supporterMonthlyDescription;
 
   /// No description provided for @supporterCoffeeDescription.
@@ -3079,7 +3079,7 @@ abstract class AppLocalizations {
   /// No description provided for @supporterOneTimeGroupBody.
   ///
   /// In ja, this message translates to:
-  /// **'ドリンクやランチをおごる気持ちになったら、応援してもらえるとうれしいです。'**
+  /// **'ランチやドリンクをおごる気持ちになったら、応援してもらえるとうれしいです。'**
   String get supporterOneTimeGroupBody;
 
   /// No description provided for @supporterPurchaseInfoTitle.

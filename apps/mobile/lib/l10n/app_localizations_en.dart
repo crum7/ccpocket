@@ -1548,7 +1548,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterMonthlyDescription =>
-      'I\'d appreciate ongoing support to keep the app improving over time.';
+      'Ongoing support to keep the app improving, plus alternate app icon perks.';
 
   @override
   String get supporterCoffeeDescription =>
@@ -1672,7 +1672,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterOneTimeGroupBody =>
-      'If you feel like buying me a drink or lunch, I’d really appreciate the support.';
+      'If you feel like buying me lunch or a drink, I’d really appreciate the support.';
 
   @override
   String get supporterPurchaseInfoTitle => 'About purchases';

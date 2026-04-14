@@ -1,12 +1,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../router/app_router.dart';
 import '../../../services/app_update_service.dart';
-import '../../../services/revenuecat_service.dart';
-import '../../../widgets/supporter_badge.dart';
 
 /// Floating SliverAppBar for the session list screen.
 ///
@@ -32,23 +29,7 @@ class SessionListSliverAppBar extends StatelessWidget {
       floating: true,
       snap: true,
       forceElevated: forceElevated,
-      title: GestureDetector(
-        onTap: onTitleTap,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l.appTitle),
-            const SizedBox(width: 8),
-            ValueListenableBuilder<SupporterState>(
-              valueListenable: context.read<RevenueCatService>().supporterState,
-              builder: (context, state, _) {
-                if (!state.isSupporter) return const SizedBox.shrink();
-                return const SupporterBadge(compact: true);
-              },
-            ),
-          ],
-        ),
-      ),
+      title: GestureDetector(onTap: onTitleTap, child: Text(l.appTitle)),
       actions: [
         IconButton(
           key: const ValueKey('settings_button'),

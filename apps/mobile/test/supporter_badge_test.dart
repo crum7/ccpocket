@@ -1,54 +1,26 @@
 import 'package:ccpocket/features/session_list/widgets/session_list_app_bar.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
-import 'package:ccpocket/services/revenuecat_service.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class FakeRevenueCatService extends RevenueCatService {
-  FakeRevenueCatService(SupporterState initial)
-    : super(publicApiKey: '', platform: TargetPlatform.iOS) {
-    supporterState.value = initial;
-  }
-}
-
-Widget _wrap(Widget child, RevenueCatService revenueCatService) {
-  return RepositoryProvider<RevenueCatService>.value(
-    value: revenueCatService,
-    child: MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: CustomScrollView(slivers: [child]),
-    ),
+Widget _wrap(Widget child) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: CustomScrollView(slivers: [child]),
   );
 }
 
 void main() {
-  testWidgets('shows supporter badge when active', (tester) async {
+  testWidgets('shows app title without supporter badge', (tester) async {
     await tester.pumpWidget(
-      _wrap(
-        SessionListSliverAppBar(onTitleTap: () {}, onDisconnect: () {}),
-        FakeRevenueCatService(const SupporterState.active()),
-      ),
+      _wrap(SessionListSliverAppBar(onTitleTap: () {}, onDisconnect: () {})),
     );
 
     final l = AppLocalizations.of(
       tester.element(find.byType(SessionListSliverAppBar)),
     );
-    expect(find.text(l.supporterTitle), findsOneWidget);
-  });
-
-  testWidgets('hides supporter badge when inactive', (tester) async {
-    await tester.pumpWidget(
-      _wrap(
-        SessionListSliverAppBar(onTitleTap: () {}, onDisconnect: () {}),
-        FakeRevenueCatService(const SupporterState.inactive()),
-      ),
-    );
-
-    final l = AppLocalizations.of(
-      tester.element(find.byType(SessionListSliverAppBar)),
-    );
+    expect(find.text(l.appTitle), findsOneWidget);
     expect(find.text(l.supporterTitle), findsNothing);
   });
 }

@@ -695,7 +695,7 @@
       "date": { "type": "String" }
     }
   },
-  "supporterMonthlyDescription": "継続的な開発を後押し",
+  "supporterMonthlyDescription": "継続的な開発を後押し。アプリアイコン変更特典つき",
   "supporterCoffeeDescription": "ドリンクを1杯おごる",
   "supporterLunchDescription": "ランチを1食おごる",
   "supporterBuyButton": "応援する",
@@ -757,7 +757,7 @@
   "supporterSubscriptionGroupTitle": "毎月応援",
   "supporterSubscriptionGroupBody": "継続的に応援してもらえるとうれしいです。",
   "supporterOneTimeGroupTitle": "単発で応援",
-  "supporterOneTimeGroupBody": "ドリンクやランチをおごる気持ちになったら、応援してもらえるとうれしいです。",
+  "supporterOneTimeGroupBody": "ランチやドリンクをおごる気持ちになったら、応援してもらえるとうれしいです。",
   "supporterPurchaseInfoTitle": "購入について",
   "supporterPurchaseInfoBody": "購入の復元は同じ Apple ID または Google アカウントで利用できます。iOS と Android の間で応援状態は共有されません。",
   "supporterPurchaseInfoLink": "詳しくはこちら",

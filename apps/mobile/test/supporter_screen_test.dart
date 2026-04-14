@@ -100,4 +100,73 @@ void main() {
     expect(find.text(l.supporterSummaryCoffeeCount(3)), findsOneWidget);
     expect(find.text(l.supporterSummaryLunchCount(1)), findsOneWidget);
   });
+
+  testWidgets('orders lunch before drink and shows monthly icon perk copy', (
+    tester,
+  ) async {
+    final service = FakeRevenueCatService(
+      catalog: SupportCatalogState(
+        isAvailable: true,
+        isLoading: false,
+        isSupporter: true,
+        packages: const [
+          SupportPackage(
+            id: r'$rc_custom_coffee',
+            productId: 'support_coffee_5',
+            title: 'Drink',
+            priceLabel: '\$5.00',
+            kind: SupportPackageKind.coffee,
+          ),
+          SupportPackage(
+            id: r'$rc_custom_lunch',
+            productId: 'support_lunch_10',
+            title: 'Lunch',
+            priceLabel: '\$10.00',
+            kind: SupportPackageKind.lunch,
+          ),
+          SupportPackage(
+            id: r'$rc_monthly',
+            productId: 'supporter_monthly_10',
+            title: 'Monthly',
+            priceLabel: '\$10.00',
+            kind: SupportPackageKind.monthly,
+          ),
+        ],
+        summary: SupportHistorySummary(
+          supporterSince: DateTime(2026, 2, 14),
+          coffeeSupportCount: 2,
+          lunchSupportCount: 1,
+        ),
+      ),
+      supporter: const SupporterState.active(),
+    );
+
+    await tester.pumpWidget(_wrap(service));
+    final l = _localizations(tester);
+
+    final lunchBadgePosition = tester.getTopLeft(
+      find.text(l.supporterSummaryLunchCount(1)),
+    );
+    final drinkBadgePosition = tester.getTopLeft(
+      find.text(l.supporterSummaryCoffeeCount(2)),
+    );
+    expect(lunchBadgePosition.dx, lessThan(drinkBadgePosition.dx));
+
+    await tester.scrollUntilVisible(
+      find.text(l.supporterMonthlyTitle),
+      300,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(l.supporterMonthlyDescription), findsOneWidget);
+
+    final lunchCardPosition = tester.getTopLeft(
+      find.text(l.supporterLunchTitle),
+    );
+    final drinkCardPosition = tester.getTopLeft(
+      find.text(l.supporterCoffeeTitle),
+    );
+    expect(lunchCardPosition.dy, lessThan(drinkCardPosition.dy));
+  });
 }

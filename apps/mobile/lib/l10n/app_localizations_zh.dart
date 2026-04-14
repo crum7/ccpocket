@@ -1480,7 +1480,8 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get supporterMonthlyDescription => '如果你愿意持续支持，帮助这个应用继续改进，我会很开心。';
+  String get supporterMonthlyDescription =>
+      '如果你愿意持续支持，帮助这个应用继续改进，我会很开心。包含更换应用图标特典。';
 
   @override
   String get supporterCoffeeDescription => '如果你想请我喝一杯饮料，我会很感谢这份支持。';
@@ -1590,7 +1591,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterOneTimeGroupTitle => '单次支持';
 
   @override
-  String get supporterOneTimeGroupBody => '如果你愿意请我喝杯饮料或吃顿午餐，我会很感谢这份支持。';
+  String get supporterOneTimeGroupBody => '如果你愿意请我吃顿午餐或喝杯饮料，我会很感谢这份支持。';
 
   @override
   String get supporterPurchaseInfoTitle => '关于购买';

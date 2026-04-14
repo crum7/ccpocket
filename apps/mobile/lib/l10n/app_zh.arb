@@ -777,7 +777,7 @@
       "date": { "type": "String" }
     }
   },
-  "supporterMonthlyDescription": "如果你愿意持续支持，帮助这个应用继续改进，我会很开心。",
+  "supporterMonthlyDescription": "如果你愿意持续支持，帮助这个应用继续改进，我会很开心。包含更换应用图标特典。",
   "supporterCoffeeDescription": "如果你想请我喝一杯饮料，我会很感谢这份支持。",
   "supporterLunchDescription": "如果你想请我吃一顿午餐，我会很感谢这份支持。",
   "supporterBuyButton": "支持",
@@ -839,7 +839,7 @@
   "supporterSubscriptionGroupTitle": "每月支持",
   "supporterSubscriptionGroupBody": "如果你愿意持续支持，我会很感谢。",
   "supporterOneTimeGroupTitle": "单次支持",
-  "supporterOneTimeGroupBody": "如果你愿意请我喝杯饮料或吃顿午餐，我会很感谢这份支持。",
+  "supporterOneTimeGroupBody": "如果你愿意请我吃顿午餐或喝杯饮料，我会很感谢这份支持。",
   "supporterPurchaseInfoTitle": "关于购买",
   "supporterPurchaseInfoBody": "恢复购买仅适用于相同的 Apple ID 或 Google 账号。iOS 与 Android 之间的支持状态不会互通。",
   "supporterPurchaseInfoLink": "了解更多",
