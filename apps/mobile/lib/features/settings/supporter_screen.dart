@@ -781,12 +781,18 @@ class _SupportPackageTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  _descriptionForPackage(l, package),
-                  style: textTheme.bodySmall,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                if (package.kind == SupportPackageKind.monthly)
+                  _MonthlySupportDescription(
+                    description: l.supporterMonthlyDescription,
+                    perkLabel: l.supporterMonthlyPerkLabel,
+                  )
+                else
+                  Text(
+                    _descriptionForPackage(l, package),
+                    style: textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 const SizedBox(height: 10),
                 Text(
                   package.priceLabel,
@@ -860,6 +866,45 @@ class _SupportPackageTile extends StatelessWidget {
       case SupportPackageKind.other:
         return package.title;
     }
+  }
+}
+
+class _MonthlySupportDescription extends StatelessWidget {
+  const _MonthlySupportDescription({
+    required this.description,
+    required this.perkLabel,
+  });
+
+  final String description;
+  final String perkLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          description,
+          style: textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          perkLabel,
+          style: textTheme.labelMedium?.copyWith(
+            color: cs.primary,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.1,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
   }
 }
 

@@ -1047,10 +1047,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get appIconOptionLightOutlineSubtitle => '軽やかなラインが映える明るめのバリエーション。';
 
   @override
-  String get appIconOptionCopperEmeraldTitle => 'メタル';
+  String get appIconOptionCopperEmeraldTitle => 'メタリック';
 
   @override
-  String get appIconOptionCopperEmeraldSubtitle => 'メタリックな質感を強めた特別版。';
+  String get appIconOptionCopperEmeraldSubtitle => '光沢感のある特別版。';
 
   @override
   String get language => '言語';
@@ -1496,7 +1496,10 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get supporterMonthlyDescription => '継続的な開発を後押し。アプリアイコン変更特典つき';
+  String get supporterMonthlyDescription => '継続的な開発を後押し';
+
+  @override
+  String get supporterMonthlyPerkLabel => 'アプリアイコン変更特典付き';
 
   @override
   String get supporterCoffeeDescription => 'ドリンクを1杯おごる';

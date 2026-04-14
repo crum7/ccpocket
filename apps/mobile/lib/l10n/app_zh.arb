@@ -487,8 +487,8 @@
   "appIconOptionDefaultSubtitle": "标准的 CC Pocket 图标。",
   "appIconOptionLightOutlineTitle": "浅色",
   "appIconOptionLightOutlineSubtitle": "线条更轻盈、更明亮的版本。",
-  "appIconOptionCopperEmeraldTitle": "金属",
-  "appIconOptionCopperEmeraldSubtitle": "强调金属质感的特别版。",
+  "appIconOptionCopperEmeraldTitle": "金属感",
+  "appIconOptionCopperEmeraldSubtitle": "带有光泽感的特别版。",
   "language": "语言",
   "languageSystem": "跟随系统",
   "voiceInput": "语音输入",
@@ -777,7 +777,8 @@
       "date": { "type": "String" }
     }
   },
-  "supporterMonthlyDescription": "如果你愿意持续支持，帮助这个应用继续改进，我会很开心。包含更换应用图标特典。",
+  "supporterMonthlyDescription": "如果你愿意持续支持，帮助这个应用继续改进，我会很开心。",
+  "supporterMonthlyPerkLabel": "包含更换应用图标特典",
   "supporterCoffeeDescription": "如果你想请我喝一杯饮料，我会很感谢这份支持。",
   "supporterLunchDescription": "如果你想请我吃一顿午餐，我会很感谢这份支持。",
   "supporterBuyButton": "支持",

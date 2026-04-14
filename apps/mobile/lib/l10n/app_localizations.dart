@@ -2047,13 +2047,13 @@ abstract class AppLocalizations {
   /// No description provided for @appIconOptionCopperEmeraldTitle.
   ///
   /// In ja, this message translates to:
-  /// **'メタル'**
+  /// **'メタリック'**
   String get appIconOptionCopperEmeraldTitle;
 
   /// No description provided for @appIconOptionCopperEmeraldSubtitle.
   ///
   /// In ja, this message translates to:
-  /// **'メタリックな質感を強めた特別版。'**
+  /// **'光沢感のある特別版。'**
   String get appIconOptionCopperEmeraldSubtitle;
 
   /// No description provided for @language.
@@ -2887,8 +2887,14 @@ abstract class AppLocalizations {
   /// No description provided for @supporterMonthlyDescription.
   ///
   /// In ja, this message translates to:
-  /// **'継続的な開発を後押し。アプリアイコン変更特典つき'**
+  /// **'継続的な開発を後押し'**
   String get supporterMonthlyDescription;
+
+  /// No description provided for @supporterMonthlyPerkLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリアイコン変更特典付き'**
+  String get supporterMonthlyPerkLabel;
 
   /// No description provided for @supporterCoffeeDescription.
   ///

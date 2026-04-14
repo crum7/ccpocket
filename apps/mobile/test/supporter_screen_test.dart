@@ -160,6 +160,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(l.supporterMonthlyDescription), findsOneWidget);
+    expect(find.text(l.supporterMonthlyPerkLabel), findsOneWidget);
 
     final lunchCardPosition = tester.getTopLeft(
       find.text(l.supporterLunchTitle),

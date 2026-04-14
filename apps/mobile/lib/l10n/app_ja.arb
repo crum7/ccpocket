@@ -478,8 +478,8 @@
   "appIconOptionDefaultSubtitle": "通常の CC Pocket アイコンです。",
   "appIconOptionLightOutlineTitle": "ライト",
   "appIconOptionLightOutlineSubtitle": "軽やかなラインが映える明るめのバリエーション。",
-  "appIconOptionCopperEmeraldTitle": "メタル",
-  "appIconOptionCopperEmeraldSubtitle": "メタリックな質感を強めた特別版。",
+  "appIconOptionCopperEmeraldTitle": "メタリック",
+  "appIconOptionCopperEmeraldSubtitle": "光沢感のある特別版。",
   "language": "言語",
   "languageSystem": "端末の設定に従う",
   "voiceInput": "音声入力",
@@ -695,7 +695,8 @@
       "date": { "type": "String" }
     }
   },
-  "supporterMonthlyDescription": "継続的な開発を後押し。アプリアイコン変更特典つき",
+  "supporterMonthlyDescription": "継続的な開発を後押し",
+  "supporterMonthlyPerkLabel": "アプリアイコン変更特典付き",
   "supporterCoffeeDescription": "ドリンクを1杯おごる",
   "supporterLunchDescription": "ランチを1食おごる",
   "supporterBuyButton": "応援する",

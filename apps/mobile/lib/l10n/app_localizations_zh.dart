@@ -1035,10 +1035,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appIconOptionLightOutlineSubtitle => '线条更轻盈、更明亮的版本。';
 
   @override
-  String get appIconOptionCopperEmeraldTitle => '金属';
+  String get appIconOptionCopperEmeraldTitle => '金属感';
 
   @override
-  String get appIconOptionCopperEmeraldSubtitle => '强调金属质感的特别版。';
+  String get appIconOptionCopperEmeraldSubtitle => '带有光泽感的特别版。';
 
   @override
   String get language => '语言';
@@ -1480,8 +1480,10 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get supporterMonthlyDescription =>
-      '如果你愿意持续支持，帮助这个应用继续改进，我会很开心。包含更换应用图标特典。';
+  String get supporterMonthlyDescription => '如果你愿意持续支持，帮助这个应用继续改进，我会很开心。';
+
+  @override
+  String get supporterMonthlyPerkLabel => '包含更换应用图标特典';
 
   @override
   String get supporterCoffeeDescription => '如果你想请我喝一杯饮料，我会很感谢这份支持。';

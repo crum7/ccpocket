@@ -53,7 +53,7 @@ void main() {
       );
       expect(find.text('月額Supporter特典'), findsOneWidget);
       expect(find.text('ライト'), findsOneWidget);
-      expect(find.text('メタル'), findsOneWidget);
+      expect(find.text('メタリック'), findsOneWidget);
     });
 
     testWidgets('non-supporter tap opens supporter flow for locked icons', (

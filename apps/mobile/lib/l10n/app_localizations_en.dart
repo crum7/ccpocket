@@ -1091,11 +1091,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'A brighter variation with a lighter outline.';
 
   @override
-  String get appIconOptionCopperEmeraldTitle => 'Metal';
+  String get appIconOptionCopperEmeraldTitle => 'Metallic';
 
   @override
   String get appIconOptionCopperEmeraldSubtitle =>
-      'A special edition with a stronger metallic finish.';
+      'A special edition with a glossy finish.';
 
   @override
   String get language => 'Language';
@@ -1548,7 +1548,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get supporterMonthlyDescription =>
-      'Ongoing support to keep the app improving, plus alternate app icon perks.';
+      'Ongoing support to keep the app improving.';
+
+  @override
+  String get supporterMonthlyPerkLabel => 'Includes alternate app icon perks';
 
   @override
   String get supporterCoffeeDescription =>
