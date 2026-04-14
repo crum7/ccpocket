@@ -616,7 +616,9 @@ class _SupportSummaryContent extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _SupportSummaryStat(
-                    label: l.supporterSummaryStreakLabel,
+                    label: state.isSupporter
+                        ? l.supporterSummaryOngoingLabel
+                        : l.supporterSummarySupportPeriodLabel,
                     value: _formatSupportDuration(
                       l,
                       summary.supporterSince!,

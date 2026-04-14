@@ -129,8 +129,43 @@ void main() {
 
     expect(find.text(l.supporterSummaryTitle), findsOneWidget);
     expect(find.text(l.supporterImpactTitle), findsOneWidget);
+    expect(find.text(l.supporterSummaryOngoingLabel), findsOneWidget);
     expect(find.text(l.supporterSummaryCoffeeCount(3)), findsOneWidget);
     expect(find.text(l.supporterSummaryLunchCount(1)), findsOneWidget);
+  });
+
+  testWidgets('shows support period label for former subscribers', (
+    tester,
+  ) async {
+    final service = FakeRevenueCatService(
+      catalog: SupportCatalogState(
+        isAvailable: true,
+        isLoading: false,
+        isSupporter: false,
+        packages: const [
+          SupportPackage(
+            id: r'$rc_monthly',
+            productId: 'supporter_monthly_10',
+            title: 'Monthly',
+            priceLabel: '\$9.99',
+            kind: SupportPackageKind.monthly,
+          ),
+        ],
+        summary: SupportHistorySummary(
+          supporterSince: DateTime(2026, 2, 14),
+          oneTimeSupportCount: 2,
+          coffeeSupportCount: 1,
+        ),
+      ),
+      supporter: const SupporterState.inactive(),
+    );
+
+    await tester.pumpWidget(_wrap(service));
+    final l = _localizations(tester);
+
+    expect(find.text(l.supporterSummaryTitle), findsOneWidget);
+    expect(find.text(l.supporterSummarySupportPeriodLabel), findsOneWidget);
+    expect(find.text(l.supporterSummaryOngoingLabel), findsNothing);
   });
 
   testWidgets('orders lunch before drink and shows monthly icon perk copy', (

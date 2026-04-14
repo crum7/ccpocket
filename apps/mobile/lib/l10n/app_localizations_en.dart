@@ -1668,6 +1668,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supporterSummaryStreakLabel => 'Active for';
 
   @override
+  String get supporterSummaryOngoingLabel => 'Supporting';
+
+  @override
+  String get supporterSummarySupportPeriodLabel => 'Support period';
+
+  @override
   String get supporterImpactTitle => 'What support helps make possible';
 
   @override

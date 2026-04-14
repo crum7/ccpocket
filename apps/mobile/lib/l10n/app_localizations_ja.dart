@@ -1606,6 +1606,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterSummaryStreakLabel => '継続';
 
   @override
+  String get supporterSummaryOngoingLabel => '継続中';
+
+  @override
+  String get supporterSummarySupportPeriodLabel => '応援期間';
+
+  @override
   String get supporterImpactTitle => '応援でできること';
 
   @override

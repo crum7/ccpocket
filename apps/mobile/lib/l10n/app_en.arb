@@ -699,6 +699,8 @@
   },
   "supporterSummarySinceLabel": "Started",
   "supporterSummaryStreakLabel": "Active for",
+  "supporterSummaryOngoingLabel": "Supporting",
+  "supporterSummarySupportPeriodLabel": "Support period",
   "supporterImpactTitle": "What support helps make possible",
   "supporterImpactBody": "If you like CC Pocket, I'd really appreciate your support for ongoing development. The app will continue as free OSS.",
   "supporterImpactAiTitle": "Development and operating costs",

@@ -3076,6 +3076,18 @@ abstract class AppLocalizations {
   /// **'継続'**
   String get supporterSummaryStreakLabel;
 
+  /// No description provided for @supporterSummaryOngoingLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'継続中'**
+  String get supporterSummaryOngoingLabel;
+
+  /// No description provided for @supporterSummarySupportPeriodLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'応援期間'**
+  String get supporterSummarySupportPeriodLabel;
+
   /// No description provided for @supporterImpactTitle.
   ///
   /// In ja, this message translates to:

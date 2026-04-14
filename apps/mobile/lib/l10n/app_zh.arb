@@ -839,6 +839,8 @@
   },
   "supporterSummarySinceLabel": "开始支持",
   "supporterSummaryStreakLabel": "持续时间",
+  "supporterSummaryOngoingLabel": "支持中",
+  "supporterSummarySupportPeriodLabel": "支持期间",
   "supporterImpactTitle": "支持能带来什么",
   "supporterImpactBody": "如果你喜欢 CC Pocket，愿意支持持续开发的话我会很开心。这个应用会继续作为免费的 OSS 提供。",
   "supporterImpactAiTitle": "开发与维护成本",

@@ -757,6 +757,8 @@
   },
   "supporterSummarySinceLabel": "応援開始",
   "supporterSummaryStreakLabel": "継続",
+  "supporterSummaryOngoingLabel": "継続中",
+  "supporterSummarySupportPeriodLabel": "応援期間",
   "supporterImpactTitle": "応援でできること",
   "supporterImpactBody": "CC Pocket が気に入ったら、継続開発を応援してもらえるとうれしいです。アプリはこれからも無料の OSS として続けていきます。",
   "supporterImpactAiTitle": "開発と運用のコスト",

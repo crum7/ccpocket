@@ -1589,6 +1589,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterSummaryStreakLabel => '持续时间';
 
   @override
+  String get supporterSummaryOngoingLabel => '支持中';
+
+  @override
+  String get supporterSummarySupportPeriodLabel => '支持期间';
+
+  @override
   String get supporterImpactTitle => '支持能带来什么';
 
   @override
