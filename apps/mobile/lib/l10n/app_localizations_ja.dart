@@ -1026,13 +1026,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get appIconTitle => 'アプリアイコン';
 
   @override
-  String get appIconMonthlySupporterPerk => '月額Supporter特典です。';
+  String get appIconMonthlySupporterPerk => '月額サポーター特典です。';
 
   @override
-  String get appIconSupporterDialogTitle => '月額Supporter特典';
+  String get appIconSupporterDialogTitle => '月額サポーター特典';
 
   @override
-  String get appIconSupporterSectionLabel => '月額Supporter特典';
+  String get appIconSupporterSectionLabel => '月額サポーター特典';
 
   @override
   String get appIconPickerTitle => 'アプリアイコンを選ぶ';

@@ -2005,19 +2005,19 @@ abstract class AppLocalizations {
   /// No description provided for @appIconMonthlySupporterPerk.
   ///
   /// In ja, this message translates to:
-  /// **'月額Supporter特典です。'**
+  /// **'月額サポーター特典です。'**
   String get appIconMonthlySupporterPerk;
 
   /// No description provided for @appIconSupporterDialogTitle.
   ///
   /// In ja, this message translates to:
-  /// **'月額Supporter特典'**
+  /// **'月額サポーター特典'**
   String get appIconSupporterDialogTitle;
 
   /// No description provided for @appIconSupporterSectionLabel.
   ///
   /// In ja, this message translates to:
-  /// **'月額Supporter特典'**
+  /// **'月額サポーター特典'**
   String get appIconSupporterSectionLabel;
 
   /// No description provided for @appIconPickerTitle.
