@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.61.1] - 2026-04-15
+
+### Fixed
+- Keep Support and App Icon settings visible without an active Bridge connection
+
 ## [1.61.0] - 2026-04-14
 
 ### Added
