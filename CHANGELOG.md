@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.61.0] - 2026-04-14
+
+### Added
+- Add Supporter purchases with one-time and monthly support flows via RevenueCat
+- Add a dedicated Support screen with purchase actions, restore, and support history summaries
+- Add alternate app icon selection as a Monthly Supporter perk on iOS and Android
+- Add localized supporter documentation and Apple review checklist for purchase submission
+
+### Changed
+- Refine supporter copy, labels, and package presentation across settings and purchase flows
+- Update support wording from Coffee to Drink to match the current product presentation
+
 ## [1.60.0] - 2026-04-11
 
 ### Added
