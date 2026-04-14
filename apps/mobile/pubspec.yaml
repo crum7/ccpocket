@@ -123,6 +123,9 @@ flutter:
   uses-material-design: true
   assets:
     - shorebird.yaml
+    - assets/icon.png
+    - assets/icon_light_outline.png
+    - assets/icon_pro_copper_emerald.png
     - assets/docs/
 
   # To add assets to your application, add an assets section, like this:

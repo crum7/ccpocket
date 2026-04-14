@@ -1005,6 +1005,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get themeDark => '深色';
 
   @override
+  String get appIconTitle => '应用图标';
+
+  @override
+  String get appIconMonthlySupporterPerk => '这是月度 Supporter 特典。';
+
+  @override
+  String get appIconSupporterDialogTitle => '月度 Supporter 特典';
+
+  @override
+  String get appIconSupporterSectionLabel => '月度 Supporter 特典';
+
+  @override
+  String get appIconPickerTitle => '选择应用图标';
+
+  @override
+  String get appIconPickerSubtitle => '可以选择主屏幕上显示的图标。';
+
+  @override
+  String get appIconOptionDefaultTitle => '深色';
+
+  @override
+  String get appIconOptionDefaultSubtitle => '标准的 CC Pocket 图标。';
+
+  @override
+  String get appIconOptionLightOutlineTitle => '浅色';
+
+  @override
+  String get appIconOptionLightOutlineSubtitle => '线条更轻盈、更明亮的版本。';
+
+  @override
+  String get appIconOptionCopperEmeraldTitle => '金属';
+
+  @override
+  String get appIconOptionCopperEmeraldSubtitle => '强调金属质感的特别版。';
+
+  @override
   String get language => '语言';
 
   @override

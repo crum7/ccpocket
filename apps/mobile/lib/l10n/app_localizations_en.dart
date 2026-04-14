@@ -1059,6 +1059,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get themeDark => 'Dark';
 
   @override
+  String get appIconTitle => 'App Icon';
+
+  @override
+  String get appIconMonthlySupporterPerk => 'This is a Monthly Supporter perk.';
+
+  @override
+  String get appIconSupporterDialogTitle => 'Monthly Supporter Perk';
+
+  @override
+  String get appIconSupporterSectionLabel => 'Monthly Supporter Perk';
+
+  @override
+  String get appIconPickerTitle => 'Choose app icon';
+
+  @override
+  String get appIconPickerSubtitle =>
+      'Pick the icon shown on your home screen.';
+
+  @override
+  String get appIconOptionDefaultTitle => 'Dark';
+
+  @override
+  String get appIconOptionDefaultSubtitle => 'The standard CC Pocket icon.';
+
+  @override
+  String get appIconOptionLightOutlineTitle => 'Light';
+
+  @override
+  String get appIconOptionLightOutlineSubtitle =>
+      'A brighter variation with a lighter outline.';
+
+  @override
+  String get appIconOptionCopperEmeraldTitle => 'Metal';
+
+  @override
+  String get appIconOptionCopperEmeraldSubtitle =>
+      'A special edition with a stronger metallic finish.';
+
+  @override
   String get language => 'Language';
 
   @override

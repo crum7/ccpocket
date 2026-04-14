@@ -165,6 +165,7 @@ void main() {
 
         expect(find.text('USAGE'), findsNothing);
         expect(find.byKey(const ValueKey('codex_usage_card')), findsNothing);
+        expect(find.byKey(const ValueKey('app_icon_tile')), findsNothing);
 
         await settingsCubit.close();
         await machineManagerCubit.close();
@@ -209,6 +210,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+
+      expect(find.byKey(const ValueKey('app_icon_tile')), findsOneWidget);
+
       await tester.scrollUntilVisible(
         find.byKey(const ValueKey('codex_usage_card')),
         300,

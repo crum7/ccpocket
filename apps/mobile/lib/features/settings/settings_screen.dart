@@ -13,6 +13,7 @@ import '../../constants/app_constants.dart';
 import '../../constants/feature_flags.dart';
 import '../../services/app_update_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/app_icon.dart';
 import '../../providers/machine_manager_cubit.dart';
 import '../../router/app_router.dart';
 import '../../services/bridge_service.dart';
@@ -21,6 +22,7 @@ import '../../services/revenuecat_service.dart';
 import '../../models/machine.dart';
 import 'state/settings_cubit.dart';
 import 'state/settings_state.dart';
+import 'widgets/app_icon_bottom_sheet.dart';
 import 'widgets/app_locale_bottom_sheet.dart';
 import 'widgets/support_section.dart';
 
@@ -107,6 +109,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             context.read<SettingsCubit>().setThemeMode(mode),
                       ),
                     ),
+                    if (isConnected && state.appIconSupported) ...[
+                      Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: cs.outlineVariant,
+                      ),
+                      ValueListenableBuilder<SupporterState>(
+                        valueListenable: revenueCat.supporterState,
+                        builder: (context, supporterState, _) {
+                          return ListTile(
+                            key: const ValueKey('app_icon_tile'),
+                            leading: Icon(
+                              Icons.apps_outlined,
+                              color: cs.primary,
+                            ),
+                            title: Text(l.appIconTitle),
+                            subtitle: Text(
+                              _getAppIconSubtitle(
+                                context,
+                                selectedIcon: state.selectedAppIcon,
+                                isSupporter: supporterState.isSupporter,
+                              ),
+                            ),
+                            trailing: const Icon(Icons.chevron_right, size: 20),
+                            onTap: () async {
+                              if (!context.mounted) return;
+                              await showAppIconBottomSheet(
+                                context: context,
+                                current: state.selectedAppIcon,
+                                isSupporter: supporterState.isSupporter,
+                                onChanged: (icon) => context
+                                    .read<SettingsCubit>()
+                                    .setSelectedAppIcon(icon),
+                                onSupporterRequired: () =>
+                                    _openSupporterPerk(context),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ],
                     Divider(
                       height: 1,
                       indent: 16,
@@ -564,6 +608,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case ThemeMode.dark:
         return l.themeDark;
     }
+  }
+
+  static String _getAppIconSubtitle(
+    BuildContext context, {
+    required AppIconVariant selectedIcon,
+    required bool isSupporter,
+  }) {
+    final l = AppLocalizations.of(context);
+    if (!isSupporter) {
+      return l.appIconMonthlySupporterPerk;
+    }
+    return switch (selectedIcon) {
+      AppIconVariant.defaultIcon => l.appIconOptionDefaultTitle,
+      AppIconVariant.lightOutline => l.appIconOptionLightOutlineTitle,
+      AppIconVariant.proCopperEmerald => l.appIconOptionCopperEmeraldTitle,
+    };
+  }
+
+  static void _openSupporterPerk(BuildContext context) {
+    context.pushRoute(const SupporterRoute());
   }
 
   Machine? _activeMachine(BuildContext context, String? activeMachineId) {

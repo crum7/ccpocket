@@ -1984,6 +1984,78 @@ abstract class AppLocalizations {
   /// **'ダーク'**
   String get themeDark;
 
+  /// No description provided for @appIconTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリアイコン'**
+  String get appIconTitle;
+
+  /// No description provided for @appIconMonthlySupporterPerk.
+  ///
+  /// In ja, this message translates to:
+  /// **'月額Supporter特典です。'**
+  String get appIconMonthlySupporterPerk;
+
+  /// No description provided for @appIconSupporterDialogTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'月額Supporter特典'**
+  String get appIconSupporterDialogTitle;
+
+  /// No description provided for @appIconSupporterSectionLabel.
+  ///
+  /// In ja, this message translates to:
+  /// **'月額Supporter特典'**
+  String get appIconSupporterSectionLabel;
+
+  /// No description provided for @appIconPickerTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'アプリアイコンを選ぶ'**
+  String get appIconPickerTitle;
+
+  /// No description provided for @appIconPickerSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ホーム画面に表示するアイコンを選べます。'**
+  String get appIconPickerSubtitle;
+
+  /// No description provided for @appIconOptionDefaultTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ダーク'**
+  String get appIconOptionDefaultTitle;
+
+  /// No description provided for @appIconOptionDefaultSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'通常の CC Pocket アイコンです。'**
+  String get appIconOptionDefaultSubtitle;
+
+  /// No description provided for @appIconOptionLightOutlineTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'ライト'**
+  String get appIconOptionLightOutlineTitle;
+
+  /// No description provided for @appIconOptionLightOutlineSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'軽やかなラインが映える明るめのバリエーション。'**
+  String get appIconOptionLightOutlineSubtitle;
+
+  /// No description provided for @appIconOptionCopperEmeraldTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'メタル'**
+  String get appIconOptionCopperEmeraldTitle;
+
+  /// No description provided for @appIconOptionCopperEmeraldSubtitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'メタリックな質感を強めた特別版。'**
+  String get appIconOptionCopperEmeraldSubtitle;
+
   /// No description provided for @language.
   ///
   /// In ja, this message translates to:
