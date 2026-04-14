@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.61.2] - 2026-04-15
+
+### Fixed
+- Restore the Support section position so it appears just above Spread in Settings
+
 ## [1.61.1] - 2026-04-15
 
 ### Fixed
