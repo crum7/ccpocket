@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.61.3] - 2026-04-15
+
+### Fixed
+- Add Privacy Policy and Apple Standard EULA links to the Support purchase flow and metadata
+
 ## [1.61.2] - 2026-04-15
 
 ### Fixed
