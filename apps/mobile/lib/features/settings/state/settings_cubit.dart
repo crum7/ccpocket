@@ -90,7 +90,9 @@ class SettingsCubit extends Cubit<SettingsState> {
       _supporterListener = _handleSupporterStateChanged;
       revenueCat.supporterState.addListener(_supporterListener!);
     }
-    unawaited(_initializePush());
+    if (state.fcmEnabledMachines.isNotEmpty) {
+      unawaited(_initializePush());
+    }
     unawaited(_initializeAppIconSupport());
     unawaited(_syncAppIcon(force: true));
   }

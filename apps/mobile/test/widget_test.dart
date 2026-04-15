@@ -9,12 +9,14 @@ import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/providers/bridge_cubits.dart';
 import 'package:ccpocket/providers/server_discovery_cubit.dart';
 import 'package:ccpocket/services/bridge_service.dart';
+import 'package:ccpocket/services/fcm_service.dart';
 
 void main() {
   testWidgets('Initial screen shows connect UI', (WidgetTester tester) async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final bridge = BridgeService();
+    final fcmService = FcmService();
 
     await tester.pumpWidget(
       RepositoryProvider<BridgeService>.value(
@@ -51,7 +53,7 @@ void main() {
                   SessionListCubit(bridge: ctx.read<BridgeService>()),
             ),
           ],
-          child: const CcpocketApp(),
+          child: CcpocketApp(fcmService: fcmService),
         ),
       ),
     );

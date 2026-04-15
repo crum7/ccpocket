@@ -42,6 +42,7 @@ import 'services/bridge_service.dart';
 import 'services/connection_url_parser.dart';
 import 'services/database_service.dart';
 import 'services/draft_service.dart';
+import 'services/fcm_service.dart';
 import 'services/in_app_review_service.dart';
 import 'services/machine_manager_service.dart';
 import 'services/notification_service.dart';
@@ -96,11 +97,6 @@ void main() async {
       details.stack,
     );
   };
-  // Register FCM background message handler (must be before any FCM usage)
-  if (!kIsWeb) {
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  }
-
   // Initialize notifications eagerly so the Android notification channel is
   // created before any FCM message arrives. Without this, FCM falls back to
   // the low-importance fcm_fallback_notification_channel and notifications
@@ -134,6 +130,7 @@ void main() async {
   }
 
   final bridge = BridgeService();
+  final fcmService = FcmService();
   final draftService = DraftService(prefs);
   final inAppReviewService = InAppReviewService(prefs: prefs);
   await inAppReviewService.attachToBridge(bridge);
@@ -206,19 +203,22 @@ void main() async {
               prefs,
               bridgeService: bridge,
               machineManager: machineManagerService,
+              fcmService: fcmService,
               revenueCatService: revenueCatService,
               appIconService: appIconService,
             ),
           ),
         ],
-        child: const CcpocketApp(),
+        child: CcpocketApp(fcmService: fcmService),
       ),
     ),
   );
 }
 
 class CcpocketApp extends StatefulWidget {
-  const CcpocketApp({super.key});
+  const CcpocketApp({required this.fcmService, super.key});
+
+  final FcmService fcmService;
 
   @override
   State<CcpocketApp> createState() => _CcpocketAppState();
@@ -266,19 +266,15 @@ class _CcpocketAppState extends State<CcpocketApp> {
     NotificationService.instance.onNotificationTap = (payload) {
       _openSessionFromPayload(payload);
     };
-    _initFcmHandlers();
   }
 
   void _initFcmHandlers() {
-    if (kIsWeb || _fcmHandlersInitialized) return;
-    try {
-      // Firebase may be unavailable in widget tests or non-FCM setups.
-      FirebaseMessaging.instance;
-    } catch (e) {
-      logger.warning('[fcm] handlers skipped: Firebase not initialized ($e)');
+    if (kIsWeb || _fcmHandlersInitialized || !widget.fcmService.isAvailable) {
       return;
     }
     _fcmHandlersInitialized = true;
+
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
     _fcmOnMessageSub = FirebaseMessaging.onMessage.listen((message) {
       _handleForegroundFcmMessage(message);
@@ -423,6 +419,9 @@ class _CcpocketAppState extends State<CcpocketApp> {
 
     return BlocBuilder<SettingsCubit, SettingsState>(
       builder: (context, settings) {
+        if (settings.fcmEnabledMachines.isNotEmpty && settings.fcmAvailable) {
+          _initFcmHandlers();
+        }
         return MaterialApp.router(
           title: 'CC Pocket',
           theme: AppTheme.lightTheme,
