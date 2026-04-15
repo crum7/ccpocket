@@ -991,7 +991,7 @@ abstract class AppLocalizations {
   /// No description provided for @sheetSubtitleSandboxClaude.
   ///
   /// In ja, this message translates to:
-  /// **'Claude Code はデフォルトでネイティブ実行です。Sandbox を有効にするとアクセスが制限されます。'**
+  /// **'Claude はデフォルトでネイティブ実行です。Sandbox を有効にするとアクセスが制限されます。'**
   String get sheetSubtitleSandboxClaude;
 
   /// No description provided for @sheetSubtitleModel.
@@ -1429,7 +1429,7 @@ abstract class AppLocalizations {
   /// No description provided for @guideAboutDescription.
   ///
   /// In ja, this message translates to:
-  /// **'スマートフォンから Claude Code や Codex を操作できるモバイルクライアントです。'**
+  /// **'スマートフォンから Claude や Codex を操作できるモバイルクライアントです。'**
   String get guideAboutDescription;
 
   /// No description provided for @guideAboutDiagramTitle.
@@ -2389,7 +2389,7 @@ abstract class AppLocalizations {
   /// No description provided for @newSessionTabClaudeCode.
   ///
   /// In ja, this message translates to:
-  /// **'Claude Code'**
+  /// **'Claude'**
   String get newSessionTabClaudeCode;
 
   /// No description provided for @usageResetAt.
@@ -2671,13 +2671,13 @@ abstract class AppLocalizations {
   /// No description provided for @authErrorTitle.
   ///
   /// In ja, this message translates to:
-  /// **'Claude Codeの再ログインが必要です'**
+  /// **'Claudeの再ログインが必要です'**
   String get authErrorTitle;
 
   /// No description provided for @authErrorBody.
   ///
   /// In ja, this message translates to:
-  /// **'BridgeマシンでClaude Codeを起動し、再ログインしてください。'**
+  /// **'BridgeマシンでClaudeに再ログインしてください。'**
   String get authErrorBody;
 
   /// No description provided for @authErrorPrimaryCommandLabel.
@@ -2707,7 +2707,7 @@ abstract class AppLocalizations {
   /// No description provided for @apiKeyRequiredBody.
   ///
   /// In ja, this message translates to:
-  /// **'サブスクリプション認証は規約上の懸念から現在制限されています。APIキーをご利用ください。'**
+  /// **'Anthropic の現行 Claude Agent SDK ドキュメントでは、サードパーティ製品で Claude のサブスクリプションログインを使うことは許可されていません。APIキーをご利用ください。'**
   String get apiKeyRequiredBody;
 
   /// No description provided for @apiKeyRequiredHint.
@@ -2851,7 +2851,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareText.
   ///
   /// In ja, this message translates to:
-  /// **'CC Pocket: Claude Code & Codex\nスマホからコーディングエージェントを操作できるアプリ 📱\n#ccpocket\n{url}'**
+  /// **'CC Pocket: Claude & Codex\nスマホからコーディングエージェントを操作できるアプリ 📱\n#ccpocket\n{url}'**
   String shareText(String url);
 
   /// No description provided for @starOnGithub.

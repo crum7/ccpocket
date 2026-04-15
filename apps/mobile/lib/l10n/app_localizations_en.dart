@@ -482,7 +482,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sheetSubtitleSandboxClaude =>
-      'Claude Code runs natively by default. Enabling sandbox restricts access.';
+      'Claude runs natively by default. Enabling sandbox restricts access.';
 
   @override
   String get sheetSubtitleModel =>
@@ -756,7 +756,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guideAboutDescription =>
-      'A mobile client that lets you control Claude Code and Codex from your smartphone.';
+      'A mobile client that lets you control Claude and Codex from your smartphone.';
 
   @override
   String get guideAboutDiagramTitle => 'How it works';
@@ -1276,7 +1276,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newSessionTabCodex => 'Codex';
 
   @override
-  String get newSessionTabClaudeCode => 'Claude Code';
+  String get newSessionTabClaudeCode => 'Claude';
 
   @override
   String usageResetAt(String time) {
@@ -1435,7 +1435,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authErrorBody =>
-      'Claude Code needs to sign in again on the Bridge machine.';
+      'Claude needs to sign in again on the Bridge machine.';
 
   @override
   String get authErrorPrimaryCommandLabel => 'Step 1';
@@ -1451,7 +1451,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get apiKeyRequiredBody =>
-      'Subscription-based authentication is currently restricted due to Anthropic policy concerns. Please use an API key instead.';
+      'Anthropic\'s current Claude Agent SDK docs do not permit third-party products to use Claude subscription login. Please use an API key instead.';
 
   @override
   String get apiKeyRequiredHint => 'Get your API key at:';
@@ -1526,7 +1526,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String shareText(String url) {
-    return 'CC Pocket: Claude Code & Codex\nControl your coding agent from your phone 📱\n#ccpocket\n$url';
+    return 'CC Pocket: Claude & Codex\nControl your coding agent from your phone 📱\n#ccpocket\n$url';
   }
 
   @override

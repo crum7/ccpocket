@@ -10,11 +10,6 @@ import {
   type ProcessStatus,
   type PermissionMode,
 } from "./parser.js";
-import {
-  getClaudeAuthStatus,
-  getValidClaudeAccessToken,
-  validateClaudeAccessToken,
-} from "./usage.js";
 
 // Tools that are auto-approved in acceptEdits mode
 export const ACCEPT_EDITS_AUTO_APPROVE = new Set([
@@ -182,15 +177,17 @@ async function checkClaudeAuth(): Promise<AuthCheckResult> {
     return { authenticated: true };
   }
 
-  // Subscription (OAuth) authentication is temporarily disabled pending
-  // official clarification from Anthropic on third-party SDK usage policy.
-  // See: https://code.claude.com/docs/en/legal-and-compliance
+  // Subscription (OAuth) authentication is disabled for third-party app usage.
+  // Current Anthropic docs still require API key auth for third-party products
+  // using the Claude Agent SDK. See:
+  // - https://code.claude.com/docs/en/agent-sdk
+  // - https://code.claude.com/docs/en/legal-and-compliance
   //
   // Users should set ANTHROPIC_API_KEY instead.
   return {
     authenticated: false,
     errorCode: "auth_api_error",
-    message: "⚠ API key required\n\nSubscription-based authentication is temporarily unavailable while we await policy clarification from Anthropic.\n\nPlease set the ANTHROPIC_API_KEY environment variable on the Bridge machine.\nhttps://console.anthropic.com/settings/keys",
+    message: "⚠ API key required\n\nAnthropic's current Claude Agent SDK docs do not permit third-party products to use Claude subscription login. Please set the ANTHROPIC_API_KEY environment variable on the Bridge machine instead.\n\nhttps://console.anthropic.com/settings/keys",
   };
 }
 
@@ -989,13 +986,14 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
       // Extract session ID and model from system/init
       if (message.type === "system" && "subtype" in message && (message as Record<string, unknown>).subtype === "init") {
         // Guard: reject OAuth authentication even if SDK accepted it.
-        // API key (ANTHROPIC_API_KEY) is the only allowed auth source.
+        // API key (ANTHROPIC_API_KEY) is the only allowed auth source for
+        // this third-party app under the current Anthropic docs.
         const apiKeySource = (message as Record<string, unknown>).apiKeySource;
         if (apiKeySource === "oauth") {
           console.log("[sdk-process] Rejected OAuth auth source at runtime");
           this.emitMessage({
             type: "error",
-            message: "⚠ API key required\n\nOAuth (subscription) authentication is not permitted. Please set the ANTHROPIC_API_KEY environment variable on the Bridge machine.\nhttps://console.anthropic.com/settings/keys",
+            message: "⚠ API key required\n\nAnthropic's current Claude Agent SDK docs do not permit third-party products to use Claude subscription login. Please set the ANTHROPIC_API_KEY environment variable on the Bridge machine instead.\n\nhttps://console.anthropic.com/settings/keys",
             errorCode: "auth_api_error",
           });
           this.stop();

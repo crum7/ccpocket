@@ -76,10 +76,12 @@ npx @ccpocket/bridge@latest
 服务启动后会在终端中打印一个二维码，你可以直接在 App 里扫描并快速连接。
 
 > Warning
-> `@ccpocket/bridge` `1.25.0` 之前的版本因潜在的 Anthropic 政策问题（基于 OAuth 的使用方式）已不建议新安装使用。
+> `@ccpocket/bridge` `1.25.0` 之前的版本已不建议新安装使用，因为 Anthropic 当前的 Claude Agent SDK 文档不允许第三方产品使用 Claude 订阅登录。
 > 请使用 `>=1.25.0` 版本，并配置 `ANTHROPIC_API_KEY` 替代 OAuth。
 >
-> **重要提示：** 请通过 `ANTHROPIC_API_KEY` 环境变量设置 API 密钥，而不要通过 Claude CLI 中的 `/login` 设置。通过 `/login` 设置的密钥无法与订阅计划的凭证区分开来，可能会导致问题。
+> 截至 2026 年 4 月 15 日，Anthropic 的部分帮助页面看起来表示 Extra Usage / usage bundles 可能适用于使用 Claude 账号的第三方产品。CC Pocket 也希望如果 Agent SDK 正式允许这类用法，就移除当前的 OAuth 屏蔽；但已发布的 Claude Agent SDK 文档仍然禁止第三方产品提供 Claude 订阅登录。在这些文档口径统一之前，CC Pocket 会继续保留 OAuth 屏蔽，并遵循更严格的那份指引。
+>
+> **重要提示：** 请通过 `ANTHROPIC_API_KEY` 环境变量设置 API 密钥，而不要通过 Claude CLI 中的 `/login` 设置。通过 `/login` 设置的密钥无法与订阅计划凭证区分，这会与当前的第三方认证指引冲突。
 
 ### 2. 安装移动端 App
 

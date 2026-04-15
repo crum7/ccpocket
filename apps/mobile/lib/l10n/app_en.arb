@@ -169,7 +169,7 @@
 
   "sheetSubtitleApproval": "Controls which actions require your approval",
   "sheetSubtitleSandboxCodex": "Sandbox is on by default for safety. Disabling allows full system access.",
-  "sheetSubtitleSandboxClaude": "Claude Code runs natively by default. Enabling sandbox restricts access.",
+  "sheetSubtitleSandboxClaude": "Claude runs natively by default. Enabling sandbox restricts access.",
   "sheetSubtitleModel": "Different models vary in speed, capability, and cost.",
   "sheetSubtitleEffort": "Higher effort produces more thorough analysis but takes longer.",
 
@@ -307,7 +307,7 @@
   "setupGuideTitle": "Setup Guide",
 
   "guideAboutTitle": "What is CC Pocket?",
-  "guideAboutDescription": "A mobile client that lets you control Claude Code and Codex from your smartphone.",
+  "guideAboutDescription": "A mobile client that lets you control Claude and Codex from your smartphone.",
   "guideAboutDiagramTitle": "How it works",
   "guideAboutDiagramPhone": "iPhone",
   "guideAboutDiagramBridge": "Bridge Server",
@@ -503,7 +503,7 @@
   "settingsNewSessionTabs": "New Session Tabs",
   "settingsNewSessionTabsDescription": "Choose which AI tools appear for new sessions and change their order.",
   "newSessionTabCodex": "Codex",
-  "newSessionTabClaudeCode": "Claude Code",
+  "newSessionTabClaudeCode": "Claude",
   "usageResetAt": "Reset: {time}",
   "@usageResetAt": {
     "placeholders": {
@@ -589,12 +589,12 @@
   "showLess": "Show less",
 
   "authErrorTitle": "Claude login required",
-  "authErrorBody": "Claude Code needs to sign in again on the Bridge machine.",
+  "authErrorBody": "Claude needs to sign in again on the Bridge machine.",
   "authErrorPrimaryCommandLabel": "Step 1",
   "authErrorSecondaryCommandLabel": "Step 2",
   "authErrorAlternativeLabel": "Shell alternative",
   "apiKeyRequiredTitle": "API key required",
-  "apiKeyRequiredBody": "Subscription-based authentication is currently restricted due to Anthropic policy concerns. Please use an API key instead.",
+  "apiKeyRequiredBody": "Anthropic's current Claude Agent SDK docs do not permit third-party products to use Claude subscription login. Please use an API key instead.",
   "apiKeyRequiredHint": "Get your API key at:",
 
   "authHelpTitle": "Auth Troubleshooting",
@@ -621,7 +621,7 @@
   "sectionSpread": "ENJOYING CC POCKET?",
   "shareApp": "Share with Friends",
   "shareAppSubtitle": "Tell your friends & colleagues",
-  "shareText": "CC Pocket: Claude Code & Codex\nControl your coding agent from your phone \ud83d\udcf1\n#ccpocket\n{url}",
+  "shareText": "CC Pocket: Claude & Codex\nControl your coding agent from your phone \ud83d\udcf1\n#ccpocket\n{url}",
   "@shareText": {
     "placeholders": {
       "url": { "type": "String" }

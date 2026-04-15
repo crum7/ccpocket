@@ -252,7 +252,7 @@ class _ProviderUsageTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final providerLabel = info.provider == 'claude' ? 'Claude Code' : 'Codex';
+    final providerLabel = info.provider == 'claude' ? 'Claude' : 'Codex';
     final providerIcon = info.provider == 'claude'
         ? Icons.smart_toy_outlined
         : Icons.code;

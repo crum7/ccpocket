@@ -103,7 +103,7 @@ enum ProcessStatus {
 // ---- Provider ----
 
 enum Provider {
-  claude('claude', 'Claude Code'),
+  claude('claude', 'Claude'),
   codex('codex', 'Codex');
 
   final String value;

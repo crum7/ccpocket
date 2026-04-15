@@ -76,10 +76,12 @@ npx @ccpocket/bridge@latest
 ターミナルに QR コードが表示されます。アプリからスキャンすればすぐに接続できます。
 
 > Warning
-> `@ccpocket/bridge` バージョン `1.25.0` 未満は、Anthropic ポリシー上の懸念（OAuth ベースの利用）により、新規インストールでの使用は非推奨です。
+> `@ccpocket/bridge` バージョン `1.25.0` 未満は、Anthropic の現行 Claude Agent SDK ドキュメントではサードパーティ製品で Claude のサブスクリプションログインを許可していないため、新規インストールでの使用は非推奨です。
 > `>=1.25.0` を使用し、OAuth の代わりに `ANTHROPIC_API_KEY` を設定してください。
 >
-> **重要:** API キーは `ANTHROPIC_API_KEY` 環境変数で設定してください。Claude CLI 内の `/login` で設定したキーはサブスクリプションプランの認証と区別がつかないため、問題が発生する可能性があります。
+> 2026年4月15日時点では、Anthropic の一部 Help ページに「Extra Usage / usage bundles が Claude アカウントを使う third-party products にも適用されうる」と読める記述があります。CC Pocket としては、Agent SDK でもそれが正式に許可されるなら OAuth ブロックを外したいと考えていますが、公開中の Claude Agent SDK ドキュメントでは依然としてサードパーティ製品による Claude のサブスクリプションログイン提供が禁止されています。ドキュメント同士の整合が取れるまでは、より厳しいガイダンスを優先して OAuth ブロックを維持します。
+>
+> **重要:** API キーは `ANTHROPIC_API_KEY` 環境変数で設定してください。Claude CLI 内の `/login` で設定したキーはサブスクリプションプランの認証と区別がつかず、現行のサードパーティ認証ガイダンスと衝突します。
 
 ### 2. アプリをインストール
 
@@ -300,7 +302,6 @@ cd apps/mobile && flutter pub get && cd ../..
 | `DIFF_IMAGE_AUTO_DISPLAY_KB` | `1024` | 画像 diff の自動表示しきい値 |
 | `DIFF_IMAGE_MAX_SIZE_MB` | `5` | 画像 diff プレビューの最大サイズ |
 | `BRIDGE_DISABLE_MDNS` | 未設定 | mDNS 自動発見のアドバタイズメントを無効化 |
-| `BRIDGE_ENABLE_USAGE` | 未設定 | Claude の使用量取得を有効化。**Claude Agent SDK 外で Anthropic API に直接通信します。自己責任でご利用ください。** |
 
 ## ライセンス
 

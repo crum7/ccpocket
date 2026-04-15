@@ -473,7 +473,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get sheetSubtitleSandboxClaude =>
-      'Claude Code はデフォルトでネイティブ実行です。Sandbox を有効にするとアクセスが制限されます。';
+      'Claude はデフォルトでネイティブ実行です。Sandbox を有効にするとアクセスが制限されます。';
 
   @override
   String get sheetSubtitleModel => 'モデルによって速度・能力・コストが異なります。';
@@ -721,7 +721,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get guideAboutDescription =>
-      'スマートフォンから Claude Code や Codex を操作できるモバイルクライアントです。';
+      'スマートフォンから Claude や Codex を操作できるモバイルクライアントです。';
 
   @override
   String get guideAboutDiagramTitle => 'しくみ';
@@ -1228,7 +1228,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get newSessionTabCodex => 'Codex';
 
   @override
-  String get newSessionTabClaudeCode => 'Claude Code';
+  String get newSessionTabClaudeCode => 'Claude';
 
   @override
   String usageResetAt(String time) {
@@ -1382,10 +1382,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get showLess => '閉じる';
 
   @override
-  String get authErrorTitle => 'Claude Codeの再ログインが必要です';
+  String get authErrorTitle => 'Claudeの再ログインが必要です';
 
   @override
-  String get authErrorBody => 'BridgeマシンでClaude Codeを起動し、再ログインしてください。';
+  String get authErrorBody => 'BridgeマシンでClaudeに再ログインしてください。';
 
   @override
   String get authErrorPrimaryCommandLabel => '手順1';
@@ -1401,7 +1401,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get apiKeyRequiredBody =>
-      'サブスクリプション認証は規約上の懸念から現在制限されています。APIキーをご利用ください。';
+      'Anthropic の現行 Claude Agent SDK ドキュメントでは、サードパーティ製品で Claude のサブスクリプションログインを使うことは許可されていません。APIキーをご利用ください。';
 
   @override
   String get apiKeyRequiredHint => 'APIキーの取得:';
@@ -1475,7 +1475,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String shareText(String url) {
-    return 'CC Pocket: Claude Code & Codex\nスマホからコーディングエージェントを操作できるアプリ 📱\n#ccpocket\n$url';
+    return 'CC Pocket: Claude & Codex\nスマホからコーディングエージェントを操作できるアプリ 📱\n#ccpocket\n$url';
   }
 
   @override

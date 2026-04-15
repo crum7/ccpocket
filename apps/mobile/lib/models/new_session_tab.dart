@@ -6,7 +6,7 @@ import 'messages.dart';
 /// Tabs available in the new session sheet.
 enum NewSessionTab {
   codex('codex', 'Codex'),
-  claude('claude', 'Claude Code');
+  claude('claude', 'Claude');
 
   final String value;
   final String label;

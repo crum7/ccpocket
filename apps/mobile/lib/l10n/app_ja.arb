@@ -197,7 +197,7 @@
 
   "sheetSubtitleApproval": "どの操作に承認が必要かを制御します",
   "sheetSubtitleSandboxCodex": "Codex は安全のためデフォルトで Sandbox が有効です。無効にするとシステムへのフルアクセスが可能になります。",
-  "sheetSubtitleSandboxClaude": "Claude Code はデフォルトでネイティブ実行です。Sandbox を有効にするとアクセスが制限されます。",
+  "sheetSubtitleSandboxClaude": "Claude はデフォルトでネイティブ実行です。Sandbox を有効にするとアクセスが制限されます。",
   "sheetSubtitleModel": "モデルによって速度・能力・コストが異なります。",
   "sheetSubtitleEffort": "高い Effort はより丁寧な分析を行いますが、時間とコストが増えます。",
 
@@ -355,7 +355,7 @@
   "setupGuideTitle": "セットアップガイド",
 
   "guideAboutTitle": "CC Pocket とは",
-  "guideAboutDescription": "スマートフォンから Claude Code や Codex を操作できるモバイルクライアントです。",
+  "guideAboutDescription": "スマートフォンから Claude や Codex を操作できるモバイルクライアントです。",
   "guideAboutDiagramTitle": "しくみ",
   "guideAboutDiagramPhone": "iPhone",
   "guideAboutDiagramBridge": "Bridge Server",
@@ -561,7 +561,7 @@
   "settingsNewSessionTabs": "新規セッションタブ",
   "settingsNewSessionTabsDescription": "新規セッションで表示する AI ツールの選択肢と並び順を変更できます。",
   "newSessionTabCodex": "Codex",
-  "newSessionTabClaudeCode": "Claude Code",
+  "newSessionTabClaudeCode": "Claude",
   "usageResetAt": "リセット: {time}",
   "@usageResetAt": {
     "placeholders": {
@@ -646,13 +646,13 @@
   "showMore": "もっと見る",
   "showLess": "閉じる",
 
-  "authErrorTitle": "Claude Codeの再ログインが必要です",
-  "authErrorBody": "BridgeマシンでClaude Codeを起動し、再ログインしてください。",
+  "authErrorTitle": "Claudeの再ログインが必要です",
+  "authErrorBody": "BridgeマシンでClaudeに再ログインしてください。",
   "authErrorPrimaryCommandLabel": "手順1",
   "authErrorSecondaryCommandLabel": "手順2",
   "authErrorAlternativeLabel": "シェルから実行する場合",
   "apiKeyRequiredTitle": "APIキーが必要です",
-  "apiKeyRequiredBody": "サブスクリプション認証は規約上の懸念から現在制限されています。APIキーをご利用ください。",
+  "apiKeyRequiredBody": "Anthropic の現行 Claude Agent SDK ドキュメントでは、サードパーティ製品で Claude のサブスクリプションログインを使うことは許可されていません。APIキーをご利用ください。",
   "apiKeyRequiredHint": "APIキーの取得:",
 
   "authHelpTitle": "認証トラブルシューティング",
@@ -679,7 +679,7 @@
   "sectionSpread": "CC Pocket を広める",
   "shareApp": "SNSでシェア",
   "shareAppSubtitle": "同僚や友人に紹介する",
-  "shareText": "CC Pocket: Claude Code & Codex\nスマホからコーディングエージェントを操作できるアプリ \ud83d\udcf1\n#ccpocket\n{url}",
+  "shareText": "CC Pocket: Claude & Codex\nスマホからコーディングエージェントを操作できるアプリ \ud83d\udcf1\n#ccpocket\n{url}",
   "@shareText": {
     "placeholders": {
       "url": { "type": "String" }

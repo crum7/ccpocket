@@ -76,10 +76,12 @@ npx @ccpocket/bridge@latest
 The server prints a QR code you can scan from the app to connect instantly.
 
 > Warning
-> `@ccpocket/bridge` versions older than `1.25.0` are deprecated for new installs due to potential Anthropic policy concerns around OAuth-based usage.
+> `@ccpocket/bridge` versions older than `1.25.0` are deprecated for new installs because current Anthropic Claude Agent SDK docs do not permit third-party products to use Claude subscription login.
 > Use `>=1.25.0` and configure `ANTHROPIC_API_KEY` instead of OAuth.
 >
-> **Important:** Set your API key via the `ANTHROPIC_API_KEY` environment variable, not through `/login` in the Claude CLI. Keys configured via `/login` are indistinguishable from subscription-plan credentials, which may cause issues.
+> As of April 15, 2026, some Anthropic help pages suggest Extra Usage / usage bundles may apply to third-party products using a Claude account. CC Pocket would like to remove this OAuth block if that policy is officially supported for the Agent SDK, but the published Claude Agent SDK docs still prohibit third-party products from offering Claude subscription login. Until those docs are aligned, CC Pocket keeps the OAuth block in place and follows the stricter guidance.
+>
+> **Important:** Set your API key via the `ANTHROPIC_API_KEY` environment variable, not through `/login` in the Claude CLI. Keys configured via `/login` are indistinguishable from subscription-plan credentials, which would conflict with the current third-party auth guidance.
 
 ### 2. Install the Mobile App
 
@@ -313,7 +315,6 @@ cd apps/mobile && flutter pub get && cd ../..
 | `DIFF_IMAGE_AUTO_DISPLAY_KB` | `1024` | Auto-display threshold for image diffs |
 | `DIFF_IMAGE_MAX_SIZE_MB` | `5` | Max image size for diff previews |
 | `BRIDGE_DISABLE_MDNS` | unset | Disables mDNS auto-discovery advertisement |
-| `BRIDGE_ENABLE_USAGE` | unset | Enables Claude usage tracking via the Anthropic API. **This makes direct API calls to Anthropic outside the Claude Agent SDK. Use at your own risk.** |
 
 ## License
 

@@ -469,7 +469,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sheetSubtitleSandboxCodex => 'Codex 默认启用沙箱以确保安全。禁用后将允许完全访问系统。';
 
   @override
-  String get sheetSubtitleSandboxClaude => 'Claude Code 默认在原生环境运行。启用沙箱将限制系统访问。';
+  String get sheetSubtitleSandboxClaude => 'Claude 默认在原生环境运行。启用沙箱将限制系统访问。';
 
   @override
   String get sheetSubtitleModel => '不同模型在速度、能力和成本上各有差异。';
@@ -714,8 +714,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideAboutTitle => '什么是 CC Pocket？';
 
   @override
-  String get guideAboutDescription =>
-      '一款可让你通过智能手机控制 Claude Code 和 Codex 的移动客户端。';
+  String get guideAboutDescription => '一款可让你通过智能手机控制 Claude 和 Codex 的移动客户端。';
 
   @override
   String get guideAboutDiagramTitle => '工作方式';
@@ -1214,7 +1213,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newSessionTabCodex => 'Codex';
 
   @override
-  String get newSessionTabClaudeCode => 'Claude Code';
+  String get newSessionTabClaudeCode => 'Claude';
 
   @override
   String usageResetAt(String time) {
@@ -1370,7 +1369,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get authErrorTitle => '需要重新登录 Claude';
 
   @override
-  String get authErrorBody => 'Bridge 机器上的 Claude Code 需要重新登录。';
+  String get authErrorBody => 'Bridge 机器上的 Claude 需要重新登录。';
 
   @override
   String get authErrorPrimaryCommandLabel => '步骤 1';
@@ -1385,7 +1384,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get apiKeyRequiredTitle => '需要 API 密钥';
 
   @override
-  String get apiKeyRequiredBody => '由于 Anthropic 策略方面的限制，目前订阅制认证受限。请改用 API 密钥。';
+  String get apiKeyRequiredBody =>
+      'Anthropic 当前的 Claude Agent SDK 文档不允许第三方产品使用 Claude 订阅登录。请改用 API 密钥。';
 
   @override
   String get apiKeyRequiredHint => '在此获取 API 密钥：';
@@ -1459,7 +1459,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String shareText(String url) {
-    return 'CC Pocket: Claude Code & Codex\n用手机控制你的编程 Agent 📱\n#ccpocket\n$url';
+    return 'CC Pocket: Claude & Codex\n用手机控制你的编程 Agent 📱\n#ccpocket\n$url';
   }
 
   @override

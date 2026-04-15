@@ -181,7 +181,7 @@
 
   "sheetSubtitleApproval": "控制哪些操作需要你的审批",
   "sheetSubtitleSandboxCodex": "Codex 默认启用沙箱以确保安全。禁用后将允许完全访问系统。",
-  "sheetSubtitleSandboxClaude": "Claude Code 默认在原生环境运行。启用沙箱将限制系统访问。",
+  "sheetSubtitleSandboxClaude": "Claude 默认在原生环境运行。启用沙箱将限制系统访问。",
   "sheetSubtitleModel": "不同模型在速度、能力和成本上各有差异。",
   "sheetSubtitleEffort": "更高的 Effort 会进行更深入的分析，但需要更多时间和成本。",
 
@@ -331,7 +331,7 @@
   "setupGuideTitle": "设置指南",
 
   "guideAboutTitle": "什么是 CC Pocket？",
-  "guideAboutDescription": "一款可让你通过智能手机控制 Claude Code 和 Codex 的移动客户端。",
+  "guideAboutDescription": "一款可让你通过智能手机控制 Claude 和 Codex 的移动客户端。",
   "guideAboutDiagramTitle": "工作方式",
   "guideAboutDiagramPhone": "iPhone",
   "guideAboutDiagramBridge": "Bridge 服务",
@@ -602,7 +602,7 @@
   "settingsNewSessionTabs": "新建会话标签页",
   "settingsNewSessionTabsDescription": "可修改新建会话时显示的 AI 工具选项及其排列顺序。",
   "newSessionTabCodex": "Codex",
-  "newSessionTabClaudeCode": "Claude Code",
+  "newSessionTabClaudeCode": "Claude",
   "usageResetAt": "重置时间：{time}",
   "@usageResetAt": {
     "placeholders": {
@@ -728,12 +728,12 @@
   },
 
   "authErrorTitle": "需要重新登录 Claude",
-  "authErrorBody": "Bridge 机器上的 Claude Code 需要重新登录。",
+  "authErrorBody": "Bridge 机器上的 Claude 需要重新登录。",
   "authErrorPrimaryCommandLabel": "步骤 1",
   "authErrorSecondaryCommandLabel": "步骤 2",
   "authErrorAlternativeLabel": "Shell 方式",
   "apiKeyRequiredTitle": "需要 API 密钥",
-  "apiKeyRequiredBody": "由于 Anthropic 策略方面的限制，目前订阅制认证受限。请改用 API 密钥。",
+  "apiKeyRequiredBody": "Anthropic 当前的 Claude Agent SDK 文档不允许第三方产品使用 Claude 订阅登录。请改用 API 密钥。",
   "apiKeyRequiredHint": "在此获取 API 密钥：",
   "authHelpTitle": "认证故障排查",
   "authHelpFetchError": "加载故障排查指南失败",
@@ -759,7 +759,7 @@
   "sectionSpread": "喜欢 CC POCKET 吗？",
   "shareApp": "分享给朋友",
   "shareAppSubtitle": "告诉你的朋友和同事",
-  "shareText": "CC Pocket: Claude Code & Codex\n用手机控制你的编程 Agent \ud83d\udcf1\n#ccpocket\n{url}",
+  "shareText": "CC Pocket: Claude & Codex\n用手机控制你的编程 Agent \ud83d\udcf1\n#ccpocket\n{url}",
   "@shareText": {
     "placeholders": {
       "url": {
