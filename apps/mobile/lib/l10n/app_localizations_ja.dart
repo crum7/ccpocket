@@ -1665,6 +1665,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get supporterPurchaseInfoLink => '詳しくはこちら';
 
   @override
+  String get supporterPrivacyPolicyLink => 'プライバシーポリシー';
+
+  @override
+  String get supporterTermsOfUseLink => '利用規約（Apple標準EULA）';
+
+  @override
   String get supporterLearnMoreTitle => '購入と応援について';
 
   @override

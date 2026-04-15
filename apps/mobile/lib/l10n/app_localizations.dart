@@ -3184,6 +3184,18 @@ abstract class AppLocalizations {
   /// **'詳しくはこちら'**
   String get supporterPurchaseInfoLink;
 
+  /// No description provided for @supporterPrivacyPolicyLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'プライバシーポリシー'**
+  String get supporterPrivacyPolicyLink;
+
+  /// No description provided for @supporterTermsOfUseLink.
+  ///
+  /// In ja, this message translates to:
+  /// **'利用規約（Apple標準EULA）'**
+  String get supporterTermsOfUseLink;
+
   /// No description provided for @supporterLearnMoreTitle.
   ///
   /// In ja, this message translates to:

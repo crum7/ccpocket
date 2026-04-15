@@ -775,6 +775,8 @@
   "supporterPurchaseInfoTitle": "購入について",
   "supporterPurchaseInfoBody": "購入の復元は同じ Apple ID または Google アカウントで利用できます。iOS と Android の間で応援状態は共有されません。",
   "supporterPurchaseInfoLink": "詳しくはこちら",
+  "supporterPrivacyPolicyLink": "プライバシーポリシー",
+  "supporterTermsOfUseLink": "利用規約（Apple標準EULA）",
   "supporterLearnMoreTitle": "購入と応援について",
   "supporterLearnMoreBody": "無料で提供し続ける考え方や、購入の復元の仕組みを確認できます。",
   "supporterOpenLinkFailed": "案内ページを開けませんでした。",

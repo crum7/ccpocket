@@ -91,5 +91,5 @@ codex,claude,code,ai,coding,agent,mobile,bridge,ssh,remote
 
 ## Privacy
 
-- Privacy Policy URL: https://k9i-0.github.io/ccpocket/privacy-policy (after GitHub Pages setup)
+- Privacy Policy URL: https://github.com/K9i-0/ccpocket/blob/main/PRIVACY_POLICY.md
 - Data collected: See privacy-policy.md

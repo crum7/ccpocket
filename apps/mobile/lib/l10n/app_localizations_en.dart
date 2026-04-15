@@ -1729,6 +1729,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supporterPurchaseInfoLink => 'Learn more';
 
   @override
+  String get supporterPrivacyPolicyLink => 'Privacy Policy';
+
+  @override
+  String get supporterTermsOfUseLink => 'Terms of Use (Apple Standard EULA)';
+
+  @override
   String get supporterLearnMoreTitle => 'About purchases and support';
 
   @override

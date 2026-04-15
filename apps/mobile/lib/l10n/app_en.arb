@@ -717,6 +717,8 @@
   "supporterPurchaseInfoTitle": "About purchases",
   "supporterPurchaseInfoBody": "Restore works with the same Apple ID or Google account. Supporter status does not carry between iOS and Android.",
   "supporterPurchaseInfoLink": "Learn more",
+  "supporterPrivacyPolicyLink": "Privacy Policy",
+  "supporterTermsOfUseLink": "Terms of Use (Apple Standard EULA)",
   "supporterLearnMoreTitle": "About purchases and support",
   "supporterLearnMoreBody": "Read why CC Pocket stays free, how restore works, and what Supporter includes.",
   "supporterOpenLinkFailed": "Could not open the info page.",

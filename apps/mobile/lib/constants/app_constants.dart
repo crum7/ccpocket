@@ -39,4 +39,12 @@ class AppConstants {
   /// Play Store URL (Android)
   static const String playStoreUrl =
       'https://play.google.com/store/apps/details?id=com.k9i.ccpocket';
+
+  /// Public privacy policy page
+  static const String privacyPolicyUrl =
+      'https://github.com/K9i-0/ccpocket/blob/main/PRIVACY_POLICY.md';
+
+  /// Apple standard EULA for auto-renewable subscriptions
+  static const String termsOfUseUrl =
+      'https://www.apple.com/legal/internet-services/itunes/dev/stdeula/';
 }

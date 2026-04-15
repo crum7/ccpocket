@@ -153,6 +153,7 @@ Important context:
 - One-time purchases update the support summary only.
 - The monthly purchase updates the support summary and unlocks alternate app icon perks.
 - The current alternate app icon options for monthly supporters are Light and Metallic.
+- The purchase screen includes functional links to the Privacy Policy and Terms of Use.
 
 Bridge note:
 CC Pocket's main coding workflow connects to a self-hosted Bridge Server.
@@ -178,6 +179,7 @@ The subscription is associated with the reviewer's Apple ID in Apple's sandbox e
 This purchase does not unlock core app functionality.
 It is an optional supporter purchase that updates the support summary and unlocks alternate app icons.
 The currently available monthly supporter icon options are Light and Metallic.
+The purchase screen includes functional links to the Privacy Policy and Terms of Use.
 ```
 
 ### Drink Support
@@ -195,6 +197,7 @@ The purchase is associated with the reviewer's Apple ID in Apple's sandbox envir
 
 This purchase does not unlock core app functionality.
 It is an optional one-time support option that updates the support summary on the Support screen.
+The purchase screen includes functional links to the Privacy Policy and Terms of Use.
 ```
 
 ### Lunch Support
@@ -212,6 +215,7 @@ The purchase is associated with the reviewer's Apple ID in Apple's sandbox envir
 
 This purchase does not unlock core app functionality.
 It is an optional one-time support option that updates the support summary on the Support screen.
+The purchase screen includes functional links to the Privacy Policy and Terms of Use.
 ```
 
 ## Review Screenshot の考え方

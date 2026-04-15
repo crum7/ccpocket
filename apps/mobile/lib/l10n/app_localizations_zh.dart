@@ -1645,6 +1645,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterPurchaseInfoLink => '了解更多';
 
   @override
+  String get supporterPrivacyPolicyLink => '隐私政策';
+
+  @override
+  String get supporterTermsOfUseLink => '使用条款（Apple 标准 EULA）';
+
+  @override
   String get supporterLearnMoreTitle => '关于购买与支持';
 
   @override

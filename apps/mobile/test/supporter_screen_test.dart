@@ -19,6 +19,7 @@ Widget _wrap(RevenueCatService revenueCatService) {
   return RepositoryProvider<RevenueCatService>.value(
     value: revenueCatService,
     child: MaterialApp(
+      theme: ThemeData(platform: TargetPlatform.iOS),
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: const SupporterScreen(),
@@ -60,6 +61,14 @@ void main() {
     expect(find.text(l.supporterImpactTitle), findsOneWidget);
     expect(find.text(l.supporterPackagesTitle), findsOneWidget);
     expect(find.text(l.supporterSummaryTitle), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text(l.supporterPrivacyPolicyLink),
+      300,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(l.supporterPrivacyPolicyLink), findsOneWidget);
+    expect(find.text(l.supporterTermsOfUseLink), findsOneWidget);
   });
 
   testWidgets('shows minimal summary for one-time supporters', (tester) async {

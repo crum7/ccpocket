@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../constants/app_constants.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../services/revenuecat_service.dart';
 
@@ -187,6 +188,9 @@ class _SupportPurchaseInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
+    final platform = Theme.of(context).platform;
+    final showTermsLink =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -217,6 +221,28 @@ class _SupportPurchaseInfoCard extends StatelessWidget {
             _SupportTextLink(
               label: l.supporterPurchaseInfoLink,
               onTap: () => _openSupporterDoc(context),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 16,
+              runSpacing: 4,
+              children: [
+                _SupportTextLink(
+                  label: l.supporterPrivacyPolicyLink,
+                  onTap: () => _openExternalSupportLink(
+                    context,
+                    Uri.parse(AppConstants.privacyPolicyUrl),
+                  ),
+                ),
+                if (showTermsLink)
+                  _SupportTextLink(
+                    label: l.supporterTermsOfUseLink,
+                    onTap: () => _openExternalSupportLink(
+                      context,
+                      Uri.parse(AppConstants.termsOfUseUrl),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),
@@ -1026,8 +1052,6 @@ void _showResultSnackBar(
 }
 
 Future<void> _openSupporterDoc(BuildContext context) async {
-  final l = AppLocalizations.of(context);
-  final messenger = ScaffoldMessenger.of(context);
   final locale = Localizations.localeOf(context).languageCode;
   final uri = switch (locale) {
     'ja' => Uri.parse(
@@ -1040,6 +1064,12 @@ Future<void> _openSupporterDoc(BuildContext context) async {
       'https://github.com/K9i-0/ccpocket/blob/main/docs/supporter.md',
     ),
   };
+  await _openExternalSupportLink(context, uri);
+}
+
+Future<void> _openExternalSupportLink(BuildContext context, Uri uri) async {
+  final l = AppLocalizations.of(context);
+  final messenger = ScaffoldMessenger.of(context);
   final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
   if (!launched && context.mounted) {
     messenger.showSnackBar(SnackBar(content: Text(l.supporterOpenLinkFailed)));

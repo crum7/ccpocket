@@ -50,3 +50,6 @@ REQUIREMENTS
 
 SOURCE CODE
 https://github.com/K9i-0/ccpocket
+
+TERMS OF USE
+https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
