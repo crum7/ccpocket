@@ -730,7 +730,14 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get guideAboutDescription =>
-      'スマートフォンから Claude や Codex を操作できるモバイルクライアントです。';
+      'Bridge Server 経由で Codex や Claude をスマートフォンから使えるモバイルクライアントです。';
+
+  @override
+  String get guideAboutSdkNoteTitle => 'Claude Agent SDK について';
+
+  @override
+  String get guideAboutSdkNoteBody =>
+      'Claude Code のライブラリ版です。履歴や .claude、CLAUDE.md などの設定ファイルを共有でき、承認フローもおおよそ同じ感覚で使えます。';
 
   @override
   String get guideAboutDiagramTitle => 'しくみ';
@@ -742,17 +749,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get guideAboutDiagramBridge => 'Bridge Server';
 
   @override
-  String get guideAboutDiagramClaude => 'Claude CLI\n/ Codex';
+  String get guideAboutDiagramClaude => 'Codex CLI\n/ Claude Agent SDK';
 
   @override
   String get guideAboutDiagramCaption =>
-      'PC で Bridge Server を起動し、\nスマホから接続して使います。';
+      'PC の Bridge Server が Codex CLI や Claude Agent SDK に接続し、\nスマホからその Bridge に接続して使います。';
 
   @override
   String get guideBridgeTitle => 'Bridge Server の\nセットアップ';
 
   @override
-  String get guideBridgeDescription => 'PC で Bridge Server を起動しましょう。';
+  String get guideBridgeDescription =>
+      'PC で Bridge Server を起動します。Claude を使う場合は ANTHROPIC_API_KEY も設定してください。';
 
   @override
   String get guideBridgePrerequisites => '必要なもの';
@@ -761,8 +769,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get guideBridgePrereq1 => 'Node.js がインストールされた Mac / PC';
 
   @override
-  String get guideBridgePrereq2 =>
-      'Codex CLI または Claude Code CLI\n（使いたい方だけでOK）';
+  String get guideBridgePrereq2 => 'Claude を使う場合は ANTHROPIC_API_KEY を設定';
+
+  @override
+  String get guideBridgePrereq3 => 'Codex を使う場合は Codex の認証を完了';
 
   @override
   String get guideBridgeStep1 => 'npx で実行（推奨）';

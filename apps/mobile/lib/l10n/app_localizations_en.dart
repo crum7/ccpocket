@@ -766,7 +766,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get guideAboutDescription =>
-      'A mobile client that lets you control Claude and Codex from your smartphone.';
+      'A mobile client that lets you use Codex and Claude from your smartphone through the Bridge Server.';
+
+  @override
+  String get guideAboutSdkNoteTitle => 'About Claude Agent SDK';
+
+  @override
+  String get guideAboutSdkNoteBody =>
+      'It is the library version of Claude Code. It can share history and project config files such as .claude and CLAUDE.md, and the approval flow feels mostly the same.';
 
   @override
   String get guideAboutDiagramTitle => 'How it works';
@@ -778,18 +785,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guideAboutDiagramBridge => 'Bridge Server';
 
   @override
-  String get guideAboutDiagramClaude => 'Claude CLI\n/ Codex';
+  String get guideAboutDiagramClaude => 'Codex CLI\n/ Claude Agent SDK';
 
   @override
   String get guideAboutDiagramCaption =>
-      'Start the Bridge Server on your PC,\nthen connect from your phone.';
+      'The Bridge Server on your PC connects to Codex CLI and Claude Agent SDK,\nthen your phone connects to the Bridge.';
 
   @override
   String get guideBridgeTitle => 'Bridge Server\nSetup';
 
   @override
   String get guideBridgeDescription =>
-      'Let\'s start the Bridge Server on your PC.';
+      'Start the Bridge Server on your PC. If you want to use Claude, set ANTHROPIC_API_KEY too.';
 
   @override
   String get guideBridgePrerequisites => 'Prerequisites';
@@ -798,8 +805,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guideBridgePrereq1 => 'Mac / PC with Node.js installed';
 
   @override
-  String get guideBridgePrereq2 =>
-      'Codex CLI or Claude Code CLI\n(either one is fine)';
+  String get guideBridgePrereq2 => 'If you use Claude, set ANTHROPIC_API_KEY';
+
+  @override
+  String get guideBridgePrereq3 =>
+      'If you use Codex, complete Codex authentication';
 
   @override
   String get guideBridgeStep1 => 'Run with npx (recommended)';

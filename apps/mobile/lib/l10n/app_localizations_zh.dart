@@ -723,7 +723,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideAboutTitle => '什么是 CC Pocket？';
 
   @override
-  String get guideAboutDescription => '一款可让你通过智能手机控制 Claude 和 Codex 的移动客户端。';
+  String get guideAboutDescription =>
+      '一款可让你通过 Bridge 服务在智能手机上使用 Codex 和 Claude 的移动客户端。';
+
+  @override
+  String get guideAboutSdkNoteTitle => '关于 Claude Agent SDK';
+
+  @override
+  String get guideAboutSdkNoteBody =>
+      '它相当于 Claude Code 的库版本。可以共享历史记录以及 .claude、CLAUDE.md 等配置文件，审批流程体验也大致相同。';
 
   @override
   String get guideAboutDiagramTitle => '工作方式';
@@ -735,16 +743,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideAboutDiagramBridge => 'Bridge 服务';
 
   @override
-  String get guideAboutDiagramClaude => 'Claude CLI\n/ Codex';
+  String get guideAboutDiagramClaude => 'Codex CLI\n/ Claude Agent SDK';
 
   @override
-  String get guideAboutDiagramCaption => '先在你的电脑上启动 Bridge 服务，\n然后从手机连接。';
+  String get guideAboutDiagramCaption =>
+      '电脑上的 Bridge 服务会连接到 Codex CLI 和 Claude Agent SDK，\n然后你的手机再连接到 Bridge。';
 
   @override
   String get guideBridgeTitle => 'Bridge 服务\n设置';
 
   @override
-  String get guideBridgeDescription => '先在你的电脑上启动 Bridge 服务。';
+  String get guideBridgeDescription =>
+      '先在你的电脑上启动 Bridge 服务。如果你要使用 Claude，也请先设置 ANTHROPIC_API_KEY。';
 
   @override
   String get guideBridgePrerequisites => '前置条件';
@@ -753,7 +763,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guideBridgePrereq1 => '已安装 Node.js 的 Mac / PC';
 
   @override
-  String get guideBridgePrereq2 => 'Claude Code CLI 或 Codex CLI\n（二选一即可）';
+  String get guideBridgePrereq2 => '如果使用 Claude，请设置 ANTHROPIC_API_KEY';
+
+  @override
+  String get guideBridgePrereq3 => '如果使用 Codex，请先完成 Codex 认证';
 
   @override
   String get guideBridgeStep1 => '使用 npx 运行（推荐）';

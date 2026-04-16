@@ -44,6 +44,7 @@ class GuidePageAbout extends StatelessWidget {
                     l.guideAboutDiagramBridge,
                     l.guideAboutDiagramClaude,
                   ],
+                  itemFlexes: const [1, 1, 2],
                   colorScheme: cs,
                 ),
                 const SizedBox(height: 12),
@@ -57,6 +58,44 @@ class GuidePageAbout extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: cs.secondaryContainer.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, size: 18, color: cs.secondary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l.guideAboutSdkNoteTitle,
+                        style: Theme.of(
+                          context,
+                        ).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        l.guideAboutSdkNoteBody,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -65,9 +104,14 @@ class GuidePageAbout extends StatelessWidget {
 
 class _ArchDiagramRow extends StatelessWidget {
   final List<String> items;
+  final List<int>? itemFlexes;
   final ColorScheme colorScheme;
 
-  const _ArchDiagramRow({required this.items, required this.colorScheme});
+  const _ArchDiagramRow({
+    required this.items,
+    this.itemFlexes,
+    required this.colorScheme,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +128,10 @@ class _ArchDiagramRow extends StatelessWidget {
             ),
             const SizedBox(width: 4),
           ],
-          Flexible(
+          Expanded(
+            flex: itemFlexes != null && i < itemFlexes!.length
+                ? itemFlexes![i]
+                : 1,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
@@ -94,7 +141,7 @@ class _ArchDiagramRow extends StatelessWidget {
               child: Text(
                 items[i],
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: colorScheme.onPrimaryContainer,
                 ),

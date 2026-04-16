@@ -26,7 +26,11 @@ class GuidePageBridgeSetup extends StatelessWidget {
             colorScheme: cs,
             icon: Icons.checklist,
             title: l.guideBridgePrerequisites,
-            items: [l.guideBridgePrereq1, l.guideBridgePrereq2],
+            items: [
+              l.guideBridgePrereq1,
+              l.guideBridgePrereq3,
+              l.guideBridgePrereq2,
+            ],
           ),
           const SizedBox(height: 16),
           // Steps

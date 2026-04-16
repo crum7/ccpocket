@@ -1447,8 +1447,20 @@ abstract class AppLocalizations {
   /// No description provided for @guideAboutDescription.
   ///
   /// In ja, this message translates to:
-  /// **'スマートフォンから Claude や Codex を操作できるモバイルクライアントです。'**
+  /// **'Bridge Server 経由で Codex や Claude をスマートフォンから使えるモバイルクライアントです。'**
   String get guideAboutDescription;
+
+  /// No description provided for @guideAboutSdkNoteTitle.
+  ///
+  /// In ja, this message translates to:
+  /// **'Claude Agent SDK について'**
+  String get guideAboutSdkNoteTitle;
+
+  /// No description provided for @guideAboutSdkNoteBody.
+  ///
+  /// In ja, this message translates to:
+  /// **'Claude Code のライブラリ版です。履歴や .claude、CLAUDE.md などの設定ファイルを共有でき、承認フローもおおよそ同じ感覚で使えます。'**
+  String get guideAboutSdkNoteBody;
 
   /// No description provided for @guideAboutDiagramTitle.
   ///
@@ -1471,13 +1483,13 @@ abstract class AppLocalizations {
   /// No description provided for @guideAboutDiagramClaude.
   ///
   /// In ja, this message translates to:
-  /// **'Claude CLI\n/ Codex'**
+  /// **'Codex CLI\n/ Claude Agent SDK'**
   String get guideAboutDiagramClaude;
 
   /// No description provided for @guideAboutDiagramCaption.
   ///
   /// In ja, this message translates to:
-  /// **'PC で Bridge Server を起動し、\nスマホから接続して使います。'**
+  /// **'PC の Bridge Server が Codex CLI や Claude Agent SDK に接続し、\nスマホからその Bridge に接続して使います。'**
   String get guideAboutDiagramCaption;
 
   /// No description provided for @guideBridgeTitle.
@@ -1489,7 +1501,7 @@ abstract class AppLocalizations {
   /// No description provided for @guideBridgeDescription.
   ///
   /// In ja, this message translates to:
-  /// **'PC で Bridge Server を起動しましょう。'**
+  /// **'PC で Bridge Server を起動します。Claude を使う場合は ANTHROPIC_API_KEY も設定してください。'**
   String get guideBridgeDescription;
 
   /// No description provided for @guideBridgePrerequisites.
@@ -1507,8 +1519,14 @@ abstract class AppLocalizations {
   /// No description provided for @guideBridgePrereq2.
   ///
   /// In ja, this message translates to:
-  /// **'Codex CLI または Claude Code CLI\n（使いたい方だけでOK）'**
+  /// **'Claude を使う場合は ANTHROPIC_API_KEY を設定'**
   String get guideBridgePrereq2;
+
+  /// No description provided for @guideBridgePrereq3.
+  ///
+  /// In ja, this message translates to:
+  /// **'Codex を使う場合は Codex の認証を完了'**
+  String get guideBridgePrereq3;
 
   /// No description provided for @guideBridgeStep1.
   ///
