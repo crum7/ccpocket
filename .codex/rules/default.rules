@@ -105,9 +105,12 @@ prefix_rule(
     justification="Flutter run/build/pub commands may write files or start long-running processes.",
 )
 prefix_rule(
+    pattern=["defaults", "write", "com.apple.iphonesimulator"],
+    justification="Simulator keyboard and UI preferences are safe local workflow settings for screenshot capture.",
+)
+prefix_rule(
     pattern=["xcrun", "simctl"],
-    decision="prompt",
-    justification="Simulator control should be explicit.",
+    justification="Simulator control is allowed in this trusted project workflow.",
 )
 prefix_rule(
     pattern=["pod", "install"],
