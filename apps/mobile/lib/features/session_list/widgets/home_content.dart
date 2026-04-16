@@ -50,12 +50,7 @@ class HomeContent extends StatefulWidget {
   })
   onTapRunning;
   final ValueChanged<String> onStopSession;
-  final void Function(
-    String sessionId,
-    String toolUseId, {
-    Map<String, dynamic>? updatedInput,
-    bool clearContext,
-  })?
+  final void Function(String sessionId, String toolUseId, {bool clearContext})?
   onApprovePermission;
   final void Function(String sessionId, String toolUseId)? onApproveAlways;
   final void Function(String sessionId, String toolUseId, {String? message})?
@@ -428,17 +423,9 @@ class HomeContentState extends State<HomeContent> {
                   permissionMode: session.permissionMode,
                   sandboxMode: session.codexSandboxMode,
                 ),
-                onApprove:
-                    (
-                      toolUseId, {
-                      Map<String, dynamic>? updatedInput,
-                      bool clearContext = false,
-                    }) => widget.onApprovePermission?.call(
-                      session.id,
-                      toolUseId,
-                      updatedInput: updatedInput,
-                      clearContext: clearContext,
-                    ),
+                onApprove: (toolUseId, {bool clearContext = false}) => widget
+                    .onApprovePermission
+                    ?.call(session.id, toolUseId, clearContext: clearContext),
                 onApproveAlways: (toolUseId) =>
                     widget.onApproveAlways?.call(session.id, toolUseId),
                 onReject: (toolUseId, {String? message}) => widget

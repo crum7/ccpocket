@@ -19,12 +19,7 @@ class RunningSessionCard extends StatefulWidget {
   final SessionInfo session;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
-  final void Function(
-    String toolUseId, {
-    Map<String, dynamic>? updatedInput,
-    bool clearContext,
-  })?
-  onApprove;
+  final void Function(String toolUseId, {bool clearContext})? onApprove;
   final ValueChanged<String>? onApproveAlways;
   final void Function(String toolUseId, {String? message})? onReject;
   final void Function(String toolUseId, String result)? onAnswer;
@@ -48,7 +43,6 @@ class RunningSessionCard extends StatefulWidget {
 
 class _RunningSessionCardState extends State<RunningSessionCard> {
   late final TextEditingController _planFeedbackController;
-  String? _editedPlanText;
   String? _activePlanToolUseId;
 
   @override
@@ -67,7 +61,6 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
     final toolUseId = permission?.toolUseId;
     if (_activePlanToolUseId == toolUseId) return;
     _activePlanToolUseId = toolUseId;
-    _editedPlanText = null;
     _planFeedbackController.clear();
   }
 
@@ -82,12 +75,7 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
   Future<void> _openPlanSheet(PermissionRequestMessage permission) async {
     final originalText = _extractPlanText(permission);
     if (originalText == null || !mounted) return;
-    final current = _editedPlanText ?? originalText;
-    final edited = await showPlanDetailSheet(context, current, editable: true);
-    if (!mounted) return;
-    if (edited != null) {
-      setState(() => _editedPlanText = edited);
-    }
+    await showPlanDetailSheet(context, originalText);
   }
 
   @override
@@ -203,9 +191,6 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                             onOpenPlan: () => _openPlanSheet(permission),
                             onApprove: () => widget.onApprove?.call(
                               permission.toolUseId,
-                              updatedInput: _editedPlanText != null
-                                  ? {'plan': _editedPlanText!}
-                                  : null,
                               clearContext: false,
                             ),
                             onReject: () =>
@@ -251,16 +236,10 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                         onOpenPlan: () => _openPlanSheet(permission),
                         onApprove: () => widget.onApprove?.call(
                           permission.toolUseId,
-                          updatedInput: _editedPlanText != null
-                              ? {'plan': _editedPlanText!}
-                              : null,
                           clearContext: false,
                         ),
                         onApproveClearContext: () => widget.onApprove?.call(
                           permission.toolUseId,
-                          updatedInput: _editedPlanText != null
-                              ? {'plan': _editedPlanText!}
-                              : null,
                           clearContext: true,
                         ),
                         onKeepPlanning: () {

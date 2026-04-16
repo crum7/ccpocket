@@ -142,7 +142,7 @@
   "toolApprovalSummary": "Tool execution requires approval",
   "planApproval": "Plan Approval",
   "approvalRequired": "Approval Required",
-  "viewEditPlan": "View / Edit Plan",
+  "viewEditPlan": "View Plan",
   "keepPlanning": "Keep Planning",
   "keepPlanningHint": "What should be changed...",
   "sendFeedbackKeepPlanning": "Send feedback & keep planning",

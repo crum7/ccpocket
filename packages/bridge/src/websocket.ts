@@ -1624,7 +1624,7 @@ export class BridgeWebSocketServer {
           return;
         }
         if (session.provider === "codex") {
-          (session.process as CodexProcess).approve(msg.id, msg.updatedInput);
+          (session.process as CodexProcess).approve(msg.id);
           break;
         }
         const sdkProc = session.process as SdkProcess;
@@ -1634,12 +1634,8 @@ export class BridgeWebSocketServer {
           // This guarantees chat history is cleared in the mobile UI without
           // waiting for additional in-turn tool approvals.
           const pending = sdkProc.getPendingPermission(msg.id);
-          const mergedInput = {
-            ...(pending?.input ?? {}),
-            ...(msg.updatedInput ?? {}),
-          };
           const planText =
-            typeof mergedInput.plan === "string" ? mergedInput.plan : "";
+            typeof pending?.input.plan === "string" ? pending.input.plan : "";
 
           // Use session.id (always present) instead of msg.sessionId.
           const sessionId = session.id;
@@ -1688,7 +1684,7 @@ export class BridgeWebSocketServer {
           this.broadcast({ ...createdMsg, clearContext: true });
           this.broadcastSessionList();
         } else {
-          sdkProc.approve(msg.id, msg.updatedInput);
+          sdkProc.approve(msg.id);
         }
         break;
       }

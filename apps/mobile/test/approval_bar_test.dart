@@ -483,7 +483,7 @@ void main() {
       );
     });
 
-    testWidgets('View Plan button has View / Edit tooltip', (tester) async {
+    testWidgets('View Plan button has view tooltip', (tester) async {
       await tester.pumpWidget(
         buildSubject(
           pendingPermission: const PermissionRequestMessage(
@@ -499,7 +499,7 @@ void main() {
       final iconButton = tester.widget<IconButton>(
         find.byKey(const ValueKey('view_plan_header_button')),
       );
-      expect(iconButton.tooltip, 'View / Edit Plan');
+      expect(iconButton.tooltip, 'View Plan');
     });
 
     testWidgets(

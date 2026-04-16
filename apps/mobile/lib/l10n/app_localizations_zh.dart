@@ -391,7 +391,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get approvalRequired => '需要批准';
 
   @override
-  String get viewEditPlan => '查看 / 编辑计划';
+  String get viewEditPlan => '查看计划';
 
   @override
   String get keepPlanning => '继续规划';

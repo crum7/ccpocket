@@ -393,7 +393,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get approvalRequired => '承認が必要';
 
   @override
-  String get viewEditPlan => 'プランを表示 / 編集';
+  String get viewEditPlan => 'プランを表示';
 
   @override
   String get keepPlanning => '計画を続ける';

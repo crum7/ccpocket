@@ -547,13 +547,13 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     });
   }
 
-  approve(toolUseId?: string, _updatedInput?: Record<string, unknown>): void {
+  approve(toolUseId?: string): void {
     // Check if this is a plan completion approval
     if (
       this.pendingPlanCompletion &&
       toolUseId === this.pendingPlanCompletion.toolUseId
     ) {
-      this.handlePlanApproved(_updatedInput);
+      this.handlePlanApproved();
       return;
     }
 
@@ -771,11 +771,8 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
   /**
    * Plan approved → switch to Default mode and auto-start execution.
    */
-  private handlePlanApproved(updatedInput?: Record<string, unknown>): void {
-    const planText =
-      (updatedInput?.plan as string) ??
-      this.pendingPlanCompletion?.planText ??
-      "";
+  private handlePlanApproved(): void {
+    const planText = this.pendingPlanCompletion?.planText ?? "";
     const resolvedToolUseId = this.pendingPlanCompletion?.toolUseId;
     this.pendingPlanCompletion = null;
     this._collaborationMode = "default";

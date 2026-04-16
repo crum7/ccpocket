@@ -31,6 +31,7 @@ void main() {
       final sent = findSentMessage(bridge, 'approve');
       expect(sent, isNotNull);
       expect(sent!['id'], 'tool-exit-1');
+      expect(sent.containsKey('updatedInput'), isFalse);
       // clearContext should not be set for regular accept
       expect(sent['clearContext'], isNot(true));
     });
@@ -49,6 +50,7 @@ void main() {
       final sent = findSentMessage(bridge, 'approve');
       expect(sent, isNotNull);
       expect(sent!['id'], 'tool-exit-1');
+      expect(sent.containsKey('updatedInput'), isFalse);
       expect(sent['clearContext'], isTrue);
     });
 

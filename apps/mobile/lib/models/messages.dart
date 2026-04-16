@@ -2719,14 +2719,12 @@ class ClientMessage {
 
   factory ClientMessage.approve(
     String id, {
-    Map<String, dynamic>? updatedInput,
     bool clearContext = false,
     String? sessionId,
   }) {
     return ClientMessage._(<String, dynamic>{
       'type': 'approve',
       'id': id,
-      'updatedInput': ?updatedInput,
       if (clearContext) 'clearContext': true,
       'sessionId': ?sessionId,
     });

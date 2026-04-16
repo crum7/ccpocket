@@ -1236,7 +1236,6 @@ class _SessionListScreenState extends State<SessionListScreen>
                                     (
                                       sessionId,
                                       toolUseId, {
-                                      Map<String, dynamic>? updatedInput,
                                       bool clearContext = false,
                                     }) {
                                       final bridge = context
@@ -1245,7 +1244,6 @@ class _SessionListScreenState extends State<SessionListScreen>
                                         ClientMessage.approve(
                                           toolUseId,
                                           sessionId: sessionId,
-                                          updatedInput: updatedInput,
                                           clearContext: clearContext,
                                         ),
                                       );

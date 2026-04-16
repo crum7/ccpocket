@@ -35,6 +35,7 @@ void main() {
       final approveMsg = findSentMessage(bridge, 'approve');
       expect(approveMsg, isNotNull);
       expect(approveMsg!['id'], 'tool-exit-1');
+      expect(approveMsg.containsKey('updatedInput'), isFalse);
 
       // Bridge sends tool result for plan, then new Bash tool + permission
       await emitAndPump($.tester, bridge, [
@@ -133,7 +134,8 @@ void main() {
 
         final msg = findSentMessage(bridge, 'approve');
         expect(msg, isNotNull);
-        expect(msg!['clearContext'], true);
+        expect(msg!.containsKey('updatedInput'), isFalse);
+        expect(msg['clearContext'], true);
 
         // Approval bar should be gone after approve
         expect($(ApprovalBar), findsNothing);

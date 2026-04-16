@@ -27,9 +27,6 @@ import 'todo_write_widget.dart';
 
 class AssistantBubble extends StatefulWidget {
   final AssistantServerMessage message;
-  final ValueNotifier<String?>? editedPlanText;
-  final bool allowPlanEditing;
-  final String? pendingPlanToolUseId;
 
   /// Pre-resolved plan text extracted from a Write tool in a *different*
   /// AssistantMessage.  When the real SDK writes the plan to a file via the
@@ -43,10 +40,7 @@ class AssistantBubble extends StatefulWidget {
   const AssistantBubble({
     super.key,
     required this.message,
-    this.editedPlanText,
     this.resolvedPlanText,
-    this.allowPlanEditing = true,
-    this.pendingPlanToolUseId,
     this.onFileTap,
   });
 
@@ -95,9 +89,6 @@ class _AssistantBubbleState extends State<AssistantBubble> {
         contents: contents,
         hasTextContent: hasTextContent,
         resolvedPlanText: widget.resolvedPlanText,
-        allowPlanEditing: widget.allowPlanEditing,
-        pendingPlanToolUseId: widget.pendingPlanToolUseId,
-        editedPlanText: widget.editedPlanText,
         allText: _allText(),
         plainTextMode: _plainTextMode,
         onTogglePlainText: () {
@@ -123,9 +114,6 @@ class _PlanLayout extends StatelessWidget {
   final List<AssistantContent> contents;
   final bool hasTextContent;
   final String? resolvedPlanText;
-  final bool allowPlanEditing;
-  final String? pendingPlanToolUseId;
-  final ValueNotifier<String?>? editedPlanText;
   final String allText;
   final bool plainTextMode;
   final VoidCallback onTogglePlainText;
@@ -134,9 +122,6 @@ class _PlanLayout extends StatelessWidget {
     required this.contents,
     required this.hasTextContent,
     required this.resolvedPlanText,
-    required this.allowPlanEditing,
-    required this.pendingPlanToolUseId,
-    required this.editedPlanText,
     required this.allText,
     required this.plainTextMode,
     required this.onTogglePlainText,
@@ -156,17 +141,6 @@ class _PlanLayout extends StatelessWidget {
       originalPlanText = resolvedPlanText!;
     }
 
-    String? planToolUseId;
-    for (final content in contents) {
-      if (content is ToolUseContent && content.name == 'ExitPlanMode') {
-        planToolUseId = content.id;
-        break;
-      }
-    }
-    final canEditThisPlan =
-        allowPlanEditing &&
-        (pendingPlanToolUseId == null || pendingPlanToolUseId == planToolUseId);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -182,39 +156,10 @@ class _PlanLayout extends StatelessWidget {
                   : ToolUseTile(toolUseId: id, name: name, input: input),
             TextContent() => const SizedBox.shrink(),
           },
-        // Plan card – reflects edited text if available
-        if (editedPlanText != null)
-          ValueListenableBuilder<String?>(
-            valueListenable: editedPlanText!,
-            builder: (context, edited, _) {
-              final displayText = canEditThisPlan && edited != null
-                  ? edited
-                  : originalPlanText;
-              return PlanCard(
-                planText: displayText,
-                isEdited: canEditThisPlan && edited != null,
-                onViewFullPlan: () async {
-                  final edited = await showPlanDetailSheet(
-                    context,
-                    displayText,
-                    editable: canEditThisPlan,
-                  );
-                  if (edited != null && canEditThisPlan) {
-                    editedPlanText!.value = edited;
-                  }
-                },
-              );
-            },
-          )
-        else
-          PlanCard(
-            planText: originalPlanText,
-            onViewFullPlan: () => showPlanDetailSheet(
-              context,
-              originalPlanText,
-              editable: canEditThisPlan,
-            ),
-          ),
+        PlanCard(
+          planText: originalPlanText,
+          onViewFullPlan: () => showPlanDetailSheet(context, originalPlanText),
+        ),
         if (hasTextContent)
           MessageActionBar(
             textToCopy: allText,

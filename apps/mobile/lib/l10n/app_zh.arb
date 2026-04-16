@@ -223,7 +223,7 @@
   "toolApprovalSummary": "执行工具需要批准",
   "planApproval": "计划批准",
   "approvalRequired": "需要批准",
-  "viewEditPlan": "查看 / 编辑计划",
+  "viewEditPlan": "查看计划",
   "keepPlanning": "继续规划",
   "keepPlanningHint": "需要改什么...",
   "sendFeedbackKeepPlanning": "发送反馈并继续规划",

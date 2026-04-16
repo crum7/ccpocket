@@ -520,11 +520,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
   }
 
   /// Approve a pending tool execution.
-  void approve(
-    String toolUseId, {
-    Map<String, dynamic>? updatedInput,
-    bool clearContext = false,
-  }) {
+  void approve(String toolUseId, {bool clearContext = false}) {
     final isExitPlanApproval = _isExitPlanApproval(toolUseId);
     logger.info(
       '[session:$sessionId] approve toolUseId=$toolUseId'
@@ -534,7 +530,6 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     _bridge.send(
       ClientMessage.approve(
         toolUseId,
-        updatedInput: updatedInput,
         clearContext: clearContext,
         sessionId: sessionId,
       ),

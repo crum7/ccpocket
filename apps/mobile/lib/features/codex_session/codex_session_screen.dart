@@ -374,10 +374,6 @@ class _CodexChatBody extends HookWidget {
         chatInputController.removeListener(onChanged);
       };
     }, [sessionId]);
-    final editedPlanText = useMemoized(() => ValueNotifier<String?>(null));
-    useEffect(() => editedPlanText.dispose, const []);
-    final activePlanApprovalToolUseId = useRef<String?>(null);
-
     // Collapse tool results notifier (shared widget needs it)
     final collapseToolResults = useMemoized(() => ValueNotifier<int>(0));
     useEffect(() => collapseToolResults.dispose, const []);
@@ -492,22 +488,10 @@ class _CodexChatBody extends HookWidget {
     }
 
     final isPlanApproval = pendingPermission?.toolName == 'ExitPlanMode';
-    final pendingPlanToolUseId = isPlanApproval ? pendingToolUseId : null;
-    if (activePlanApprovalToolUseId.value != pendingPlanToolUseId) {
-      activePlanApprovalToolUseId.value = pendingPlanToolUseId;
-      editedPlanText.value = null;
-    }
 
     void approveToolUse() {
       if (pendingToolUseId == null) return;
-      final updatedInput = isPlanApproval && editedPlanText.value != null
-          ? {'plan': editedPlanText.value!}
-          : null;
-      context.read<ChatSessionCubit>().approve(
-        pendingToolUseId,
-        updatedInput: updatedInput,
-      );
-      editedPlanText.value = null;
+      context.read<ChatSessionCubit>().approve(pendingToolUseId);
       planFeedbackController.clear();
     }
 
@@ -520,21 +504,15 @@ class _CodexChatBody extends HookWidget {
         pendingToolUseId,
         message: feedback != null && feedback.isNotEmpty ? feedback : null,
       );
-      editedPlanText.value = null;
       planFeedbackController.clear();
     }
 
     void approveWithClearContext() {
       if (pendingToolUseId == null) return;
-      final updatedInput = isPlanApproval && editedPlanText.value != null
-          ? {'plan': editedPlanText.value!}
-          : null;
       context.read<ChatSessionCubit>().approve(
         pendingToolUseId,
-        updatedInput: updatedInput,
         clearContext: true,
       );
-      editedPlanText.value = null;
       planFeedbackController.clear();
     }
 
@@ -787,25 +765,17 @@ class _CodexChatBody extends HookWidget {
                                           ? approveWithClearContext
                                           : null,
                                       onViewPlan: isPlanApproval
-                                          ? () async {
+                                          ? () {
                                               final originalText =
                                                   _extractPlanText(
                                                     pendingPermission,
                                                     sessionState.entries,
                                                   );
                                               if (originalText == null) return;
-                                              final current =
-                                                  editedPlanText.value ??
-                                                  originalText;
-                                              final edited =
-                                                  await showPlanDetailSheet(
-                                                    context,
-                                                    current,
-                                                    editable: true,
-                                                  );
-                                              if (edited != null) {
-                                                editedPlanText.value = edited;
-                                              }
+                                              showPlanDetailSheet(
+                                                context,
+                                                originalText,
+                                              );
                                             }
                                           : null,
                                     ),
@@ -855,9 +825,6 @@ class _CodexChatBody extends HookWidget {
                         context.read<ChatSessionCubit>().retryMessage(entry);
                       },
                       onRewindMessage: null,
-                      editedPlanText: editedPlanText,
-                      allowPlanEditing: pendingPlanToolUseId != null,
-                      pendingPlanToolUseId: pendingPlanToolUseId,
                       scrollToUserEntry: scrollToUserEntry,
                       collapseToolResults: collapseToolResults,
                       bottomPadding: 8,

@@ -170,7 +170,7 @@
   "toolApprovalSummary": "ツール実行には承認が必要です",
   "planApproval": "プラン承認",
   "approvalRequired": "承認が必要",
-  "viewEditPlan": "プランを表示 / 編集",
+  "viewEditPlan": "プランを表示",
   "keepPlanning": "計画を続ける",
   "keepPlanningHint": "変更点を入力...",
   "sendFeedbackKeepPlanning": "フィードバックを送信して計画を続ける",

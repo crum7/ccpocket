@@ -113,7 +113,6 @@ export type ClientMessage =
   | {
       type: "approve";
       id: string;
-      updatedInput?: Record<string, unknown>;
       clearContext?: boolean;
       sessionId?: string;
     }

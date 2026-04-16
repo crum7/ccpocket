@@ -397,7 +397,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get approvalRequired => 'Approval Required';
 
   @override
-  String get viewEditPlan => 'View / Edit Plan';
+  String get viewEditPlan => 'View Plan';
 
   @override
   String get keepPlanning => 'Keep Planning';

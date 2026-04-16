@@ -379,11 +379,6 @@ class _ChatScreenBody extends HookWidget {
     );
     useEffect(() => scrollToUserEntry.dispose, const []);
 
-    // Edited plan text (shared with PlanCard via ValueNotifier)
-    final editedPlanText = useMemoized(() => ValueNotifier<String?>(null));
-    useEffect(() => editedPlanText.dispose, const []);
-    final activePlanApprovalToolUseId = useRef<String?>(null);
-
     // Diff selection from GitScreen navigation
     final diffSelectionFromNav = useState<DiffSelection?>(null);
 
@@ -494,39 +489,20 @@ class _ChatScreenBody extends HookWidget {
     }
 
     final isPlanApproval = pendingPermission?.toolName == 'ExitPlanMode';
-    final pendingPlanToolUseId = isPlanApproval ? pendingToolUseId : null;
-
-    // Clear edited plan when plan approval target changes.
-    if (activePlanApprovalToolUseId.value != pendingPlanToolUseId) {
-      activePlanApprovalToolUseId.value = pendingPlanToolUseId;
-      editedPlanText.value = null;
-    }
 
     // --- Action callbacks ---
     void approveToolUse() {
       if (pendingToolUseId == null) return;
-      final updatedInput = isPlanApproval && editedPlanText.value != null
-          ? {'plan': editedPlanText.value!}
-          : null;
-      context.read<ChatSessionCubit>().approve(
-        pendingToolUseId,
-        updatedInput: updatedInput,
-      );
-      editedPlanText.value = null;
+      context.read<ChatSessionCubit>().approve(pendingToolUseId);
       planFeedbackController.clear();
     }
 
     void approveWithClearContext() {
       if (pendingToolUseId == null) return;
-      final updatedInput = isPlanApproval && editedPlanText.value != null
-          ? {'plan': editedPlanText.value!}
-          : null;
       context.read<ChatSessionCubit>().approve(
         pendingToolUseId,
-        updatedInput: updatedInput,
         clearContext: true,
       );
-      editedPlanText.value = null;
       planFeedbackController.clear();
     }
 
@@ -799,24 +775,16 @@ class _ChatScreenBody extends HookWidget {
                                           ? approveWithClearContext
                                           : null,
                                       onViewPlan: isPlanApproval
-                                          ? () async {
+                                          ? () {
                                               final originalText =
                                                   _extractPlanText(
                                                     sessionState.entries,
                                                   );
                                               if (originalText == null) return;
-                                              final current =
-                                                  editedPlanText.value ??
-                                                  originalText;
-                                              final edited =
-                                                  await showPlanDetailSheet(
-                                                    context,
-                                                    current,
-                                                    editable: true,
-                                                  );
-                                              if (edited != null) {
-                                                editedPlanText.value = edited;
-                                              }
+                                              showPlanDetailSheet(
+                                                context,
+                                                originalText,
+                                              );
                                             }
                                           : null,
                                     ),
@@ -869,9 +837,6 @@ class _ChatScreenBody extends HookWidget {
                         _showRewindActionSheet(context, entry);
                       },
                       collapseToolResults: collapseToolResults,
-                      editedPlanText: editedPlanText,
-                      allowPlanEditing: pendingPlanToolUseId != null,
-                      pendingPlanToolUseId: pendingPlanToolUseId,
                       scrollToUserEntry: scrollToUserEntry,
                       bottomPadding: 8,
                       isCodex: false,

@@ -26,9 +26,6 @@ class ChatMessageList extends StatefulWidget {
   final void Function(UserChatEntry)? onRetryMessage;
   final void Function(UserChatEntry)? onRewindMessage;
   final ValueNotifier<int>? collapseToolResults;
-  final ValueNotifier<String?>? editedPlanText;
-  final bool allowPlanEditing;
-  final String? pendingPlanToolUseId;
   final double bottomPadding;
   final bool isCodex;
 
@@ -47,9 +44,6 @@ class ChatMessageList extends StatefulWidget {
     required this.onRetryMessage,
     this.onRewindMessage,
     required this.collapseToolResults,
-    this.editedPlanText,
-    this.allowPlanEditing = true,
-    this.pendingPlanToolUseId,
     this.scrollToUserEntry,
     this.bottomPadding = 8,
     this.projectPath,
@@ -216,10 +210,7 @@ class _ChatMessageListState extends State<ChatMessageList> {
             onRetryMessage: widget.onRetryMessage,
             onRewindMessage: widget.onRewindMessage,
             collapseToolResults: widget.collapseToolResults,
-            editedPlanText: widget.editedPlanText,
             resolvedPlanText: _resolvePlanText(entry),
-            allowPlanEditing: widget.allowPlanEditing,
-            pendingPlanToolUseId: widget.pendingPlanToolUseId,
             hiddenToolUseIds: hiddenToolUseIds,
             onFileTap: (filePath) {
               final projectPath = widget.projectPath;

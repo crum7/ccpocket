@@ -150,23 +150,6 @@ describe("parseClientMessage", () => {
     expect(msg).toEqual({ type: "approve", id: "tu1" });
   });
 
-  it("parses approve with updatedInput", () => {
-    const msg = parseClientMessage(
-      '{"type":"approve","id":"tu1","updatedInput":{"plan":"edited plan"}}',
-    );
-    expect(msg).toEqual({
-      type: "approve",
-      id: "tu1",
-      updatedInput: { plan: "edited plan" },
-    });
-  });
-
-  it("parses approve without updatedInput (backward compat)", () => {
-    const msg = parseClientMessage('{"type":"approve","id":"tu1"}');
-    expect(msg).not.toBeNull();
-    expect((msg as Record<string, unknown>).updatedInput).toBeUndefined();
-  });
-
   it("rejects approve without id", () => {
     expect(parseClientMessage('{"type":"approve"}')).toBeNull();
   });
@@ -399,18 +382,6 @@ describe("parseClientMessage", () => {
     const msg = parseClientMessage('{"type":"approve","id":"tu1"}');
     expect(msg).not.toBeNull();
     expect((msg as Record<string, unknown>).clearContext).toBeUndefined();
-  });
-
-  it("parses approve with updatedInput and clearContext", () => {
-    const msg = parseClientMessage(
-      '{"type":"approve","id":"tu1","updatedInput":{"plan":"my plan"},"clearContext":true}',
-    );
-    expect(msg).toEqual({
-      type: "approve",
-      id: "tu1",
-      updatedInput: { plan: "my plan" },
-      clearContext: true,
-    });
   });
 
   // ---- rewind ----

@@ -26,10 +26,7 @@ class ChatEntryWidget extends StatelessWidget {
   final void Function(UserChatEntry)? onRetryMessage;
   final void Function(UserChatEntry)? onRewindMessage;
   final ValueNotifier<int>? collapseToolResults;
-  final ValueNotifier<String?>? editedPlanText;
   final String? resolvedPlanText;
-  final bool allowPlanEditing;
-  final String? pendingPlanToolUseId;
 
   /// Tool use IDs that should be hidden (replaced by a tool_use_summary).
   final Set<String> hiddenToolUseIds;
@@ -49,10 +46,7 @@ class ChatEntryWidget extends StatelessWidget {
     this.onRetryMessage,
     this.onRewindMessage,
     this.collapseToolResults,
-    this.editedPlanText,
     this.resolvedPlanText,
-    this.allowPlanEditing = true,
-    this.pendingPlanToolUseId,
     this.hiddenToolUseIds = const {},
     this.onImageTap,
     this.onFileTap,
@@ -70,10 +64,7 @@ class ChatEntryWidget extends StatelessWidget {
             message: message,
             httpBaseUrl: httpBaseUrl,
             collapseToolResults: collapseToolResults,
-            editedPlanText: editedPlanText,
             resolvedPlanText: resolvedPlanText,
-            allowPlanEditing: allowPlanEditing,
-            pendingPlanToolUseId: pendingPlanToolUseId,
             hiddenToolUseIds: hiddenToolUseIds,
             onFileTap: onFileTap,
             isCodex: isCodex,
@@ -152,10 +143,7 @@ class ServerMessageWidget extends StatelessWidget {
   final ServerMessage message;
   final String? httpBaseUrl;
   final ValueNotifier<int>? collapseToolResults;
-  final ValueNotifier<String?>? editedPlanText;
   final String? resolvedPlanText;
-  final bool allowPlanEditing;
-  final String? pendingPlanToolUseId;
 
   /// Tool use IDs that should be hidden (replaced by a tool_use_summary).
   final Set<String> hiddenToolUseIds;
@@ -169,10 +157,7 @@ class ServerMessageWidget extends StatelessWidget {
     required this.message,
     this.httpBaseUrl,
     this.collapseToolResults,
-    this.editedPlanText,
     this.resolvedPlanText,
-    this.allowPlanEditing = true,
-    this.pendingPlanToolUseId,
     this.hiddenToolUseIds = const {},
     this.onFileTap,
     this.isCodex = false,
@@ -185,10 +170,7 @@ class ServerMessageWidget extends StatelessWidget {
         msg.subtype == 'tip' ? TipChip(message: msg) : SystemChip(message: msg),
       final AssistantServerMessage msg => AssistantBubble(
         message: msg,
-        editedPlanText: editedPlanText,
         resolvedPlanText: resolvedPlanText,
-        allowPlanEditing: allowPlanEditing,
-        pendingPlanToolUseId: pendingPlanToolUseId,
         onFileTap: onFileTap,
       ),
       // Hide tool results that are summarized by a tool_use_summary
