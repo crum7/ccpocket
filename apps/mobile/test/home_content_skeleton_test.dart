@@ -7,6 +7,9 @@ import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/services/bridge_service.dart';
 import 'package:ccpocket/services/draft_service.dart';
+import 'package:ccpocket/services/in_app_review_service.dart';
+import 'package:ccpocket/services/revenuecat_service.dart';
+import 'package:ccpocket/services/support_banner_service.dart';
 import 'package:ccpocket/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -90,17 +93,25 @@ Widget _buildHomeContent({
   bool isInitialLoading = false,
   required SessionListCubit cubit,
   required DraftService draftService,
+  required RevenueCatService revenueCatService,
+  required SupportBannerService supportBannerService,
 }) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    theme: AppTheme.darkTheme,
-    home: Scaffold(
-      body: MultiBlocProvider(
-        providers: [BlocProvider<SessionListCubit>.value(value: cubit)],
-        child: RepositoryProvider<DraftService>.value(
-          value: draftService,
+  return MultiRepositoryProvider(
+    providers: [
+      RepositoryProvider<DraftService>.value(value: draftService),
+      RepositoryProvider<RevenueCatService>.value(value: revenueCatService),
+      RepositoryProvider<SupportBannerService>.value(
+        value: supportBannerService,
+      ),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      theme: AppTheme.darkTheme,
+      home: Scaffold(
+        body: MultiBlocProvider(
+          providers: [BlocProvider<SessionListCubit>.value(value: cubit)],
           child: HomeContent(
             connectionState: BridgeConnectionState.connected,
             sessions: sessions,
@@ -144,18 +155,32 @@ void main() {
   late _MockBridgeService mockBridge;
   late SessionListCubit cubit;
   late DraftService draftService;
+  late RevenueCatService revenueCatService;
+  late SupportBannerService supportBannerService;
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     draftService = DraftService(prefs);
+    revenueCatService = RevenueCatService(
+      publicApiKey: '',
+      platform: TargetPlatform.macOS,
+    );
+    supportBannerService = SupportBannerService(
+      prefs: prefs,
+      reviewService: InAppReviewService(
+        prefs: prefs,
+        appVersionLoader: () async => '1.0.0',
+      ),
+    );
     mockBridge = _MockBridgeService();
     cubit = SessionListCubit(bridge: mockBridge);
   });
 
-  tearDown(() {
+  tearDown(() async {
     cubit.close();
     mockBridge.dispose();
+    await revenueCatService.dispose();
   });
 
   group('HomeContent skeleton', () {
@@ -167,6 +192,8 @@ void main() {
           isInitialLoading: true,
           cubit: cubit,
           draftService: draftService,
+          revenueCatService: revenueCatService,
+          supportBannerService: supportBannerService,
         ),
       );
       await tester.pump();
@@ -186,6 +213,8 @@ void main() {
           isInitialLoading: false,
           cubit: cubit,
           draftService: draftService,
+          revenueCatService: revenueCatService,
+          supportBannerService: supportBannerService,
         ),
       );
       await tester.pump();
@@ -207,6 +236,8 @@ void main() {
           isInitialLoading: false,
           cubit: cubit,
           draftService: draftService,
+          revenueCatService: revenueCatService,
+          supportBannerService: supportBannerService,
         ),
       );
       await tester.pump();
@@ -227,6 +258,8 @@ void main() {
           isInitialLoading: true,
           cubit: cubit,
           draftService: draftService,
+          revenueCatService: revenueCatService,
+          supportBannerService: supportBannerService,
         ),
       );
       await tester.pump();
@@ -247,6 +280,8 @@ void main() {
           isInitialLoading: false,
           cubit: cubit,
           draftService: draftService,
+          revenueCatService: revenueCatService,
+          supportBannerService: supportBannerService,
         ),
       );
       await tester.pump();
@@ -268,6 +303,8 @@ void main() {
           isInitialLoading: true,
           cubit: cubit,
           draftService: draftService,
+          revenueCatService: revenueCatService,
+          supportBannerService: supportBannerService,
         ),
       );
       await tester.pump();
