@@ -50,10 +50,7 @@ class ApprovalBar extends StatelessWidget {
         : presentation?.title ?? pendingPermission?.displayToolName;
     final detailLines = isPlanApproval
         ? const <String>[]
-        : _approvalDetailLines(
-            presentation?.secondaryDetails ?? const <String>[],
-            planApprovalUiMode: planApprovalUiMode,
-          );
+        : (presentation?.secondaryDetails ?? const <String>[]);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -111,14 +108,6 @@ class ApprovalBar extends StatelessWidget {
       ),
     );
   }
-}
-
-List<String> _approvalDetailLines(
-  List<String> detailLines, {
-  required PlanApprovalUiMode planApprovalUiMode,
-}) {
-  if (planApprovalUiMode != PlanApprovalUiMode.codex) return detailLines;
-  return detailLines.where((line) => !line.startsWith('Why:')).toList();
 }
 
 class _ApprovalHeader extends StatelessWidget {

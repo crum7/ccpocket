@@ -835,7 +835,7 @@ abstract class AppLocalizations {
   /// No description provided for @viewEditPlan.
   ///
   /// In ja, this message translates to:
-  /// **'プランを表示 / 編集'**
+  /// **'プランを表示'**
   String get viewEditPlan;
 
   /// No description provided for @keepPlanning.

@@ -25,10 +25,7 @@ class _PermissionRequestBubbleState extends State<PermissionRequestBubble> {
   Widget build(BuildContext context) {
     final appColors = Theme.of(context).extension<AppColors>()!;
     final presentation = widget.message.presentation;
-    final detailLines = _visiblePermissionDetailLines(
-      presentation.secondaryDetails,
-      isCodex: widget.isCodex,
-    );
+    final detailLines = presentation.secondaryDetails;
     final inputStr = presentation.rawDetails;
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -140,12 +137,4 @@ class _PermissionRequestBubbleState extends State<PermissionRequestBubble> {
       ),
     );
   }
-}
-
-List<String> _visiblePermissionDetailLines(
-  List<String> detailLines, {
-  required bool isCodex,
-}) {
-  if (!isCodex) return detailLines;
-  return detailLines.where((line) => !line.startsWith('Why:')).toList();
 }

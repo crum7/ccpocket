@@ -1079,6 +1079,9 @@ class PermissionRequestMessage implements ServerMessage {
   bool get isQuestionApproval =>
       isQuestionPrompt && isMcpApprovalRequestUserInput(input);
 
+  bool get usesAskUserUi =>
+      isQuestionPrompt && !(isMcpElicitation && isQuestionApproval);
+
   bool get isPermissionGrantRequest => toolName == 'Permissions';
 
   List<String> get availableDecisions =>
@@ -1152,7 +1155,7 @@ class PermissionPresentation {
     final input = message.input;
     final rawDetails = const JsonEncoder.withIndent('  ').convert(input);
 
-    if (message.isQuestionApproval) {
+    if (message.isQuestionApproval && !message.isMcpElicitation) {
       return PermissionPresentation(
         title: message.displayToolName,
         summary: requestUserInputQuestionText(input) ?? message.displayToolName,
@@ -1165,7 +1168,7 @@ class PermissionPresentation {
       );
     }
 
-    if (message.isQuestionPrompt) {
+    if (message.isQuestionPrompt && !message.isMcpElicitation) {
       return PermissionPresentation(
         title: requestUserInputHeader(input) ?? message.displayToolName,
         summary:
@@ -1182,7 +1185,12 @@ class PermissionPresentation {
     }
 
     if (message.isMcpElicitation) {
-      final summary = _mcpSummary(input) ?? message.displayToolName;
+      final toolDescription = _mcpToolDescription(input);
+      final summary =
+          toolDescription ??
+          _mcpSummary(input) ??
+          requestUserInputQuestionText(input) ??
+          message.displayToolName;
       return PermissionPresentation(
         title: message.displayToolName,
         summary: summary,
@@ -1190,9 +1198,17 @@ class PermissionPresentation {
         riskBadge: 'MCP',
         primaryTargetLabel: input['url'] is String ? 'URL' : null,
         primaryTarget: input['url'] as String?,
-        secondaryDetails: _buildCommonSecondaryDetails(
-          input,
-          includePermissions: false,
+        secondaryDetails: _dedupeDetailLines(
+          summary: summary,
+          primaryTarget: input['url'] as String?,
+          lines: [
+            if (_nonEmptyString(input['serverName']) case final serverName?)
+              'Server: $serverName',
+            ..._mcpToolParamLines(input),
+            if (_nonEmptyString(input['message']) case final reason?)
+              'Reason: $reason',
+            ..._buildCommonSecondaryDetails(input, includePermissions: false),
+          ],
         ),
       );
     }
@@ -1231,10 +1247,14 @@ class PermissionPresentation {
           riskBadge: 'Command',
           primaryTargetLabel: command != null ? 'Command' : null,
           primaryTarget: command,
-          secondaryDetails: _buildCommonSecondaryDetails(
-            input,
-            includePermissions: false,
+          secondaryDetails: _dedupeDetailLines(
+            summary: visibleReason ?? 'Allow command execution',
             primaryTarget: command,
+            lines: _buildCommonSecondaryDetails(
+              input,
+              includePermissions: false,
+              primaryTarget: command,
+            ),
           ),
         );
       case 'FileChange':
@@ -1279,10 +1299,20 @@ class PermissionPresentation {
           riskBadge: message.displayToolName,
           primaryTargetLabel: fallbackPrimary != null ? 'Target' : null,
           primaryTarget: fallbackPrimary,
-          secondaryDetails: _buildCommonSecondaryDetails(
-            input,
-            includePermissions: false,
+          secondaryDetails: _dedupeDetailLines(
+            summary:
+                _visibleReason(
+                  input['reason'],
+                  primaryTarget: fallbackPrimary,
+                ) ??
+                fallbackPrimary ??
+                message.displayToolName,
             primaryTarget: fallbackPrimary,
+            lines: _buildCommonSecondaryDetails(
+              input,
+              includePermissions: false,
+              primaryTarget: fallbackPrimary,
+            ),
           ),
         );
     }
@@ -1296,7 +1326,7 @@ class ApprovalNotificationCopy {
   const ApprovalNotificationCopy({required this.title, required this.body});
 
   factory ApprovalNotificationCopy.from(PermissionRequestMessage message) {
-    if (message.isQuestionPrompt || message.isMcpElicitation) {
+    if (message.usesAskUserUi) {
       return ApprovalNotificationCopy(
         title: '質問があります - ccpocket',
         body: message.summary,
@@ -1432,6 +1462,7 @@ List<String> _buildCommonSecondaryDetails(
   Map<String, dynamic> input, {
   required bool includePermissions,
   bool includeReason = true,
+  String reasonLabel = 'Why',
   String? primaryTarget,
 }) {
   final lines = <String>[];
@@ -1442,7 +1473,7 @@ List<String> _buildCommonSecondaryDetails(
       primaryTarget: primaryTarget,
     );
     if (reason != null) {
-      lines.add('Why: $reason');
+      lines.add('$reasonLabel: $reason');
     }
   }
 
@@ -1473,6 +1504,121 @@ List<String> _buildCommonSecondaryDetails(
   }
 
   return lines;
+}
+
+String? _mcpToolDescription(Map<String, dynamic> input) {
+  final meta = _stringKeyedMap(input['_meta']);
+  return _nonEmptyString(meta?['tool_description']);
+}
+
+List<String> _mcpToolParamLines(Map<String, dynamic> input) {
+  final meta = _stringKeyedMap(input['_meta']);
+  final paramsDisplay = meta?['tool_params_display'];
+  if (paramsDisplay is List) {
+    final lines = paramsDisplay
+        .map((entry) {
+          final item = _stringKeyedMap(entry);
+          if (item == null) return null;
+          final label =
+              _nonEmptyString(item['display_name']) ??
+              _nonEmptyString(item['name']);
+          final value = _nonEmptyString(item['value']);
+          if (label == null || value == null) return null;
+          return '${_titleCaseLabel(label)}: $value';
+        })
+        .whereType<String>()
+        .toList();
+    if (lines.isNotEmpty) return lines;
+  }
+
+  final params = _stringKeyedMap(meta?['tool_params']);
+  if (params == null || params.isEmpty) return const [];
+  return params.entries
+      .map((entry) {
+        final value = _stringifyDetailValue(entry.value);
+        if (value == null) return null;
+        return '${_titleCaseLabel(entry.key)}: $value';
+      })
+      .whereType<String>()
+      .toList();
+}
+
+List<String> _dedupeDetailLines({
+  required String summary,
+  String? primaryTarget,
+  required List<String> lines,
+}) {
+  final normalizedSummary = _normalizeDetailValue(summary);
+  final normalizedPrimary = _normalizeDetailValue(primaryTarget);
+  final seen = <String>{};
+  final deduped = <String>[];
+
+  for (final line in lines) {
+    final normalizedLine = _normalizeDetailValue(_detailLineValue(line));
+    if (normalizedLine == null || normalizedLine.isEmpty) {
+      if (seen.add(line)) deduped.add(line);
+      continue;
+    }
+    if (normalizedLine == normalizedSummary ||
+        normalizedLine == normalizedPrimary) {
+      continue;
+    }
+    if (!seen.add(normalizedLine)) continue;
+    deduped.add(line);
+  }
+
+  return deduped;
+}
+
+Map<String, dynamic>? _stringKeyedMap(dynamic value) {
+  if (value is! Map) return null;
+  return value.map((key, value) => MapEntry(key.toString(), value));
+}
+
+String? _stringifyDetailValue(dynamic value) {
+  if (value == null) return null;
+  if (value is String) return _nonEmptyString(value);
+  if (value is num || value is bool) return value.toString();
+  if (value is List) {
+    final parts = value.map(_stringifyDetailValue).whereType<String>().toList();
+    return parts.isEmpty ? null : parts.join(', ');
+  }
+  if (value is Map) {
+    final parts = value.entries
+        .map((entry) {
+          final rendered = _stringifyDetailValue(entry.value);
+          if (rendered == null) return null;
+          return '${entry.key}=$rendered';
+        })
+        .whereType<String>()
+        .toList();
+    return parts.isEmpty ? null : parts.join(', ');
+  }
+  return value.toString();
+}
+
+String _titleCaseLabel(String label) {
+  final normalized = label.replaceAll('_', ' ').trim();
+  if (normalized.isEmpty) return label;
+  return normalized
+      .split(RegExp(r'\s+'))
+      .map((part) {
+        if (part.isEmpty) return part;
+        return '${part[0].toUpperCase()}${part.substring(1)}';
+      })
+      .join(' ');
+}
+
+String? _detailLineValue(String line) {
+  final idx = line.indexOf(':');
+  if (idx == -1) return line;
+  return line.substring(idx + 1).trim();
+}
+
+String? _normalizeDetailValue(String? value) {
+  final text = _nonEmptyString(value);
+  if (text == null) return null;
+  return text.replaceAll(RegExp(r'\s+'), ' ').trim().toLowerCase();
 }
 
 List<String> _stringList(dynamic value) {

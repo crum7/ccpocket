@@ -102,7 +102,9 @@ void main() {
       expect(find.text('Allowed actions: accept, decline'), findsNothing);
     });
 
-    testWidgets('codex approval hides duplicated Why line', (tester) async {
+    testWidgets('dedupes duplicated reason line for codex approval', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         buildSubject(
           pendingPermission: const PermissionRequestMessage(
@@ -132,6 +134,71 @@ void main() {
       );
       expect(
         find.text('Additional permissions: fileSystem.write=/tmp/project'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('shows structured MCP approval details', (tester) async {
+      await tester.pumpWidget(
+        buildSubject(
+          pendingPermission: const PermissionRequestMessage(
+            toolUseId: 'approval-1',
+            toolName: 'McpElicitation',
+            input: {
+              'serverName': 'dart-mcp',
+              'message':
+                  'Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
+              '_meta': {
+                'tool_description':
+                    'Launches a Flutter application and returns its DTD URI.',
+                'tool_params_display': [
+                  {
+                    'name': 'device',
+                    'display_name': 'device',
+                    'value': 'iPhone 17 Pro',
+                  },
+                  {
+                    'name': 'root',
+                    'display_name': 'project',
+                    'value': '/Users/k9i-mini/Workspace/ccpocket/apps/mobile',
+                  },
+                  {
+                    'name': 'target',
+                    'display_name': 'target',
+                    'value': 'lib/main.dart',
+                  },
+                ],
+              },
+              'questions': [
+                {
+                  'header': 'Approve app tool call?',
+                  'question': 'Approve app tool call?',
+                  'options': [
+                    {'label': 'Allow', 'description': 'Run the tool.'},
+                    {'label': 'Cancel', 'description': 'Cancel the tool.'},
+                  ],
+                },
+              ],
+              'availableDecisions': ['accept', 'cancel'],
+            },
+          ),
+          planApprovalUiMode: PlanApprovalUiMode.codex,
+        ),
+      );
+
+      expect(
+        find.text('Launches a Flutter application and returns its DTD URI.'),
+        findsOneWidget,
+      );
+      expect(find.text('Server: dart-mcp'), findsOneWidget);
+      expect(find.text('Device: iPhone 17 Pro'), findsOneWidget);
+      expect(
+        find.text('Project: /Users/k9i-mini/Workspace/ccpocket/apps/mobile'),
+        findsOneWidget,
+      );
+      expect(find.text('Target: lib/main.dart'), findsOneWidget);
+      expect(
+        find.textContaining('Reason: Tool call needs your approval.'),
         findsOneWidget,
       );
     });

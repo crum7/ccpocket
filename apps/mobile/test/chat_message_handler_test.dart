@@ -749,7 +749,7 @@ void main() {
 
   group('PermissionRequestMessage for McpElicitation questions', () {
     test(
-      'question-based MCP elicitation sets askToolUseId instead of pendingPermission',
+      'question-based MCP elicitation sets pendingPermission instead of askToolUseId',
       () {
         final update = handler.handle(
           const PermissionRequestMessage(
@@ -773,10 +773,11 @@ void main() {
           isBackground: false,
         );
 
-        expect(update.askToolUseId, 'tu-mcp-ask');
-        expect(update.askInput, isNotNull);
-        expect(update.pendingPermission, isNull);
-        expect(update.pendingToolUseId, isNull);
+        expect(update.askToolUseId, isNull);
+        expect(update.askInput, isNull);
+        expect(update.pendingPermission, isNotNull);
+        expect(update.pendingPermission?.toolUseId, 'tu-mcp-ask');
+        expect(update.pendingToolUseId, 'tu-mcp-ask');
       },
     );
   });
@@ -834,8 +835,47 @@ void main() {
       );
 
       expect(perm.isQuestionApproval, isTrue);
+      expect(perm.usesAskUserUi, isFalse);
       expect(perm.displayToolName, 'Approve app tool call?');
       expect(perm.summary, contains('delete-package-from-offering'));
+    });
+
+    test('uses ask user UI for ordinary AskUserQuestion prompts only', () {
+      const questionPerm = PermissionRequestMessage(
+        toolUseId: 'tu-ask-ui',
+        toolName: 'AskUserQuestion',
+        input: {
+          'questions': [
+            {
+              'header': 'Framework',
+              'question': 'Which framework should we use?',
+              'options': [
+                {'label': 'React', 'description': ''},
+                {'label': 'Vue', 'description': ''},
+              ],
+            },
+          ],
+        },
+      );
+      const mcpApproval = PermissionRequestMessage(
+        toolUseId: 'tu-mcp-ui',
+        toolName: 'McpElicitation',
+        input: {
+          'questions': [
+            {
+              'header': 'Approve app tool call?',
+              'question': 'Allow this request?',
+              'options': [
+                {'label': 'Allow', 'description': ''},
+                {'label': 'Cancel', 'description': ''},
+              ],
+            },
+          ],
+        },
+      );
+
+      expect(questionPerm.usesAskUserUi, isTrue);
+      expect(mcpApproval.usesAskUserUi, isFalse);
     });
 
     test('extracts command from input', () {
@@ -943,26 +983,107 @@ void main() {
       );
     });
 
-    test('keeps bash reason when command mention adds extra intent', () {
-      const command = '/bin/zsh -lc "mise ls flutter"';
+    test(
+      'dedupes bash reason line when summary already carries the intent',
+      () {
+        const command = '/bin/zsh -lc "mise ls flutter"';
+        const perm = PermissionRequestMessage(
+          toolUseId: 'tu-bash-intent',
+          toolName: 'Bash',
+          input: {
+            'command': command,
+            'reason': '$command to verify whether Flutter 3.41.6 is installed',
+          },
+        );
+
+        expect(
+          perm.summary,
+          '$command to verify whether Flutter 3.41.6 is installed',
+        );
+        expect(
+          perm.detailLines.where((line) => line.startsWith('Why:')),
+          isEmpty,
+        );
+      },
+    );
+
+    test('prefers structured MCP tool description and params', () {
       const perm = PermissionRequestMessage(
-        toolUseId: 'tu-bash-intent',
-        toolName: 'Bash',
+        toolUseId: 'approval-1',
+        toolName: 'McpElicitation',
         input: {
-          'command': command,
-          'reason': '$command to verify whether Flutter 3.41.6 is installed',
+          'serverName': 'dart-mcp',
+          'message':
+              'Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
+          '_meta': {
+            'tool_description':
+                'Launches a Flutter application and returns its DTD URI.',
+            'tool_params_display': [
+              {
+                'name': 'device',
+                'display_name': 'device',
+                'value': 'iPhone 17 Pro',
+              },
+              {
+                'name': 'root',
+                'display_name': 'project',
+                'value': '/Users/k9i-mini/Workspace/ccpocket/apps/mobile',
+              },
+              {
+                'name': 'target',
+                'display_name': 'target',
+                'value': 'lib/main.dart',
+              },
+            ],
+          },
         },
       );
 
       expect(
         perm.summary,
-        '$command to verify whether Flutter 3.41.6 is installed',
+        'Launches a Flutter application and returns its DTD URI.',
       );
+      expect(perm.detailLines, contains('Server: dart-mcp'));
+      expect(perm.detailLines, contains('Device: iPhone 17 Pro'));
       expect(
         perm.detailLines,
-        contains('Why: $command to verify whether Flutter 3.41.6 is installed'),
+        contains('Project: /Users/k9i-mini/Workspace/ccpocket/apps/mobile'),
+      );
+      expect(perm.detailLines, contains('Target: lib/main.dart'));
+      expect(
+        perm.detailLines,
+        contains(
+          'Reason: Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
+        ),
       );
     });
+
+    test(
+      'falls back to raw MCP tool params when display params are absent',
+      () {
+        const perm = PermissionRequestMessage(
+          toolUseId: 'approval-2',
+          toolName: 'McpElicitation',
+          input: {
+            'serverName': 'dart-mcp',
+            'message': 'Tool call needs your approval.',
+            '_meta': {
+              'tool_description':
+                  'Launches a Flutter application and returns its DTD URI.',
+              'tool_params': {
+                'device': 'sim-1',
+                'root': '/tmp/project',
+                'target': 'lib/main.dart',
+              },
+            },
+          },
+        );
+
+        expect(perm.detailLines, contains('Device: sim-1'));
+        expect(perm.detailLines, contains('Root: /tmp/project'));
+        expect(perm.detailLines, contains('Target: lib/main.dart'));
+      },
+    );
 
     test('builds notification copy from structured permission details', () {
       const perm = PermissionRequestMessage(
@@ -979,6 +1100,28 @@ void main() {
         perm.notificationCopy.body,
         'Verify whether Flutter 3.41.6 finished installing',
       );
+    });
+
+    test('uses approval notification title for MCP approvals', () {
+      const perm = PermissionRequestMessage(
+        toolUseId: 'tu-notify-mcp',
+        toolName: 'McpElicitation',
+        input: {
+          'questions': [
+            {
+              'header': 'Approve app tool call?',
+              'question': 'Allow this request?',
+              'options': [
+                {'label': 'Allow', 'description': ''},
+                {'label': 'Cancel', 'description': ''},
+              ],
+            },
+          ],
+        },
+      );
+
+      expect(perm.notificationCopy.title, '承認待ち - ccpocket');
+      expect(perm.notificationCopy.body, 'Allow this request?');
     });
   });
 

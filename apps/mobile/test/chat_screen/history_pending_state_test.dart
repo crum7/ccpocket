@@ -88,7 +88,7 @@ void main() {
     );
 
     patrolWidgetTest(
-      'L2b: History with question-based McpElicitation shows question widget',
+      'L2b: History with question-based McpElicitation shows approval bar',
       ($) async {
         await $.pumpWidget(await buildTestChatScreen(bridge: bridge));
         await pumpN($.tester);
@@ -121,9 +121,9 @@ void main() {
         ]);
         await pumpN($.tester);
 
-        expect($(AskUserQuestionWidget), findsOneWidget);
+        expect($(AskUserQuestionWidget), findsNothing);
         expect(find.text('Allow this request?'), findsOneWidget);
-        expect($(ApprovalBar), findsNothing);
+        expect($(ApprovalBar), findsOneWidget);
         expect($(ChatInputWithOverlays), findsNothing);
       },
     );

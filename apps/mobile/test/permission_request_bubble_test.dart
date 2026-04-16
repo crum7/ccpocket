@@ -27,7 +27,7 @@ void main() {
     },
   );
 
-  testWidgets('codex bubble hides duplicated Why line', (tester) async {
+  testWidgets('bubble dedupes duplicated reason line', (tester) async {
     await tester.pumpWidget(
       _wrap(const PermissionRequestBubble(message: permission, isCodex: true)),
     );
@@ -46,13 +46,65 @@ void main() {
     );
   });
 
-  testWidgets('claude bubble keeps Why line', (tester) async {
+  testWidgets('bubble also dedupes duplicated reason line for non-codex', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _wrap(const PermissionRequestBubble(message: permission, isCodex: false)),
     );
 
     expect(
       find.text('Why: Verify whether Flutter 3.41.6 finished installing'),
+      findsNothing,
+    );
+  });
+
+  testWidgets('bubble shows structured MCP approval details', (tester) async {
+    const mcpPermission = PermissionRequestMessage(
+      toolUseId: 'approval-1',
+      toolName: 'McpElicitation',
+      input: {
+        'serverName': 'dart-mcp',
+        'message':
+            'Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
+        '_meta': {
+          'tool_description':
+              'Launches a Flutter application and returns its DTD URI.',
+          'tool_params_display': [
+            {
+              'name': 'device',
+              'display_name': 'device',
+              'value': 'iPhone 17 Pro',
+            },
+            {
+              'name': 'root',
+              'display_name': 'project',
+              'value': '/Users/k9i-mini/Workspace/ccpocket/apps/mobile',
+            },
+            {
+              'name': 'target',
+              'display_name': 'target',
+              'value': 'lib/main.dart',
+            },
+          ],
+        },
+      },
+    );
+
+    await tester.pumpWidget(
+      _wrap(const PermissionRequestBubble(message: mcpPermission)),
+    );
+
+    expect(find.text('MCP: dart-mcp'), findsOneWidget);
+    expect(
+      find.text('Launches a Flutter application and returns its DTD URI.'),
+      findsOneWidget,
+    );
+    expect(find.text('Server: dart-mcp'), findsOneWidget);
+    expect(find.text('Device: iPhone 17 Pro'), findsOneWidget);
+    expect(find.text('Target: lib/main.dart'), findsOneWidget);
+    expect(
+      find.textContaining('Reason: Tool call needs your approval.'),
       findsOneWidget,
     );
   });

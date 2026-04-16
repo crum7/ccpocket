@@ -149,7 +149,13 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(RunningSessionCard(session: session, onTap: () {})),
+        _wrap(
+          RunningSessionCard(
+            session: session,
+            onTap: () {},
+            onApproveAlways: (_) {},
+          ),
+        ),
       );
 
       // Git branch text
@@ -170,7 +176,13 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(RunningSessionCard(session: session, onTap: () {})),
+        _wrap(
+          RunningSessionCard(
+            session: session,
+            onTap: () {},
+            onApproveAlways: (_) {},
+          ),
+        ),
       );
 
       // No fork icon when gitBranch is empty
@@ -187,7 +199,13 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(RunningSessionCard(session: session, onTap: () {})),
+        _wrap(
+          RunningSessionCard(
+            session: session,
+            onTap: () {},
+            onApproveAlways: (_) {},
+          ),
+        ),
       );
 
       // Status label in bar
@@ -425,7 +443,13 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(RunningSessionCard(session: session, onTap: () {})),
+        _wrap(
+          RunningSessionCard(
+            session: session,
+            onTap: () {},
+            onApproveAlways: (_) {},
+          ),
+        ),
       );
 
       expect(find.text('Command Approval'), findsOneWidget);
@@ -449,6 +473,67 @@ void main() {
       );
       expect(find.byKey(const ValueKey('reject_button')), findsOneWidget);
       expect(find.text('Approve'), findsOneWidget);
+    });
+
+    testWidgets('shows structured MCP approval summary in session card', (
+      tester,
+    ) async {
+      final session = SessionInfo(
+        id: 'codex-mcp-approval',
+        provider: 'codex',
+        projectPath: '/home/user/my-app',
+        status: 'waiting_approval',
+        createdAt: DateTime.now().toIso8601String(),
+        lastActivityAt: DateTime.now().toIso8601String(),
+        pendingPermission: const PermissionRequestMessage(
+          toolUseId: 'approval-1',
+          toolName: 'McpElicitation',
+          input: {
+            'serverName': 'dart-mcp',
+            'message':
+                'Tool call needs your approval. Reason: Potentially unsafe action: launching a local application on user\'s machine.',
+            '_meta': {
+              'tool_description':
+                  'Launches a Flutter application and returns its DTD URI.',
+              'tool_params_display': [
+                {
+                  'name': 'device',
+                  'display_name': 'device',
+                  'value': 'iPhone 17 Pro',
+                },
+                {
+                  'name': 'root',
+                  'display_name': 'project',
+                  'value': '/Users/k9i-mini/Workspace/ccpocket/apps/mobile',
+                },
+                {
+                  'name': 'target',
+                  'display_name': 'target',
+                  'value': 'lib/main.dart',
+                },
+              ],
+            },
+            'availableDecisions': ['accept', 'acceptForSession', 'cancel'],
+          },
+        ),
+      );
+
+      await tester.pumpWidget(
+        _wrap(RunningSessionCard(session: session, onTap: () {})),
+      );
+
+      expect(find.text('MCP: dart-mcp'), findsOneWidget);
+      expect(
+        find.text('Launches a Flutter application and returns its DTD URI.'),
+        findsOneWidget,
+      );
+      expect(find.text('Server: dart-mcp'), findsOneWidget);
+      expect(find.text('Device: iPhone 17 Pro'), findsOneWidget);
+      expect(find.text('Target: lib/main.dart'), findsOneWidget);
+      expect(
+        find.textContaining('Reason: Tool call needs your approval.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('ask user custom input does not send on keyboard done', (
@@ -673,9 +758,12 @@ void main() {
       expect(answered, isNull);
     });
 
-    testWidgets('MCP tool approval prompt uses question UI and preserves '
-        'dynamic option labels', (tester) async {
-      String? answered;
+    testWidgets('MCP tool approval prompt uses approval controls', (
+      tester,
+    ) async {
+      var approved = false;
+      var approvedAlways = false;
+      var rejected = false;
       final session = SessionInfo(
         id: 'ask-mcp-approval',
         provider: 'codex',
@@ -710,7 +798,9 @@ void main() {
           RunningSessionCard(
             session: session,
             onTap: () {},
-            onAnswer: (_, result) => answered = result,
+            onApprove: (_, {clearContext = false}) => approved = true,
+            onApproveAlways: (_) => approvedAlways = true,
+            onReject: (_, {message}) => rejected = true,
           ),
         ),
       );
@@ -723,22 +813,32 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Allow'), findsOneWidget);
-      expect(find.text('Allow for this session'), findsOneWidget);
-      expect(find.text('Always allow'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Allow'), findsNothing);
+      expect(find.text('Allow for this session'), findsNothing);
+      expect(find.text('Always allow'), findsNothing);
+      expect(find.text('Cancel'), findsNothing);
       expect(find.text('Other answer...'), findsNothing);
       expect(find.byType(TextField), findsNothing);
+      expect(find.byKey(const ValueKey('approve_button')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('approve_always_button')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const ValueKey('reject_button')), findsOneWidget);
 
-      await tester.tap(find.text('Always allow'));
+      await tester.tap(find.byKey(const ValueKey('approve_always_button')));
       await tester.pump();
 
-      expect(answered, 'Always allow');
+      expect(approved, isFalse);
+      expect(approvedAlways, isTrue);
+      expect(rejected, isFalse);
     });
 
-    testWidgets('MCP approval prompt omits always allow when unavailable', (
+    testWidgets('MCP approval prompt omits session button when unavailable', (
       tester,
     ) async {
+      var approved = false;
+      var rejected = false;
       final session = SessionInfo(
         id: 'ask-mcp-approval-session-only',
         provider: 'codex',
@@ -766,13 +866,28 @@ void main() {
       );
 
       await tester.pumpWidget(
-        _wrap(RunningSessionCard(session: session, onTap: () {})),
+        _wrap(
+          RunningSessionCard(
+            session: session,
+            onTap: () {},
+            onApprove: (_, {clearContext = false}) => approved = true,
+            onReject: (_, {message}) => rejected = true,
+          ),
+        ),
       );
 
-      expect(find.text('Allow'), findsOneWidget);
-      expect(find.text('Allow for this session'), findsOneWidget);
-      expect(find.text('Always allow'), findsNothing);
-      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.byKey(const ValueKey('approve_button')), findsOneWidget);
+      expect(find.byKey(const ValueKey('reject_button')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('approve_always_button')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('approve_button')));
+      await tester.pump();
+
+      expect(approved, isTrue);
+      expect(rejected, isFalse);
     });
 
     testWidgets('shows Cancel label when codex approval exposes cancel', (

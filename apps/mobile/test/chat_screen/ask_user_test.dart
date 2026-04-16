@@ -2,6 +2,7 @@ import 'package:ccpocket/features/chat_session/widgets/chat_input_with_overlays.
 import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/widgets/bubbles/ask_user_question_widget.dart';
 import 'package:ccpocket/widgets/approval_bar.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol_finders/patrol_finders.dart';
 
@@ -216,7 +217,7 @@ void main() {
     );
 
     patrolWidgetTest(
-      'E7: question-based McpElicitation uses AskUserQuestionWidget',
+      'E7: question-based McpElicitation approval uses ApprovalBar',
       ($) async {
         await $.pumpWidget(await buildTestChatScreen(bridge: bridge));
         await pumpN($.tester);
@@ -245,9 +246,15 @@ void main() {
         ]);
         await pumpN($.tester);
 
-        expect($(AskUserQuestionWidget), findsOneWidget);
+        expect($(AskUserQuestionWidget), findsNothing);
         expect(find.text('Allow this request?'), findsOneWidget);
-        expect($(ApprovalBar), findsNothing);
+        expect($(ApprovalBar), findsOneWidget);
+        expect(find.byKey(const ValueKey('approve_button')), findsOneWidget);
+        expect(
+          find.byKey(const ValueKey('approve_always_button')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('reject_button')), findsOneWidget);
       },
     );
   });

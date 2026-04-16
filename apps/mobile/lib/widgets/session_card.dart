@@ -104,7 +104,7 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
     final isCodexSession = session.provider == Provider.codex.value;
     final isPlanApproval =
         hasPermission && permission.toolName == 'ExitPlanMode';
-    final hasQuestionPrompt = hasPermission && permission.isQuestionPrompt;
+    final hasQuestionPrompt = hasPermission && permission.usesAskUserUi;
     if (isPlanApproval) {
       _syncPlanApprovalState(permission);
     } else {
@@ -214,9 +214,11 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
                               permission.toolUseId,
                               clearContext: false,
                             ),
-                            onApproveAlways: () => widget.onApproveAlways?.call(
-                              permission.toolUseId,
-                            ),
+                            onApproveAlways: widget.onApproveAlways == null
+                                ? null
+                                : () => widget.onApproveAlways!(
+                                    permission.toolUseId,
+                                  ),
                             onReject: () =>
                                 widget.onReject?.call(permission.toolUseId),
                           ))
@@ -505,11 +507,7 @@ class _ToolApprovalArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final presentation = permission.presentation;
-    final detailLines = isCodex
-        ? presentation.secondaryDetails
-              .where((line) => !line.startsWith('Why:'))
-              .toList()
-        : presentation.secondaryDetails;
+    final detailLines = presentation.secondaryDetails;
     final canReject = permission.canDecline;
     final canApproveAlways =
         permission.canApproveForSession && onApproveAlways != null;
@@ -566,7 +564,7 @@ class _ToolApprovalArea extends StatelessWidget {
           if (detailLines.isNotEmpty) ...[
             const SizedBox(height: 6),
             ...detailLines
-                .take(2)
+                .take(5)
                 .map(
                   (line) => Padding(
                     padding: const EdgeInsets.only(bottom: 2),
