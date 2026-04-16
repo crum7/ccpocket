@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.63.0] - 2026-04-16
+
+### Added
+- Add a diff file list sheet and direct navigation between changed files
+- Keep diff file actions available while git content is still loading
+
+### Changed
+- Remove in-app plan approval editing from the plan review flow
+
+### Fixed
+- Show structured MCP approval details and route question-style MCP approvals through the approval UI
+
 ## [1.62.0] - 2026-04-16
 
 ### Added
