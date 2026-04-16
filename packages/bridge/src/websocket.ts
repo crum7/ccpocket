@@ -75,6 +75,8 @@ type SystemServerMessage = Extract<ServerMessage, { type: "system" }>;
 // ---- Available model lists (delivered to clients via session_list) ----
 
 const CLAUDE_MODELS: string[] = [
+  "claude-opus-4-7",
+  "claude-opus-4-7[1m]",
   "claude-opus-4-6",
   "claude-opus-4-6[1m]",
   "claude-sonnet-4-6",
