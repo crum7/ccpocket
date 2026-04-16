@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.62.0] - 2026-04-16
+
+### Added
+- Add a home support banner that can promote the Support entry point for eligible users
+
+### Changed
+- Route the home support banner through Settings, auto-scroll to the Support section, and highlight the in-app entry point
+- Add a debug toggle to force-show the home support banner for UI verification
+
+### Fixed
+- Lazy-initialize FCM handlers to avoid startup issues in the mobile app
+
 ## [1.61.4] - 2026-04-15
 
 ### Changed
