@@ -110,7 +110,27 @@ prefix_rule(
 )
 prefix_rule(
     pattern=["xcrun", "simctl"],
+    decision="allow",
     justification="Simulator control is allowed in this trusted project workflow.",
+    match=[
+        "xcrun simctl list devices available",
+        "xcrun simctl ui booted appearance light",
+    ],
+)
+prefix_rule(
+    pattern=["xcrun", "simctl", ["addmedia", "clone", "create", "delete", "erase", "icloud_sync", "install", "install_app_data", "keychain", "openurl", "pair", "pair_activate", "privacy", "push", "rename", "runtime", "spawn", "uninstall", "unpair", "upgrade"]],
+    decision="prompt",
+    justification="Destructive or high-impact Simulator actions should still require confirmation.",
+    match=[
+        "xcrun simctl erase booted",
+        "xcrun simctl privacy booted grant notifications com.example.app",
+        "xcrun simctl install booted build/ios/iphonesimulator/Runner.app",
+    ],
+    not_match=[
+        "xcrun simctl list devices available",
+        "xcrun simctl ui booted appearance light",
+        "xcrun simctl io booted screenshot /tmp/example.png",
+    ],
 )
 prefix_rule(
     pattern=["pod", "install"],
