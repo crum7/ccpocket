@@ -1,3 +1,1 @@
-- Added optional Supporter purchases with one-time and monthly support options
-- New Support screen with purchase history summaries and restore flow
-- Monthly supporters can now unlock alternate app icons
+- Minor fixes and improvements
