@@ -28,6 +28,7 @@ class DiffFileHeader extends StatelessWidget {
     final appColors = Theme.of(context).extension<AppColors>()!;
     final stats = file.stats;
     return GestureDetector(
+      key: ValueKey('diff_file_header_${file.filePath}'),
       onTap: onToggleCollapse,
       onLongPress: onLongPress,
       child: Container(

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ccpocket/features/git/git_screen.dart';
+import 'package:ccpocket/features/git/state/git_view_state.dart';
+import 'package:ccpocket/features/git/widgets/git_file_list_sheet.dart';
 import 'package:ccpocket/l10n/app_localizations.dart';
 import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/services/bridge_service.dart';
@@ -51,6 +53,27 @@ diff --git a/file_b.dart b/file_b.dart
  first
 +added
  last
+''';
+
+const _nestedDiff = '''
+diff --git a/apps/mobile/lib/app.dart b/apps/mobile/lib/app.dart
+--- a/apps/mobile/lib/app.dart
++++ b/apps/mobile/lib/app.dart
+@@ -1,1 +1,1 @@
+-old
++new
+diff --git a/apps/mobile/lib/features/git/git_screen.dart b/apps/mobile/lib/features/git/git_screen.dart
+--- a/apps/mobile/lib/features/git/git_screen.dart
++++ b/apps/mobile/lib/features/git/git_screen.dart
+@@ -1,1 +1,1 @@
+-old
++new
+diff --git a/apps/mobile/test/git_screen_test.dart b/apps/mobile/test/git_screen_test.dart
+--- a/apps/mobile/test/git_screen_test.dart
++++ b/apps/mobile/test/git_screen_test.dart
+@@ -1,1 +1,1 @@
+-old
++new
 ''';
 
 void main() {
@@ -153,9 +176,20 @@ void main() {
 
       expect(find.byKey(const ValueKey('pull_button')), findsOneWidget);
       expect(find.byKey(const ValueKey('push_button')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('git_file_list_button')),
+        findsOneWidget,
+      );
       expect(find.byKey(const ValueKey('revert_all_button')), findsOneWidget);
       expect(find.byKey(const ValueKey('stage_all_button')), findsOneWidget);
 
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_button')),
+          matching: find.text('2'),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.descendant(
           of: find.byKey(const ValueKey('pull_button')),
@@ -277,6 +311,111 @@ void main() {
       expect(find.text('Stage'), findsWidgets);
     });
 
+    testWidgets('opens files sheet from the app bar', (tester) async {
+      final bridge = MockBridgeService()..mockDiff = _nestedDiff;
+      addTearDown(bridge.dispose);
+
+      await tester.pumpWidget(
+        _wrap(const GitScreen(projectPath: '/tmp/project'), bridge: bridge),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('git_file_list_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Files'), findsOneWidget);
+      expect(find.text('3 files • Changes'), findsOneWidget);
+      expect(find.text('apps'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('git_screen.dart'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('apps/mobile/lib/features/git'),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('files sheet reflects the current tab only', (tester) async {
+      final bridge = MockBridgeService()..mockDiff = _multiFileDiff;
+      bridge.send(
+        ClientMessage.gitStage('/tmp/project', files: ['file_a.dart']),
+      );
+      addTearDown(bridge.dispose);
+
+      await tester.pumpWidget(
+        _wrap(const GitScreen(projectPath: '/tmp/project'), bridge: bridge),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Staged'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('git_file_list_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 files • Staged'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('file_a.dart'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('file_b.dart'),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('selecting a file from the sheet closes it and scrolls there', (
+      tester,
+    ) async {
+      final bridge = MockBridgeService()
+        ..mockDiff = List.generate(
+          12,
+          (index) =>
+              '''
+diff --git a/lib/file_$index.dart b/lib/file_$index.dart
+--- a/lib/file_$index.dart
++++ b/lib/file_$index.dart
+@@ -1,1 +1,1 @@
+-old
++new
+''',
+        ).join();
+      addTearDown(bridge.dispose);
+
+      await tester.pumpWidget(
+        _wrap(const GitScreen(projectPath: '/tmp/project'), bridge: bridge),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const ValueKey('diff_file_header_lib/file_11.dart')),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('git_file_list_button')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('file_11.dart'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Files'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('diff_file_header_lib/file_11.dart')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('hunk swipe is enabled by default', (tester) async {
       final bridge = MockBridgeService()..mockDiff = _multiFileDiff;
       addTearDown(bridge.dispose);
@@ -394,6 +533,79 @@ void main() {
       expect(selection.diffText, contains('@@ -1,2 +1,3 @@'));
       expect(selection.diffText, contains('+added'));
       expect(selection.diffText, isNot(contains('file_a.dart')));
+    });
+  });
+
+  group('GitFileListSheet', () {
+    testWidgets('builds a tree and toggles folders', (tester) async {
+      final files = parseDiff(_nestedDiff);
+      final controller = ScrollController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        _wrap(
+          Scaffold(
+            body: GitFileListSheet(
+              files: files,
+              viewMode: GitViewMode.unstaged,
+              scrollController: controller,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('apps'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('git_screen.dart'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('apps/mobile/lib/features/git'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('git_tree_node_folder:apps')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('git_screen.dart'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('git_screen_test.dart'),
+        ),
+        findsNothing,
+      );
+
+      await tester.tap(find.byKey(const ValueKey('git_tree_node_folder:apps')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('git_screen.dart'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const ValueKey('git_file_list_tree')),
+          matching: find.text('git_screen_test.dart'),
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

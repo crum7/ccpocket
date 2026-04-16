@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:scroll_to_index/scroll_to_index.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/bridge_service.dart';
@@ -15,6 +16,7 @@ import 'widgets/diff_content_list.dart';
 import 'widgets/diff_empty_state.dart';
 import 'widgets/diff_error_state.dart';
 import 'widgets/git_project_header.dart';
+import 'widgets/git_file_list_sheet.dart';
 
 /// Dedicated screen for viewing unified diffs.
 ///
@@ -24,7 +26,7 @@ import 'widgets/git_project_header.dart';
 ///
 /// Returns a [DiffSelection] via [Navigator.pop] when Request Change is chosen.
 @RoutePage()
-class GitScreen extends StatelessWidget {
+class GitScreen extends StatefulWidget {
   /// Raw diff text for immediate display (individual tool result).
   final String? initialDiff;
 
@@ -50,31 +52,72 @@ class GitScreen extends StatelessWidget {
   });
 
   @override
+  State<GitScreen> createState() => _GitScreenState();
+}
+
+class _GitScreenState extends State<GitScreen> {
+  late final AutoScrollController _scrollController;
+  late final ValueNotifier<int?> _scrollToFileIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = AutoScrollController();
+    _scrollToFileIndex = ValueNotifier<int?>(null)
+      ..addListener(_handleScrollTo);
+  }
+
+  @override
+  void dispose() {
+    _scrollToFileIndex
+      ..removeListener(_handleScrollTo)
+      ..dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleScrollTo() async {
+    final index = _scrollToFileIndex.value;
+    if (index == null) return;
+    _scrollToFileIndex.value = null;
+    await _scrollController.scrollToIndex(
+      index,
+      preferPosition: AutoScrollPosition.middle,
+      duration: const Duration(milliseconds: 280),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final bridge = context.read<BridgeService>();
-    final isProjectMode = projectPath != null;
+    final isProjectMode = widget.projectPath != null;
 
     return MultiBlocProvider(
       providers: [
         BlocProvider(
           create: (_) => GitViewCubit(
             bridge: bridge,
-            initialDiff: initialDiff,
-            projectPath: projectPath,
-            worktreePath: worktreePath,
-            sessionId: sessionId,
+            initialDiff: widget.initialDiff,
+            projectPath: widget.projectPath,
+            worktreePath: widget.worktreePath,
+            sessionId: widget.sessionId,
           ),
         ),
         if (isProjectMode)
           BlocProvider(
             create: (_) => CommitCubit(
               bridge: bridge,
-              projectPath: projectPath!,
-              sessionId: sessionId,
+              projectPath: widget.projectPath!,
+              sessionId: widget.sessionId,
             ),
           ),
       ],
-      child: _GitScreenBody(title: title, isProjectMode: isProjectMode),
+      child: _GitScreenBody(
+        title: widget.title,
+        isProjectMode: isProjectMode,
+        scrollController: _scrollController,
+        scrollToFileIndex: _scrollToFileIndex,
+      ),
     );
   }
 }
@@ -82,8 +125,15 @@ class GitScreen extends StatelessWidget {
 class _GitScreenBody extends StatelessWidget {
   final String? title;
   final bool isProjectMode;
+  final AutoScrollController scrollController;
+  final ValueNotifier<int?> scrollToFileIndex;
 
-  const _GitScreenBody({this.title, this.isProjectMode = false});
+  const _GitScreenBody({
+    this.title,
+    this.isProjectMode = false,
+    required this.scrollController,
+    required this.scrollToFileIndex,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +147,22 @@ class _GitScreenBody extends StatelessWidget {
       appBar: AppBar(
         title: Text(screenTitle, overflow: TextOverflow.ellipsis),
         actions: [
+          if (isProjectMode)
+            _FileListAppBarButton(
+              state: state,
+              onPressed: state.loading || state.files.isEmpty
+                  ? null
+                  : () async {
+                      final selectedIndex = await showGitFileListSheet(
+                        context,
+                        files: state.files,
+                        viewMode: state.viewMode,
+                      );
+                      if (selectedIndex != null) {
+                        scrollToFileIndex.value = selectedIndex;
+                      }
+                    },
+            ),
           // Refresh (projectPath mode only)
           if (cubit.canRefresh && !state.loading)
             IconButton(
@@ -131,6 +197,7 @@ class _GitScreenBody extends StatelessWidget {
               onConfirmRevert: _confirmRevert,
               onShowFileActionSheet: _showFileActionSheet,
               onShowHunkActionSheet: _showHunkActionSheet,
+              scrollController: scrollController,
             ),
           ),
         ],
@@ -346,10 +413,57 @@ class _GitScreenBody extends StatelessWidget {
   }
 }
 
+class _FileListAppBarButton extends StatelessWidget {
+  final GitViewState state;
+  final VoidCallback? onPressed;
+
+  const _FileListAppBarButton({required this.state, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return IconButton(
+      key: const ValueKey('git_file_list_button'),
+      tooltip: 'Files',
+      onPressed: onPressed,
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Icon(Icons.topic_outlined),
+          if (state.files.isNotEmpty)
+            Positioned(
+              right: -8,
+              top: -6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                constraints: const BoxConstraints(minWidth: 18),
+                child: Text(
+                  '${state.files.length}',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: cs.onPrimary,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _GitScreenContent extends StatelessWidget {
   final GitViewState state;
   final GitViewCubit cubit;
   final bool isProjectMode;
+  final AutoScrollController scrollController;
   final Future<void> Function(
     BuildContext context, {
     required String title,
@@ -377,6 +491,7 @@ class _GitScreenContent extends StatelessWidget {
     required this.state,
     required this.cubit,
     required this.isProjectMode,
+    required this.scrollController,
     required this.onConfirmRevert,
     required this.onShowFileActionSheet,
     required this.onShowHunkActionSheet,
@@ -398,6 +513,7 @@ class _GitScreenContent extends StatelessWidget {
 
     return DiffContentList(
       files: state.files,
+      scrollController: scrollController,
       collapsedFileIndices: state.collapsedFileIndices,
       onToggleCollapse: cubit.toggleCollapse,
       onLoadImage: cubit.loadImage,

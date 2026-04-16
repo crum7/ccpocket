@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:scroll_to_index/scroll_to_index.dart';
 
 import '../../../utils/diff_parser.dart';
 import 'diff_binary_notice.dart';
@@ -9,6 +10,7 @@ import 'git_swipe_action_background.dart';
 
 class DiffContentList extends StatelessWidget {
   final List<DiffFile> files;
+  final AutoScrollController scrollController;
   final Set<int> collapsedFileIndices;
   final ValueChanged<int> onToggleCollapse;
   final ValueChanged<int>? onLoadImage;
@@ -27,6 +29,7 @@ class DiffContentList extends StatelessWidget {
   const DiffContentList({
     super.key,
     required this.files,
+    required this.scrollController,
     required this.collapsedFileIndices,
     required this.onToggleCollapse,
     this.onLoadImage,
@@ -67,6 +70,7 @@ class DiffContentList extends StatelessWidget {
         return const DiffBinaryNotice();
       }
       return ListView(
+        controller: scrollController,
         padding: const EdgeInsets.symmetric(vertical: 8),
         children: [_buildFileSection(0, file)],
       );
@@ -74,6 +78,7 @@ class DiffContentList extends StatelessWidget {
 
     // Multi-file mode: all visible files in one scrollable list
     return ListView.builder(
+      controller: scrollController,
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: files.length * 2 - 1,
       itemBuilder: (context, index) {
@@ -98,26 +103,31 @@ class DiffContentList extends StatelessWidget {
           : null,
     );
 
-    Widget section = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        header,
-        if (!collapsed)
-          if (file.isBinary)
-            if (file.isImage && file.imageData != null)
-              DiffImageWidget(
-                file: file,
-                imageData: file.imageData!,
-                onLoadRequested: onLoadImage != null
-                    ? () => onLoadImage!(fileIdx)
-                    : null,
-                loading: loadingImageIndices.contains(fileIdx),
-              )
+    Widget section = AutoScrollTag(
+      key: ValueKey('diff_file_tag_${file.filePath}'),
+      controller: scrollController,
+      index: fileIdx,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          header,
+          if (!collapsed)
+            if (file.isBinary)
+              if (file.isImage && file.imageData != null)
+                DiffImageWidget(
+                  file: file,
+                  imageData: file.imageData!,
+                  onLoadRequested: onLoadImage != null
+                      ? () => onLoadImage!(fileIdx)
+                      : null,
+                  loading: loadingImageIndices.contains(fileIdx),
+                )
+              else
+                const DiffBinaryNotice()
             else
-              const DiffBinaryNotice()
-          else
-            ..._buildHunkWidgets(fileIdx, file),
-      ],
+              ..._buildHunkWidgets(fileIdx, file),
+        ],
+      ),
     );
 
     if (onSwipeStage != null ||
