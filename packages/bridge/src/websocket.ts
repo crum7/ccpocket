@@ -1,7 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import { execFile, execFileSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
-import { readFile, unlink } from "node:fs/promises";
+import { lstat, readFile, readlink, stat, unlink } from "node:fs/promises";
 import { resolve, extname, basename, relative } from "node:path";
 import { promisify } from "node:util";
 import { WebSocketServer, WebSocket } from "ws";
@@ -2342,6 +2342,50 @@ export class BridgeWebSocketServer {
                 filePath: msg.filePath,
                 content: "",
                 error: "File not found",
+              });
+              return;
+            }
+            const fileStat = await lstat(absPath);
+            if (fileStat.isSymbolicLink()) {
+              let targetPath = "";
+              try {
+                targetPath = await readlink(absPath);
+              } catch {
+                // Best effort only; the user-facing error still works without it.
+              }
+              let resolvedTargetStat;
+              try {
+                resolvedTargetStat = await stat(absPath);
+              } catch {
+                this.send(ws, {
+                  type: "file_content",
+                  filePath: msg.filePath,
+                  content: "",
+                  error:
+                    targetPath.length > 0
+                      ? `This symbolic link points to a missing target: ${targetPath}`
+                      : "This symbolic link points to a missing target.",
+                });
+                return;
+              }
+              if (resolvedTargetStat.isDirectory()) {
+                this.send(ws, {
+                  type: "file_content",
+                  filePath: msg.filePath,
+                  content: "",
+                  error:
+                    targetPath.length > 0
+                      ? `This symbolic link points to a directory (${targetPath}). Open the target directory instead.`
+                      : "This symbolic link points to a directory. Open the target directory instead.",
+                });
+                return;
+              }
+            } else if (fileStat.isDirectory()) {
+              this.send(ws, {
+                type: "file_content",
+                filePath: msg.filePath,
+                content: "",
+                error: "This path is a directory. Open a file instead.",
               });
               return;
             }

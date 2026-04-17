@@ -293,11 +293,20 @@ List<TextSpan> highlightToTextSpans({
     return [TextSpan(text: source, style: baseStyle)];
   }
 
-  final editorStyleSpan = _syntaxHighlight.highlight(
-    context: context,
-    source: source,
-    language: language,
-  );
+  TextSpan? editorStyleSpan;
+  try {
+    editorStyleSpan = _syntaxHighlight.highlight(
+      context: context,
+      source: source,
+      language: language,
+    );
+  } catch (error, stackTrace) {
+    logger.warning(
+      '[markdown] syntax_highlight failed for language=$language',
+      error,
+      stackTrace,
+    );
+  }
   if (editorStyleSpan != null) {
     return [editorStyleSpan];
   }

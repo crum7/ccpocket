@@ -1,4 +1,6 @@
 import { createServer } from "node:http";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -318,6 +320,50 @@ describe("BridgeWebSocketServer resume/get_history flow", () => {
     expect(created.projectPath).toBe("D:\\Users\\alice\\src\\ccpocket");
 
     bridge.close();
+  });
+
+  it("returns a friendly error for symbolic links to directories", async () => {
+    const projectPath = mkdtempSync(resolve(tmpdir(), "ccpocket-bridge-"));
+    const targetDir = resolve(projectPath, "target-dir");
+    const symlinkPath = resolve(projectPath, "linked-dir");
+    mkdirSync(targetDir);
+    symlinkSync("target-dir", symlinkPath);
+
+    const bridge = new BridgeWebSocketServer({
+      server: httpServer,
+      allowedDirs: [projectPath],
+    });
+    const ws = {
+      readyState: OPEN_STATE,
+      send: vi.fn(),
+    } as any;
+
+    try {
+      (bridge as any).handleClientMessage(
+        {
+          type: "read_file",
+          projectPath,
+          filePath: "linked-dir",
+        },
+        ws,
+      );
+
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 25));
+
+      const sends = ws.send.mock.calls.map((c: unknown[]) =>
+        JSON.parse(c[0] as string),
+      );
+      expect(sends).toContainEqual({
+        type: "file_content",
+        filePath: "linked-dir",
+        content: "",
+        error:
+          "This symbolic link points to a directory (target-dir). Open the target directory instead.",
+      });
+    } finally {
+      bridge.close();
+      rmSync(projectPath, { recursive: true, force: true });
+    }
   });
 
   it("normalizes extended Windows project paths during resume", async () => {
