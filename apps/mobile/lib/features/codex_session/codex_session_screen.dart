@@ -111,6 +111,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
   @override
   void initState() {
     super.initState();
+    final bridge = context.read<BridgeService>();
     _sessionId = widget.sessionId;
     _projectPath = widget.projectPath;
     _gitBranch = widget.gitBranch;
@@ -121,6 +122,9 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     _codexApprovalPolicy = codexApprovalPolicyFromRaw(
       widget.initialApprovalPolicy,
     );
+    final explorerHistory = bridge.getExplorerHistory(_sessionId);
+    _explorerCurrentPath = explorerHistory.currentPath;
+    _recentPeekedFiles = explorerHistory.recentPeekedFiles;
 
     if (_isPending) {
       _listenForSessionCreated();
@@ -184,6 +188,9 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     final oldId = _sessionId;
     final newId = msg.sessionId!;
     final draftService = context.read<DraftService>();
+    final bridge = context.read<BridgeService>();
+    bridge.migrateExplorerHistory(oldId, newId);
+    final explorerHistory = bridge.getExplorerHistory(newId);
     draftService.migrateDraft(oldId, newId);
     draftService.migrateImageDraft(oldId, newId);
     setState(() {
@@ -197,6 +204,8 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       _codexApprovalPolicy =
           codexApprovalPolicyFromRaw(msg.approvalPolicy) ??
           _codexApprovalPolicy;
+      _explorerCurrentPath = explorerHistory.currentPath;
+      _recentPeekedFiles = explorerHistory.recentPeekedFiles;
     });
   }
 
@@ -240,6 +249,11 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     required String currentPath,
     required List<String> recentPeekedFiles,
   }) {
+    context.read<BridgeService>().setExplorerHistory(
+      _sessionId,
+      currentPath: currentPath,
+      recentPeekedFiles: recentPeekedFiles,
+    );
     setState(() {
       _explorerCurrentPath = currentPath;
       _recentPeekedFiles = recentPeekedFiles;

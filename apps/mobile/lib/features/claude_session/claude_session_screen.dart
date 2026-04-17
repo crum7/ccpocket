@@ -110,6 +110,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
   @override
   void initState() {
     super.initState();
+    final bridge = context.read<BridgeService>();
     _sessionId = widget.sessionId;
     _projectPath = widget.projectPath;
     _worktreePath = widget.worktreePath;
@@ -117,6 +118,9 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     _isPending = widget.isPending;
     _permissionMode = permissionModeFromRaw(widget.initialPermissionMode);
     _sandboxMode = sandboxModeFromRaw(widget.initialSandboxMode);
+    final explorerHistory = bridge.getExplorerHistory(_sessionId);
+    _explorerCurrentPath = explorerHistory.currentPath;
+    _recentPeekedFiles = explorerHistory.recentPeekedFiles;
 
     if (_isPending) {
       _listenForSessionCreated();
@@ -222,6 +226,11 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     required String currentPath,
     required List<String> recentPeekedFiles,
   }) {
+    context.read<BridgeService>().setExplorerHistory(
+      _sessionId,
+      currentPath: currentPath,
+      recentPeekedFiles: recentPeekedFiles,
+    );
     setState(() {
       _explorerCurrentPath = currentPath;
       _recentPeekedFiles = recentPeekedFiles;
@@ -233,6 +242,9 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
     final oldId = _sessionId;
     final newId = msg.sessionId!;
     final draftService = context.read<DraftService>();
+    final bridge = context.read<BridgeService>();
+    bridge.migrateExplorerHistory(oldId, newId);
+    final explorerHistory = bridge.getExplorerHistory(newId);
     draftService.migrateDraft(oldId, newId);
     draftService.migrateImageDraft(oldId, newId);
     setState(() {
@@ -243,6 +255,8 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       _permissionMode =
           permissionModeFromRaw(msg.permissionMode) ?? _permissionMode;
       _sandboxMode = sandboxModeFromRaw(msg.sandboxMode) ?? _sandboxMode;
+      _explorerCurrentPath = explorerHistory.currentPath;
+      _recentPeekedFiles = explorerHistory.recentPeekedFiles;
     });
   }
 

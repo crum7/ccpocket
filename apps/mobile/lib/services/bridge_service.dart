@@ -11,6 +11,16 @@ import '../core/logger.dart';
 import '../models/messages.dart';
 import 'bridge_service_base.dart';
 
+class ExplorerHistorySnapshot {
+  const ExplorerHistorySnapshot({
+    this.currentPath = '',
+    this.recentPeekedFiles = const [],
+  });
+
+  final String currentPath;
+  final List<String> recentPeekedFiles;
+}
+
 class BridgeService implements BridgeServiceBase {
   void Function(ClientMessage message)? onOutgoingMessage;
 
@@ -92,6 +102,7 @@ class BridgeService implements BridgeServiceBase {
   String? _defaultCodexProfile;
   String? _bridgeVersion;
   UsageResultMessage? _lastUsageResult;
+  final Map<String, ExplorerHistorySnapshot> _explorerHistoryBySession = {};
 
   // Diff image cache: survives screen navigation, cleared on session stop.
   // Key: "$projectPath\n$filePath"
@@ -605,8 +616,45 @@ class BridgeService implements BridgeServiceBase {
   @override
   void stopSession(String sessionId) {
     send(ClientMessage.stopSession(sessionId));
+    clearExplorerHistory(sessionId);
     _sessionStoppedController.add(sessionId);
     clearDiffImageCache();
+  }
+
+  ExplorerHistorySnapshot getExplorerHistory(String sessionId) {
+    return _explorerHistoryBySession[sessionId] ??
+        const ExplorerHistorySnapshot();
+  }
+
+  void setExplorerHistory(
+    String sessionId, {
+    required String currentPath,
+    required List<String> recentPeekedFiles,
+  }) {
+    final normalizedPath = currentPath.trim();
+    final normalizedFiles = recentPeekedFiles
+        .map((file) => file.trim())
+        .where((file) => file.isNotEmpty)
+        .take(10)
+        .toList();
+    if (normalizedPath.isEmpty && normalizedFiles.isEmpty) {
+      _explorerHistoryBySession.remove(sessionId);
+      return;
+    }
+    _explorerHistoryBySession[sessionId] = ExplorerHistorySnapshot(
+      currentPath: normalizedPath,
+      recentPeekedFiles: normalizedFiles,
+    );
+  }
+
+  void migrateExplorerHistory(String fromSessionId, String toSessionId) {
+    final snapshot = _explorerHistoryBySession.remove(fromSessionId);
+    if (snapshot == null) return;
+    _explorerHistoryBySession[toSessionId] = snapshot;
+  }
+
+  void clearExplorerHistory(String sessionId) {
+    _explorerHistoryBySession.remove(sessionId);
   }
 
   /// Rename a session. For running sessions, [sessionId] is the bridge id.
