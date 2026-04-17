@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.64.0] - 2026-04-17
+
+### Added
+- Add Claude Opus 4.7 to the available model list when starting a new session
+
+### Changed
+- Improve Explorer navigation by keeping file history focused on recent open files
+- Open file peek automatically after jumping to a file selected from Explorer history
+
 ## [1.63.0] - 2026-04-16
 
 ### Added
