@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.64.1] - 2026-04-17
+
+### Fixed
+- Prevent File Peek from crashing on TypeScript files when syntax highlighting hits missing upstream documentation comment grammars
+- Show a clearer error when File Peek opens a symbolic link that points to a directory
+
 ## [1.64.0] - 2026-04-17
 
 ### Added
