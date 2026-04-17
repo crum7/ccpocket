@@ -295,6 +295,8 @@ List<TextSpan> highlightToTextSpans({
 
   TextSpan? editorStyleSpan;
   try {
+    // Temporary fallback until syntax_highlight merges
+    // https://github.com/serverpod/syntax_highlight/pull/21.
     editorStyleSpan = _syntaxHighlight.highlight(
       context: context,
       source: source,
