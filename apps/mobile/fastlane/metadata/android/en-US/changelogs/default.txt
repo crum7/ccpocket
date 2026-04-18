@@ -1,4 +1,3 @@
-- Improved Explorer navigation with recent files and one-tap file preview from history
-- Added Claude Opus 4.7 to the model list for new sessions
-- Added a changed-files list to Git Diff so it's easier to review the exact file you want
-- Other minor fixes and improvements
+- Added support for selecting a globally configured profile when starting a Codex session
+- Added Auto mode for Claude sessions
+- Explorer now keeps recently opened file history until the session is stopped
