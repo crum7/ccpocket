@@ -59,6 +59,7 @@ jobs:
           if ! app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type MAC_APP_DIRECT \
             --platform MAC_OS \
+            --create \
             --certificate-key "@file:$CERT_KEY_PATH"; then
             echo "::error::Failed to fetch Developer ID signing files. Check that MACOS_CERTIFICATE_P12 matches an existing Developer ID Application certificate in App Store Connect, or rotate the secret before re-running."
             exit 1
