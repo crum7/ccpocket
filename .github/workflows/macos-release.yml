@@ -138,11 +138,31 @@ jobs:
       - name: Notarize DMG
         run: |
           KEY_PATH="$HOME/.private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
+          RESULT_PATH="$RUNNER_TEMP/notarytool-result.json"
+          LOG_PATH="$RUNNER_TEMP/notarytool-log.json"
+
           xcrun notarytool submit "${{ steps.dmg.outputs.dmg_path }}" \
             --key "$KEY_PATH" \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
-            --wait --timeout 30m
+            --wait --timeout 30m \
+            --output-format json > "$RESULT_PATH"
+
+          SUBMISSION_ID=$(ruby -rjson -e 'data = JSON.parse(File.read(ARGV[0])); puts data.fetch("id")' "$RESULT_PATH")
+          STATUS=$(ruby -rjson -e 'data = JSON.parse(File.read(ARGV[0])); puts data.fetch("status")' "$RESULT_PATH")
+
+          echo "Notary submission id: $SUBMISSION_ID"
+          echo "Notary status: $STATUS"
+
+          if [ "$STATUS" != "Accepted" ]; then
+            xcrun notarytool log "$SUBMISSION_ID" \
+              --key "$KEY_PATH" \
+              --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+              --issuer "$APP_STORE_CONNECT_ISSUER_ID" \
+              --output-format json | tee "$LOG_PATH"
+            echo "::error::Notarization failed with status $STATUS"
+            exit 1
+          fi
 
           # Staple the notarization ticket
           xcrun stapler staple "${{ steps.dmg.outputs.dmg_path }}"
