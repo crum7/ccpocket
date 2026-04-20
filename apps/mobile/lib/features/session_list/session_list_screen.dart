@@ -508,16 +508,27 @@ class _SessionListScreenState extends State<SessionListScreen>
   }
 
   Future<void> _openSettings() async {
-    if (widget.embedded) {
-      await context.router.navigate(SettingsRoute());
+    final shell = WorkspaceShellScreen.maybeOf(context);
+    if (widget.embedded && shell != null) {
+      shell.openSettingsCenter();
       return;
     }
     await context.router.push(SettingsRoute());
   }
 
+  void _openSupportSettings() {
+    final shell = WorkspaceShellScreen.maybeOf(context);
+    if (widget.embedded && shell != null) {
+      shell.openSettingsCenter(focusSupport: true);
+      return;
+    }
+    context.pushRoute(SettingsRoute(focusSupport: true));
+  }
+
   Future<void> _openGallery() async {
-    if (widget.embedded) {
-      await context.router.navigate(GalleryRoute());
+    final shell = WorkspaceShellScreen.maybeOf(context);
+    if (widget.embedded && shell != null) {
+      shell.openGlobalGalleryCenter();
       return;
     }
     await context.router.push(GalleryRoute());
@@ -1603,6 +1614,7 @@ class _SessionListScreenState extends State<SessionListScreen>
               context.read<SessionListCubit>().toggleNamedOnly(),
           appUpdateInfo: _appUpdateInfo,
           onDismissAppUpdate: _dismissAppUpdate,
+          onOpenSupportSettings: _openSupportSettings,
         ),
       );
 
@@ -1632,7 +1644,14 @@ class _SessionListScreenState extends State<SessionListScreen>
       startingMachineId: machineState?.startingMachineId,
       updatingMachineId: machineState?.updatingMachineId,
       onScanQrCode: _scanQrCode,
-      onViewSetupGuide: () => context.router.push(const SetupGuideRoute()),
+      onViewSetupGuide: () {
+        final shell = WorkspaceShellScreen.maybeOf(context);
+        if (widget.embedded && shell != null) {
+          shell.openSetupGuideCenter();
+          return;
+        }
+        context.router.push(const SetupGuideRoute());
+      },
       onConnectToDiscovered: _connectToDiscovered,
       onConnectToMachine: _connectToMachine,
       onStartMachine: _startMachine,

@@ -7,23 +7,30 @@ import 'app_router.dart';
 class SessionRouteObserver extends AutoRouterObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (_isTransientRoute(route)) return;
     _syncActiveSession(route);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (_isTransientRoute(route)) return;
     _syncActiveSession(previousRoute);
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    if (_isTransientRoute(newRoute)) return;
+    if (_isTransientRoute(oldRoute) && newRoute == null) return;
     _syncActiveSession(newRoute);
   }
 
   @override
   void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (_isTransientRoute(route)) return;
     _syncActiveSession(previousRoute);
   }
+
+  bool _isTransientRoute(Route<dynamic>? route) => route is PopupRoute<dynamic>;
 
   void _syncActiveSession(Route<dynamic>? route) {
     if (route == null) {

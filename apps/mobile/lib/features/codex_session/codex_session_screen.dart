@@ -83,7 +83,7 @@ class CodexSessionScreen extends StatefulWidget {
   final String? initialPermissionMode;
   final String? initialApprovalPolicy;
   final VoidCallback? onBackToSessions;
-  final bool hideAppBarLeading;
+  final bool hideSessionBackButton;
 
   /// Notifier from the parent that may already hold a [SystemMessage]
   /// with subtype `session_created` (race condition fix).
@@ -101,7 +101,7 @@ class CodexSessionScreen extends StatefulWidget {
     this.initialApprovalPolicy,
     this.pendingSessionCreated,
     this.onBackToSessions,
-    this.hideAppBarLeading = false,
+    this.hideSessionBackButton = false,
   });
 
   @override
@@ -120,7 +120,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
   final String? initialApprovalPolicy;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
   final VoidCallback? onBackToSessions;
-  final bool hideAppBarLeading;
+  final bool hideSessionBackButton;
 
   const WorkspaceCodexSessionScreen({
     super.key,
@@ -134,7 +134,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
     this.initialApprovalPolicy,
     this.pendingSessionCreated,
     this.onBackToSessions,
-    this.hideAppBarLeading = false,
+    this.hideSessionBackButton = false,
   });
 
   @override
@@ -150,7 +150,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
       initialApprovalPolicy: initialApprovalPolicy,
       pendingSessionCreated: pendingSessionCreated,
       onBackToSessions: onBackToSessions,
-      hideAppBarLeading: hideAppBarLeading,
+      hideSessionBackButton: hideSessionBackButton,
     );
   }
 }
@@ -374,13 +374,13 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
             context,
             shell,
             onBackToSessions: widget.onBackToSessions,
-            hideAppBarLeading: widget.hideAppBarLeading,
+            hideSessionBackButton: widget.hideSessionBackButton,
           ),
           automaticallyImplyLeading: false,
           leadingWidth: _sessionAppBarLeadingWidth(
             shell,
             onBackToSessions: widget.onBackToSessions,
-            hideAppBarLeading: widget.hideAppBarLeading,
+            hideSessionBackButton: widget.hideSessionBackButton,
           ),
         ),
         body: const Center(
@@ -408,7 +408,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       permissionMode: _permissionMode,
       codexApprovalPolicy: _codexApprovalPolicy,
       onBackToSessions: widget.onBackToSessions,
-      hideAppBarLeading: widget.hideAppBarLeading,
+      hideSessionBackButton: widget.hideSessionBackButton,
     );
   }
 }
@@ -428,7 +428,7 @@ class _CodexProviders extends StatelessWidget {
   final PermissionMode? permissionMode;
   final CodexApprovalPolicy? codexApprovalPolicy;
   final VoidCallback? onBackToSessions;
-  final bool hideAppBarLeading;
+  final bool hideSessionBackButton;
 
   const _CodexProviders({
     super.key,
@@ -442,7 +442,7 @@ class _CodexProviders extends StatelessWidget {
     this.permissionMode,
     this.codexApprovalPolicy,
     this.onBackToSessions,
-    this.hideAppBarLeading = false,
+    this.hideSessionBackButton = false,
   });
 
   @override
@@ -472,7 +472,7 @@ class _CodexProviders extends StatelessWidget {
         gitBranch: gitBranch,
         worktreePath: worktreePath,
         onBackToSessions: onBackToSessions,
-        hideAppBarLeading: hideAppBarLeading,
+        hideSessionBackButton: hideSessionBackButton,
       ),
     );
   }
@@ -488,7 +488,7 @@ class _CodexChatBody extends HookWidget {
   final String? gitBranch;
   final String? worktreePath;
   final VoidCallback? onBackToSessions;
-  final bool hideAppBarLeading;
+  final bool hideSessionBackButton;
 
   const _CodexChatBody({
     required this.sessionId,
@@ -496,7 +496,7 @@ class _CodexChatBody extends HookWidget {
     this.gitBranch,
     this.worktreePath,
     this.onBackToSessions,
-    this.hideAppBarLeading = false,
+    this.hideSessionBackButton = false,
   });
 
   @override
@@ -736,7 +736,7 @@ class _CodexChatBody extends HookWidget {
                 context,
                 currentShell,
                 onBackToSessions: onBackToSessions,
-                hideAppBarLeading: hideAppBarLeading,
+                hideSessionBackButton: hideSessionBackButton,
               );
 
               return Scaffold(
@@ -746,7 +746,7 @@ class _CodexChatBody extends HookWidget {
                   leadingWidth: _sessionAppBarLeadingWidth(
                     currentShell,
                     onBackToSessions: onBackToSessions,
-                    hideAppBarLeading: hideAppBarLeading,
+                    hideSessionBackButton: hideSessionBackButton,
                   ),
                   titleSpacing: isSinglePane
                       ? NavigationToolbar.kMiddleSpacing
@@ -874,9 +874,7 @@ class _CodexChatBody extends HookWidget {
                               sessionId: sessionId,
                             );
                           case 'gallery':
-                            context.router.push(
-                              GalleryRoute(sessionId: sessionId),
-                            );
+                            _openGalleryScreen(context, sessionId: sessionId);
                           case 'rename':
                             _renameSession(context, sessionId);
                           case 'terminal':
@@ -1113,12 +1111,9 @@ Widget? _sessionAppBarLeading(
   BuildContext context,
   WorkspaceShellScreenState? shell, {
   VoidCallback? onBackToSessions,
-  bool hideAppBarLeading = false,
+  bool hideSessionBackButton = false,
 }) {
-  if (hideAppBarLeading) {
-    return null;
-  }
-  if (onBackToSessions != null) {
+  if (!hideSessionBackButton && onBackToSessions != null) {
     return BackButton(
       key: const ValueKey('session_back_button'),
       onPressed: onBackToSessions,
@@ -1140,6 +1135,9 @@ Widget? _sessionAppBarLeading(
       icon: const Icon(Icons.chevron_right),
     );
   }
+  if (hideSessionBackButton) {
+    return null;
+  }
   return BackButton(
     key: const ValueKey('session_back_button'),
     onPressed: () => Navigator.of(context).maybePop(),
@@ -1149,13 +1147,13 @@ Widget? _sessionAppBarLeading(
 double? _sessionAppBarLeadingWidth(
   WorkspaceShellScreenState? shell, {
   VoidCallback? onBackToSessions,
-  bool hideAppBarLeading = false,
+  bool hideSessionBackButton = false,
 }) {
-  if (hideAppBarLeading) {
+  if (!hideSessionBackButton && onBackToSessions != null) {
     return null;
   }
-  if (onBackToSessions != null) {
-    return null;
+  if (hideSessionBackButton) {
+    return shell?.shouldShowLeftPaneButton ?? false ? 64 : null;
   }
   return shell?.shouldShowLeftPaneButton ?? false ? 64 : null;
 }
@@ -1191,6 +1189,15 @@ Future<void> _openGitScreen(
   if (selection != null) {
     diffSelectionNotifier.value = selection.isEmpty ? null : selection;
   }
+}
+
+void _openGalleryScreen(BuildContext context, {required String sessionId}) {
+  final shell = WorkspaceShellScreen.maybeOf(context);
+  if (shell?.canOpenToolPane ?? false) {
+    shell!.openSessionGalleryPane(sessionId: sessionId);
+    return;
+  }
+  context.router.push(GalleryRoute(sessionId: sessionId));
 }
 
 void _executeSideEffects(

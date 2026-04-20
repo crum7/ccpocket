@@ -934,10 +934,7 @@ class _StoreThemeModeRoute extends StatefulWidget {
   final ThemeMode themeMode;
   final Widget child;
 
-  const _StoreThemeModeRoute({
-    required this.themeMode,
-    required this.child,
-  });
+  const _StoreThemeModeRoute({required this.themeMode, required this.child});
 
   @override
   State<_StoreThemeModeRoute> createState() => _StoreThemeModeRouteState();
@@ -1082,12 +1079,12 @@ class _StoreWorkspaceRouteState extends State<_StoreWorkspaceRoute> {
       _StoreWorkspaceCenterKind.approval => ClaudeSessionScreen(
         sessionId: widget.preset.sessionId,
         projectPath: widget.preset.projectPath,
-        hideAppBarLeading: true,
+        hideSessionBackButton: true,
       ),
       _StoreWorkspaceCenterKind.markdown => ClaudeSessionScreen(
         sessionId: widget.preset.sessionId,
         projectPath: widget.preset.projectPath,
-        hideAppBarLeading: true,
+        hideSessionBackButton: true,
       ),
     };
   }

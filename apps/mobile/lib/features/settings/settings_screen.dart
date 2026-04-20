@@ -37,9 +37,16 @@ import 'widgets/usage_section.dart';
 
 @RoutePage()
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key, this.focusSupport = false});
+  const SettingsScreen({
+    super.key,
+    this.focusSupport = false,
+    this.embedded = false,
+    this.onBack,
+  });
 
   final bool focusSupport;
+  final bool embedded;
+  final VoidCallback? onBack;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -107,7 +114,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final revenueCat = context.read<RevenueCatService>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(l.settingsTitle)),
+      appBar: AppBar(
+        title: Text(l.settingsTitle),
+        automaticallyImplyLeading: !widget.embedded,
+        leading: widget.onBack != null
+            ? IconButton(
+                key: const ValueKey('embedded_settings_back_button'),
+                onPressed: widget.onBack,
+                icon: const Icon(Icons.arrow_back),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              )
+            : null,
+      ),
       body: BlocBuilder<SettingsCubit, SettingsState>(
         builder: (context, state) {
           final machine = _activeMachine(context, state.activeMachineId);

@@ -6,10 +6,14 @@ import '../../features/claude_session/claude_session_screen.dart';
 import '../../features/codex_session/codex_session_screen.dart';
 import '../../features/explore/explore_screen.dart';
 import '../../features/explore/state/explore_state.dart';
+import '../../features/gallery/gallery_screen.dart';
 import '../../features/git/git_screen.dart';
+import '../../features/settings/settings_screen.dart';
+import '../../features/setup_guide/setup_guide_screen.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/messages.dart';
 import '../../providers/bridge_cubits.dart';
+import '../../router/app_router.dart';
 import '../../services/connection_url_parser.dart';
 import '../../services/notification_service.dart';
 import '../../utils/diff_parser.dart';
@@ -23,6 +27,10 @@ const _minCenterPaneWidth = 360.0;
 const _minRightPaneWidth = 320.0;
 
 enum _WorkspaceLayoutMode { single, doublePane, triplePane }
+
+enum _WorkspaceCenterRoot { session, offline }
+
+enum _WorkspaceCenterOverlay { none, settings, globalGallery, setupGuide }
 
 double _leftPaneWidth(double width, _WorkspaceLayoutMode mode) {
   if (mode == _WorkspaceLayoutMode.triplePane) {
@@ -115,6 +123,18 @@ class _ExploreToolPaneData extends _WorkspaceToolPaneData {
   String get title => 'Explorer';
 }
 
+class _GalleryToolPaneData extends _WorkspaceToolPaneData {
+  final String sessionId;
+
+  const _GalleryToolPaneData({required this.sessionId});
+
+  @override
+  String get id => 'gallery:$sessionId';
+
+  @override
+  String get title => 'Gallery';
+}
+
 class WorkspaceSessionSelection {
   final String sessionId;
   final String? projectPath;
@@ -163,7 +183,11 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   bool _showLeftPane = true;
   bool _shouldRestoreLeftPaneOnToolClose = false;
   _WorkspaceLayoutMode _layoutMode = _WorkspaceLayoutMode.single;
+  _WorkspaceCenterRoot _centerRoot = _WorkspaceCenterRoot.offline;
+  _WorkspaceCenterOverlay _centerOverlay = _WorkspaceCenterOverlay.none;
   WorkspaceSessionSelection? _selectedSession;
+  bool _settingsFocusSupport = false;
+  int _settingsPresentationVersion = 0;
   double? _rightPaneUserWidth;
   final ValueNotifier<int> _presentationVersion = ValueNotifier<int>(0);
 
@@ -172,6 +196,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   bool get isLeftPaneVisible => _showLeftPane;
   bool get shouldShowLeftPaneButton =>
       _layoutMode != _WorkspaceLayoutMode.single && !_showLeftPane;
+  WorkspaceSessionSelection? get selectedSession => _selectedSession;
   ValueNotifier<int> get presentationListenable => _presentationVersion;
 
   void _notifyPresentationChanged() {
@@ -214,6 +239,53 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
         onResultChanged: onResultChanged,
       ),
     );
+  }
+
+  void openSessionGalleryPane({required String sessionId}) {
+    _openToolPane(_GalleryToolPaneData(sessionId: sessionId));
+  }
+
+  void openSettingsCenter({bool focusSupport = false}) {
+    setState(() {
+      if (_centerOverlay == _WorkspaceCenterOverlay.settings && !focusSupport) {
+        _centerOverlay = _WorkspaceCenterOverlay.none;
+      } else {
+        _centerOverlay = _WorkspaceCenterOverlay.settings;
+        _settingsFocusSupport = focusSupport;
+        _settingsPresentationVersion++;
+      }
+    });
+    _notifyPresentationChanged();
+  }
+
+  void openGlobalGalleryCenter() {
+    setState(() {
+      if (_centerOverlay == _WorkspaceCenterOverlay.globalGallery) {
+        _centerOverlay = _WorkspaceCenterOverlay.none;
+      } else {
+        _centerOverlay = _WorkspaceCenterOverlay.globalGallery;
+      }
+    });
+    _notifyPresentationChanged();
+  }
+
+  void openSetupGuideCenter() {
+    setState(() {
+      if (_centerOverlay == _WorkspaceCenterOverlay.setupGuide) {
+        _centerOverlay = _WorkspaceCenterOverlay.none;
+      } else {
+        _centerOverlay = _WorkspaceCenterOverlay.setupGuide;
+      }
+    });
+    _notifyPresentationChanged();
+  }
+
+  void popCenterOverlay() {
+    if (_centerOverlay == _WorkspaceCenterOverlay.none) return;
+    setState(() {
+      _centerOverlay = _WorkspaceCenterOverlay.none;
+    });
+    _notifyPresentationChanged();
   }
 
   void _openToolPane(_WorkspaceToolPaneData pane) {
@@ -263,12 +335,20 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
 
   void resetWorkspace() {
     final hadSelection = _selectedSession != null;
-    if (_toolPane == null && _showLeftPane && !hadSelection) return;
+    final alreadyReset =
+        _toolPane == null &&
+        _showLeftPane &&
+        !hadSelection &&
+        _centerRoot == _WorkspaceCenterRoot.offline &&
+        _centerOverlay == _WorkspaceCenterOverlay.none;
+    if (alreadyReset) return;
     setState(() {
       _toolPane = null;
       _showLeftPane = true;
       _shouldRestoreLeftPaneOnToolClose = false;
       _selectedSession = null;
+      _centerRoot = _WorkspaceCenterRoot.offline;
+      _centerOverlay = _WorkspaceCenterOverlay.none;
     });
     if (hadSelection) {
       NotificationService.instance.clearActiveSession();
@@ -306,6 +386,8 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   void selectSession(WorkspaceSessionSelection selection) {
     setState(() {
       _selectedSession = selection;
+      _centerRoot = _WorkspaceCenterRoot.session;
+      _centerOverlay = _WorkspaceCenterOverlay.none;
       if (_layoutMode == _WorkspaceLayoutMode.doublePane && _toolPane != null) {
         _showLeftPane = false;
         _shouldRestoreLeftPaneOnToolClose = true;
@@ -325,6 +407,8 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
       _toolPane = null;
       _showLeftPane = true;
       _shouldRestoreLeftPaneOnToolClose = false;
+      _centerRoot = _WorkspaceCenterRoot.offline;
+      _centerOverlay = _WorkspaceCenterOverlay.none;
     });
     NotificationService.instance.clearActiveSession();
     _notifyPresentationChanged();
@@ -387,6 +471,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
       },
       child: LayoutBuilder(
         builder: (context, constraints) {
+          final connectionState = context.watch<ConnectionCubit>().state;
           final layoutMode = _layoutModeForWidth(constraints.maxWidth);
           _syncLayoutState(layoutMode);
           final sessionList = SessionListScreen(
@@ -427,7 +512,16 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
               _WorkspacePaneDivider(
                 color: Theme.of(context).dividerColor.withValues(alpha: 0.18),
               ),
-            Expanded(child: _WorkspaceContentHost(selection: _selectedSession)),
+            Expanded(
+              child: _WorkspaceContentHost(
+                selection: _selectedSession,
+                root: _centerRoot,
+                overlay: _centerOverlay,
+                connectionState: connectionState,
+                settingsFocusSupport: _settingsFocusSupport,
+                settingsPresentationVersion: _settingsPresentationVersion,
+              ),
+            ),
             if (showRightPane)
               _WorkspaceResizeDivider(
                 color: Theme.of(context).dividerColor.withValues(alpha: 0.18),
@@ -577,6 +671,11 @@ class _WorkspaceToolPaneHost extends StatelessWidget {
           onClose: onClose,
           onResultChanged: onExploreResultChanged,
         ),
+      _GalleryToolPaneData(:final sessionId) => GalleryScreen(
+        sessionId: sessionId,
+        embedded: true,
+        onClose: onClose,
+      ),
     };
 
     return Material(color: Theme.of(context).colorScheme.surface, child: child);
@@ -585,14 +684,60 @@ class _WorkspaceToolPaneHost extends StatelessWidget {
 
 class _WorkspaceContentHost extends StatelessWidget {
   final WorkspaceSessionSelection? selection;
+  final _WorkspaceCenterRoot root;
+  final _WorkspaceCenterOverlay overlay;
+  final BridgeConnectionState connectionState;
+  final bool settingsFocusSupport;
+  final int settingsPresentationVersion;
 
-  const _WorkspaceContentHost({required this.selection});
+  const _WorkspaceContentHost({
+    required this.selection,
+    required this.root,
+    required this.overlay,
+    required this.connectionState,
+    required this.settingsFocusSupport,
+    required this.settingsPresentationVersion,
+  });
 
   @override
   Widget build(BuildContext context) {
     final selection = this.selection;
-    if (selection == null) {
-      return const WorkspacePlaceholderScreen();
+    final shell = WorkspaceShellScreen.maybeOf(context);
+
+    switch (overlay) {
+      case _WorkspaceCenterOverlay.settings:
+        return SettingsScreen(
+          key: ValueKey(
+            'workspace_settings_$settingsPresentationVersion'
+            '_$settingsFocusSupport',
+          ),
+          focusSupport: settingsFocusSupport,
+          embedded: true,
+          onBack: shell?.popCenterOverlay,
+        );
+      case _WorkspaceCenterOverlay.globalGallery:
+        return GalleryScreen(embedded: true, onBack: shell?.popCenterOverlay);
+      case _WorkspaceCenterOverlay.setupGuide:
+        return SetupGuideScreen(
+          embedded: true,
+          onBack: shell?.popCenterOverlay,
+          onClose: shell?.popCenterOverlay,
+        );
+      case _WorkspaceCenterOverlay.none:
+        break;
+    }
+
+    switch (root) {
+      case _WorkspaceCenterRoot.offline:
+        return WorkspaceLandingScreen(
+          isConnected: connectionState != BridgeConnectionState.disconnected,
+        );
+      case _WorkspaceCenterRoot.session:
+        if (selection == null) {
+          return WorkspaceLandingScreen(
+            isConnected: connectionState != BridgeConnectionState.disconnected,
+          );
+        }
     }
 
     return switch (selection.provider) {
@@ -610,6 +755,7 @@ class _WorkspaceContentHost extends StatelessWidget {
         onBackToSessions: WorkspaceShellScreen.maybeOf(
           context,
         )?.clearSelectedSession,
+        hideSessionBackButton: true,
       ),
       _ => ClaudeSessionScreen(
         key: ValueKey('workspace_claude_${selection.sessionId}'),
@@ -624,13 +770,27 @@ class _WorkspaceContentHost extends StatelessWidget {
         onBackToSessions: WorkspaceShellScreen.maybeOf(
           context,
         )?.clearSelectedSession,
+        hideSessionBackButton: true,
       ),
     };
   }
 }
 
+@Deprecated('Use WorkspaceLandingScreen instead.')
+@RoutePage(name: 'WorkspacePlaceholderRoute')
 class WorkspacePlaceholderScreen extends StatelessWidget {
   const WorkspacePlaceholderScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const WorkspaceLandingScreen(isConnected: false);
+  }
+}
+
+class WorkspaceLandingScreen extends StatelessWidget {
+  final bool isConnected;
+
+  const WorkspaceLandingScreen({super.key, required this.isConnected});
 
   @override
   Widget build(BuildContext context) {
@@ -717,13 +877,35 @@ class WorkspacePlaceholderScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Select a session on the left, or start a new one.',
+                          isConnected
+                              ? 'Select a session on the left, or open settings or gallery from the sidebar.'
+                              : 'Bridge is not connected. Use the left pane to connect, or open the setup guide to configure a machine.',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                             height: 1.4,
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 20),
+                        if (isConnected)
+                          FilledButton.icon(
+                            onPressed: WorkspaceShellScreen.maybeOf(
+                              context,
+                            )?.openSettingsCenter,
+                            icon: const Icon(Icons.settings_outlined),
+                            label: Text(l.settings),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            key: const ValueKey('workspace_setup_guide_button'),
+                            onPressed:
+                                currentShell?.openSetupGuideCenter ??
+                                () => context.router.push(
+                                  const SetupGuideRoute(),
+                                ),
+                            icon: const Icon(Icons.lightbulb_outline),
+                            label: Text('${l.setupGuide} →'),
+                          ),
                       ],
                     ),
                   ),

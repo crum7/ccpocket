@@ -13,7 +13,16 @@ import 'widgets/guide_page_tailscale.dart';
 
 @RoutePage()
 class SetupGuideScreen extends HookWidget {
-  const SetupGuideScreen({super.key});
+  final bool embedded;
+  final VoidCallback? onBack;
+  final VoidCallback? onClose;
+
+  const SetupGuideScreen({
+    super.key,
+    this.embedded = false,
+    this.onBack,
+    this.onClose,
+  });
 
   static const _pageCount = 6;
 
@@ -43,11 +52,25 @@ class SetupGuideScreen extends HookWidget {
     }
 
     void close() {
+      final closeHandler = onClose;
+      if (closeHandler != null) {
+        closeHandler();
+        return;
+      }
       context.router.maybePop();
     }
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !embedded,
+        leading: onBack == null
+            ? null
+            : IconButton(
+                key: const ValueKey('embedded_setup_guide_back_button'),
+                onPressed: onBack,
+                icon: const Icon(Icons.arrow_back),
+                tooltip: l.back,
+              ),
         title: Text(l.setupGuideTitle),
         actions: [
           TextButton(

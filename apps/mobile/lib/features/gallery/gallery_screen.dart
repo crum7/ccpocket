@@ -12,8 +12,17 @@ import 'widgets/gallery_empty_state.dart';
 @RoutePage()
 class GalleryScreen extends HookWidget {
   final String? sessionId;
+  final bool embedded;
+  final VoidCallback? onBack;
+  final VoidCallback? onClose;
 
-  const GalleryScreen({super.key, this.sessionId});
+  const GalleryScreen({
+    super.key,
+    this.sessionId,
+    this.embedded = false,
+    this.onBack,
+    this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -32,11 +41,29 @@ class GalleryScreen extends HookWidget {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: !embedded,
+        leading: onBack != null
+            ? IconButton(
+                key: const ValueKey('embedded_gallery_back_button'),
+                onPressed: onBack,
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                icon: const Icon(Icons.arrow_back),
+              )
+            : null,
         title: Text(
           images.isEmpty
               ? AppLocalizations.of(context).gallery
               : AppLocalizations.of(context).galleryWithCount(images.length),
         ),
+        actions: [
+          if (embedded && onClose != null)
+            IconButton(
+              key: const ValueKey('embedded_gallery_close_button'),
+              onPressed: onClose,
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+              icon: const Icon(Icons.close),
+            ),
+        ],
       ),
       body: images.isEmpty
           ? GalleryEmptyState(isSessionMode: isSessionMode)

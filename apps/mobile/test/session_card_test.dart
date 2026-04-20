@@ -263,6 +263,41 @@ void main() {
       expect(find.byIcon(Icons.shield_outlined), findsOneWidget);
     });
 
+    testWidgets(
+      'selected running session uses border emphasis without selection fill',
+      (tester) async {
+        final session = SessionInfo(
+          id: 'selected-running',
+          projectPath: '/home/user/my-app',
+          status: 'running',
+          createdAt: DateTime.now().toIso8601String(),
+          lastActivityAt: DateTime.now().toIso8601String(),
+        );
+
+        await tester.pumpWidget(
+          _wrap(
+            RunningSessionCard(
+              session: session,
+              onTap: () {},
+              isSelected: true,
+            ),
+          ),
+        );
+
+        final card = tester.widget<Card>(find.byType(Card).first);
+        final shape = card.shape! as RoundedRectangleBorder;
+        final theme = Theme.of(tester.element(find.byType(Card).first));
+        final appColors = theme.extension<AppColors>()!;
+
+        expect(card.color, theme.colorScheme.surfaceContainerHigh);
+        expect(shape.side.width, 2.2);
+        expect(
+          shape.side.color,
+          appColors.statusRunning.withValues(alpha: 0.95),
+        );
+      },
+    );
+
     testWidgets('shows Planning label for running codex plan session', (
       tester,
     ) async {
@@ -878,10 +913,7 @@ void main() {
 
       expect(find.byKey(const ValueKey('approve_button')), findsOneWidget);
       expect(find.byKey(const ValueKey('reject_button')), findsOneWidget);
-      expect(
-        find.byKey(const ValueKey('approve_always_button')),
-        findsNothing,
-      );
+      expect(find.byKey(const ValueKey('approve_always_button')), findsNothing);
 
       await tester.tap(find.byKey(const ValueKey('approve_button')));
       await tester.pump();

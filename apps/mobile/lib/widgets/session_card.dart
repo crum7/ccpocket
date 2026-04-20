@@ -124,20 +124,17 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
       session.lastMessage.replaceAll(RegExp(r'\s+'), ' ').trim(),
     );
     final colorScheme = Theme.of(context).colorScheme;
-    final selectionColor = colorScheme.primary;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 0),
       elevation: 0,
-      color: widget.isSelected
-          ? selectionColor.withValues(alpha: 0.08)
-          : colorScheme.surfaceContainerHigh,
+      color: colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: widget.isSelected
-              ? selectionColor.withValues(alpha: 0.4)
+              ? statusColor.withValues(alpha: 0.95)
               : colorScheme.outlineVariant.withValues(alpha: 0.5),
-          width: widget.isSelected ? 1.2 : 1,
+          width: widget.isSelected ? 2.2 : 1,
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -2364,7 +2361,6 @@ class RecentSessionCard extends StatelessWidget {
     final provider = providerFromRaw(session.provider);
     final providerStyle = providerStyleFor(context, provider);
     final isCodex = session.provider == 'codex';
-    final selectionColor = colorScheme.primary;
     final agentLabel = _formatAgentLabel(
       session.agentNickname,
       session.agentRole,
@@ -2374,16 +2370,14 @@ class RecentSessionCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       elevation: 0,
-      color: isSelected
-          ? selectionColor.withValues(alpha: 0.08)
-          : colorScheme.surfaceContainerHigh,
+      color: colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: isSelected
-              ? selectionColor.withValues(alpha: 0.4)
+              ? colorScheme.primary.withValues(alpha: 0.9)
               : colorScheme.outlineVariant.withValues(alpha: 0.5),
-          width: isSelected ? 1.2 : 1,
+          width: isSelected ? 2.2 : 1,
         ),
       ),
       clipBehavior: Clip.antiAlias,

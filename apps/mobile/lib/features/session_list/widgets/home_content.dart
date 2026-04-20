@@ -18,6 +18,7 @@ import '../../../router/app_router.dart';
 import '../../../widgets/session_card.dart';
 import '../state/session_list_cubit.dart';
 import '../state/session_list_state.dart';
+import '../workspace_shell_screen.dart';
 import 'section_header.dart';
 import 'session_filter_bar.dart';
 import 'session_list_empty_state.dart';
@@ -70,6 +71,7 @@ class HomeContent extends StatefulWidget {
   final VoidCallback onToggleNamed;
   final AppUpdateInfo? appUpdateInfo;
   final VoidCallback? onDismissAppUpdate;
+  final VoidCallback? onOpenSupportSettings;
 
   const HomeContent({
     super.key,
@@ -104,6 +106,7 @@ class HomeContent extends StatefulWidget {
     required this.onToggleNamed,
     this.appUpdateInfo,
     this.onDismissAppUpdate,
+    this.onOpenSupportSettings,
   });
 
   @override
@@ -270,7 +273,9 @@ class HomeContentState extends State<HomeContent> {
   Widget? _buildSupportBanner() {
     if (!_showSupportBanner) return null;
     return SupportBanner(
-      onTap: () => context.pushRoute(SettingsRoute(focusSupport: true)),
+      onTap:
+          widget.onOpenSupportSettings ??
+          () => context.pushRoute(SettingsRoute(focusSupport: true)),
       onDismiss: () async {
         await context.read<SupportBannerService>().dismiss();
         if (!mounted) return;
@@ -283,8 +288,12 @@ class HomeContentState extends State<HomeContent> {
 
   @override
   Widget build(BuildContext context) {
+    final shell = WorkspaceShellScreen.maybeOf(context);
     return ListenableBuilder(
-      listenable: NotificationService.instance,
+      listenable: Listenable.merge([
+        NotificationService.instance,
+        if (shell != null) shell.presentationListenable,
+      ]),
       builder: (context, _) => _buildContent(context),
     );
   }
@@ -303,8 +312,14 @@ class HomeContentState extends State<HomeContent> {
         ? _buildSupportBanner()
         : null;
     final appUpdateBanner = _buildAppUpdateBanner();
-    final selectedSessionId = NotificationService.instance.activeSessionId;
-    final selectedSessionProvider = NotificationService.instance.activeProvider;
+    final shell = WorkspaceShellScreen.maybeOf(context);
+    final selectedSession = shell?.selectedSession;
+    final selectedSessionId =
+        selectedSession?.sessionId ??
+        NotificationService.instance.activeSessionId;
+    final selectedSessionProvider =
+        selectedSession?.provider?.value ??
+        NotificationService.instance.activeProvider;
 
     // Compute derived state
     // Exclude running sessions from recent list to avoid duplicates

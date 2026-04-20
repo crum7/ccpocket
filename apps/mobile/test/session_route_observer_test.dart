@@ -18,6 +18,29 @@ Route<dynamic> _route({String? name, Object? arguments}) {
   );
 }
 
+class _TestPopupRoute extends PopupRoute<void> {
+  _TestPopupRoute({String? name}) : super(settings: RouteSettings(name: name));
+
+  @override
+  Color? get barrierColor => null;
+
+  @override
+  bool get barrierDismissible => true;
+
+  @override
+  String? get barrierLabel => null;
+
+  @override
+  Duration get transitionDuration => Duration.zero;
+
+  @override
+  Widget buildPage(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+  ) => const SizedBox.shrink();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final observer = SessionRouteObserver();
@@ -106,5 +129,20 @@ void main() {
 
     expect(NotificationService.instance.activeSessionId, isNull);
     expect(NotificationService.instance.activeProvider, isNull);
+  });
+
+  test('keeps active session when popup route is pushed over a session', () {
+    observer.didPush(
+      _route(
+        name: ClaudeSessionRoute.name,
+        arguments: _SessionArgs('claude-1'),
+      ),
+      null,
+    );
+
+    observer.didPush(_TestPopupRoute(name: 'test_popup'), null);
+
+    expect(NotificationService.instance.activeSessionId, 'claude-1');
+    expect(NotificationService.instance.activeProvider, 'claude');
   });
 }
