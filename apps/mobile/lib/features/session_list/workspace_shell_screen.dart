@@ -1,22 +1,98 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../features/explore/explore_screen.dart';
+import '../../features/explore/state/explore_state.dart';
+import '../../features/git/git_screen.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/messages.dart';
+import '../../providers/bridge_cubits.dart';
 import '../../services/connection_url_parser.dart';
+import '../../utils/diff_parser.dart';
 import 'session_list_screen.dart';
 
 const _twoPaneBreakpoint = 600.0;
+const _threePaneBreakpoint = 1100.0;
 const _twoPaneDividerWidth = 1.0;
 
-double _leftPaneWidth(double width) {
+enum _WorkspaceLayoutMode { single, doublePane, triplePane }
+
+double _leftPaneWidth(double width, _WorkspaceLayoutMode mode) {
+  if (mode == _WorkspaceLayoutMode.triplePane) {
+    return width >= 1280 ? 320 : 280;
+  }
   if (width >= 1024) return 360;
   if (width >= 720) return 320;
   return 280;
 }
 
+double _rightPaneWidth(double width, _WorkspaceLayoutMode mode) {
+  if (mode == _WorkspaceLayoutMode.triplePane) {
+    return width >= 1360 ? 380 : 320;
+  }
+  return width >= 900 ? 360 : 320;
+}
+
+_WorkspaceLayoutMode _layoutModeForWidth(double width) {
+  if (width >= _threePaneBreakpoint) return _WorkspaceLayoutMode.triplePane;
+  if (width >= _twoPaneBreakpoint) return _WorkspaceLayoutMode.doublePane;
+  return _WorkspaceLayoutMode.single;
+}
+
+sealed class _WorkspaceToolPaneData {
+  const _WorkspaceToolPaneData();
+
+  String get id;
+  String get title;
+}
+
+class _GitToolPaneData extends _WorkspaceToolPaneData {
+  final String projectPath;
+  final String? sessionId;
+  final String? worktreePath;
+  final ValueNotifier<DiffSelection?>? diffSelectionNotifier;
+
+  const _GitToolPaneData({
+    required this.projectPath,
+    this.sessionId,
+    this.worktreePath,
+    this.diffSelectionNotifier,
+  });
+
+  @override
+  String get id => 'git:$projectPath:${sessionId ?? ''}:${worktreePath ?? ''}';
+
+  @override
+  String get title => 'Git';
+}
+
+class _ExploreToolPaneData extends _WorkspaceToolPaneData {
+  final String sessionId;
+  final String projectPath;
+  final List<String> initialFiles;
+  final String initialPath;
+  final List<String> recentPeekedFiles;
+  final ValueChanged<ExploreScreenResult>? onResultChanged;
+
+  const _ExploreToolPaneData({
+    required this.sessionId,
+    required this.projectPath,
+    required this.initialFiles,
+    required this.initialPath,
+    required this.recentPeekedFiles,
+    this.onResultChanged,
+  });
+
+  @override
+  String get id => 'explore:$sessionId:$projectPath';
+
+  @override
+  String get title => 'Explorer';
+}
+
 @RoutePage()
-class WorkspaceShellScreen extends StatelessWidget {
+class WorkspaceShellScreen extends StatefulWidget {
   final ValueNotifier<ConnectionParams?>? deepLinkNotifier;
   final List<RecentSession>? debugRecentSessions;
 
@@ -26,49 +102,336 @@ class WorkspaceShellScreen extends StatelessWidget {
     this.debugRecentSessions,
   });
 
+  static WorkspaceShellScreenState? maybeOf(BuildContext context) =>
+      context.findAncestorStateOfType<WorkspaceShellScreenState>();
+
+  @override
+  State<WorkspaceShellScreen> createState() => WorkspaceShellScreenState();
+}
+
+class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
+  _WorkspaceToolPaneData? _toolPane;
+  bool _showLeftPane = true;
+  bool _shouldRestoreLeftPaneOnToolClose = false;
+  _WorkspaceLayoutMode _layoutMode = _WorkspaceLayoutMode.single;
+  String? _activeChildRouteName;
+
+  bool get canOpenToolPane => _layoutMode != _WorkspaceLayoutMode.single;
+
+  void openGitPane({
+    required String projectPath,
+    String? sessionId,
+    String? worktreePath,
+    ValueNotifier<DiffSelection?>? diffSelectionNotifier,
+  }) {
+    _openToolPane(
+      _GitToolPaneData(
+        projectPath: projectPath,
+        sessionId: sessionId,
+        worktreePath: worktreePath,
+        diffSelectionNotifier: diffSelectionNotifier,
+      ),
+    );
+  }
+
+  void openExplorePane({
+    required String sessionId,
+    required String projectPath,
+    List<String> initialFiles = const [],
+    String initialPath = '',
+    List<String> recentPeekedFiles = const [],
+    ValueChanged<ExploreScreenResult>? onResultChanged,
+  }) {
+    _openToolPane(
+      _ExploreToolPaneData(
+        sessionId: sessionId,
+        projectPath: projectPath,
+        initialFiles: initialFiles,
+        initialPath: initialPath,
+        recentPeekedFiles: recentPeekedFiles,
+        onResultChanged: onResultChanged,
+      ),
+    );
+  }
+
+  void _openToolPane(_WorkspaceToolPaneData pane) {
+    if (_layoutMode == _WorkspaceLayoutMode.single) {
+      return;
+    }
+    setState(() {
+      _toolPane = pane;
+      if (_layoutMode == _WorkspaceLayoutMode.doublePane) {
+        _shouldRestoreLeftPaneOnToolClose = _showLeftPane;
+        _showLeftPane = false;
+      } else {
+        _shouldRestoreLeftPaneOnToolClose = false;
+      }
+    });
+  }
+
+  void closeToolPane() {
+    if (_toolPane == null) return;
+    setState(() {
+      _toolPane = null;
+      if (_shouldRestoreLeftPaneOnToolClose) {
+        _showLeftPane = true;
+      }
+      _shouldRestoreLeftPaneOnToolClose = false;
+    });
+  }
+
+  void resetWorkspace() {
+    if (_toolPane == null && _showLeftPane) return;
+    setState(() {
+      _toolPane = null;
+      _showLeftPane = true;
+      _shouldRestoreLeftPaneOnToolClose = false;
+    });
+  }
+
+  void toggleLeftPaneVisibility() {
+    setState(() {
+      if (_layoutMode == _WorkspaceLayoutMode.doublePane && _toolPane != null) {
+        _toolPane = null;
+        _showLeftPane = true;
+        _shouldRestoreLeftPaneOnToolClose = false;
+        return;
+      }
+      _showLeftPane = !_showLeftPane;
+      _shouldRestoreLeftPaneOnToolClose = false;
+    });
+  }
+
+  void _handleExploreResult(ExploreScreenResult result) {
+    final pane = _toolPane;
+    if (pane is! _ExploreToolPaneData) return;
+    pane.onResultChanged?.call(result);
+  }
+
+  void _handleDiffSelection(DiffSelection selection) {
+    final pane = _toolPane;
+    if (pane is! _GitToolPaneData) return;
+    pane.diffSelectionNotifier?.value = selection.isEmpty ? null : selection;
+    closeToolPane();
+  }
+
+  void _syncLayoutState(_WorkspaceLayoutMode nextMode, String? childRouteName) {
+    final shouldCloseToolForRoute =
+        _toolPane != null && !_isSessionRoute(childRouteName);
+
+    if (nextMode == _layoutMode &&
+        childRouteName == _activeChildRouteName &&
+        !shouldCloseToolForRoute) {
+      return;
+    }
+
+    _layoutMode = nextMode;
+    _activeChildRouteName = childRouteName;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (shouldCloseToolForRoute) {
+        closeToolPane();
+        return;
+      }
+      if (nextMode == _WorkspaceLayoutMode.single) {
+        if (_toolPane != null || !_showLeftPane) {
+          setState(() {
+            _toolPane = null;
+            _showLeftPane = true;
+            _shouldRestoreLeftPaneOnToolClose = false;
+          });
+        }
+        return;
+      }
+
+      if (nextMode == _WorkspaceLayoutMode.triplePane &&
+          _toolPane != null &&
+          _shouldRestoreLeftPaneOnToolClose) {
+        setState(() {
+          _showLeftPane = true;
+          _shouldRestoreLeftPaneOnToolClose = false;
+        });
+        return;
+      }
+
+      if (nextMode == _WorkspaceLayoutMode.doublePane &&
+          _toolPane != null &&
+          _showLeftPane) {
+        setState(() {
+          _shouldRestoreLeftPaneOnToolClose = true;
+          _showLeftPane = false;
+        });
+      }
+    });
+  }
+
+  bool _isSessionRoute(String? routeName) =>
+      routeName == 'ClaudeSessionRoute' || routeName == 'CodexSessionRoute';
+
   @override
   Widget build(BuildContext context) {
-    return AutoRouter(
-      builder: (routerContext, content) {
-        final childRouter = AutoRouter.of(routerContext, watch: true);
-        final currentChild = childRouter.currentChild;
-        final isPlaceholder =
-            currentChild == null ||
-            currentChild.name == 'WorkspacePlaceholderRoute';
+    return BlocListener<ConnectionCubit, BridgeConnectionState>(
+      listener: (context, state) {
+        if (state == BridgeConnectionState.disconnected) {
+          resetWorkspace();
+        }
+      },
+      child: AutoRouter(
+        builder: (routerContext, content) {
+          final childRouter = AutoRouter.of(routerContext, watch: true);
+          final currentChild = childRouter.currentChild;
+          final currentChildName = currentChild?.name;
+          final isPlaceholder =
+              currentChild == null ||
+              currentChildName == 'WorkspacePlaceholderRoute';
 
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isTwoPane = constraints.maxWidth >= _twoPaneBreakpoint;
-            final sessionList = SessionListScreen(
-              deepLinkNotifier: deepLinkNotifier,
-              debugRecentSessions: debugRecentSessions,
-              embedded: isTwoPane,
-            );
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final layoutMode = _layoutModeForWidth(constraints.maxWidth);
+              _syncLayoutState(layoutMode, currentChildName);
+              final sessionList = SessionListScreen(
+                deepLinkNotifier: widget.deepLinkNotifier,
+                debugRecentSessions: widget.debugRecentSessions,
+                embedded: layoutMode != _WorkspaceLayoutMode.single,
+                onTogglePaneVisibility: layoutMode == _WorkspaceLayoutMode.single
+                    ? null
+                    : toggleLeftPaneVisibility,
+              );
 
-            if (!isTwoPane) {
-              return isPlaceholder ? sessionList : content;
-            }
+              if (layoutMode == _WorkspaceLayoutMode.single) {
+                return isPlaceholder ? sessionList : content;
+              }
 
-            final leftWidth = _leftPaneWidth(constraints.maxWidth);
-            return Row(
-              children: [
-                SizedBox(
-                  width: leftWidth,
-                  child: ColoredBox(
-                    color: Theme.of(context).colorScheme.surface,
-                    child: sessionList,
+              final showLeftPane = _showLeftPane;
+              final showRightPane = _toolPane != null;
+              final leftWidth = _leftPaneWidth(constraints.maxWidth, layoutMode);
+              final rightWidth = _rightPaneWidth(
+                constraints.maxWidth,
+                layoutMode,
+              );
+              final children = <Widget>[
+                if (showLeftPane)
+                  SizedBox(
+                    width: leftWidth,
+                    child: ColoredBox(
+                      color: Theme.of(context).colorScheme.surface,
+                      child: sessionList,
+                    ),
+                  ),
+                if (showLeftPane)
+                  _WorkspacePaneDivider(
+                    color: Theme.of(
+                      context,
+                    ).dividerColor.withValues(alpha: 0.18),
+                  ),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: content),
+                      if (!showLeftPane)
+                        Positioned(
+                          top: 12,
+                          left: 12,
+                          child: FilledButton.tonalIcon(
+                            key: const ValueKey('show_left_pane_button'),
+                            onPressed: toggleLeftPaneVisibility,
+                            icon: const Icon(Icons.chevron_right, size: 18),
+                            label: const Text('Sessions'),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                Container(
-                  width: _twoPaneDividerWidth,
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.18),
-                ),
-                Expanded(child: content),
-              ],
-            );
-          },
-        );
-      },
+                if (showRightPane)
+                  _WorkspacePaneDivider(
+                    color: Theme.of(
+                      context,
+                    ).dividerColor.withValues(alpha: 0.18),
+                  ),
+                if (showRightPane)
+                  SizedBox(
+                    width: rightWidth,
+                    child: _WorkspaceToolPaneHost(
+                      pane: _toolPane!,
+                      onClose: closeToolPane,
+                      onExploreResultChanged: _handleExploreResult,
+                      onDiffSelection: _handleDiffSelection,
+                    ),
+                  ),
+              ];
+
+              return Row(children: children);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _WorkspacePaneDivider extends StatelessWidget {
+  final Color color;
+
+  const _WorkspacePaneDivider({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: _twoPaneDividerWidth, color: color);
+  }
+}
+
+class _WorkspaceToolPaneHost extends StatelessWidget {
+  final _WorkspaceToolPaneData pane;
+  final VoidCallback onClose;
+  final ValueChanged<ExploreScreenResult> onExploreResultChanged;
+  final ValueChanged<DiffSelection> onDiffSelection;
+
+  const _WorkspaceToolPaneHost({
+    required this.pane,
+    required this.onClose,
+    required this.onExploreResultChanged,
+    required this.onDiffSelection,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final child = switch (pane) {
+      _GitToolPaneData(
+        :final projectPath,
+        :final sessionId,
+        :final worktreePath,
+      ) =>
+        GitScreen(
+          projectPath: projectPath,
+          sessionId: sessionId,
+          worktreePath: worktreePath,
+          embedded: true,
+          onClose: onClose,
+          onRequestChange: onDiffSelection,
+        ),
+      _ExploreToolPaneData(
+        :final sessionId,
+        :final projectPath,
+        :final initialFiles,
+        :final initialPath,
+        :final recentPeekedFiles,
+      ) =>
+        ExploreScreen(
+          sessionId: sessionId,
+          projectPath: projectPath,
+          initialFiles: initialFiles,
+          initialPath: initialPath,
+          recentPeekedFiles: recentPeekedFiles,
+          embedded: true,
+          onClose: onClose,
+          onResultChanged: onExploreResultChanged,
+        ),
+    };
+
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: child,
     );
   }
 }

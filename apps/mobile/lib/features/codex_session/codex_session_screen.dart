@@ -26,6 +26,7 @@ import '../../utils/terminal_launcher.dart';
 import '../settings/state/settings_cubit.dart';
 import '../../widgets/new_session_sheet.dart'
     show permissionModeFromRaw, sandboxModeFromRaw;
+import '../session_list/workspace_shell_screen.dart';
 import '../../widgets/approval_bar.dart';
 import '../../widgets/bubbles/ask_user_question_widget.dart';
 import '../../widgets/screenshot_sheet.dart';
@@ -257,6 +258,39 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     setState(() {
       _explorerCurrentPath = currentPath;
       _recentPeekedFiles = recentPeekedFiles;
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant CodexSessionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sessionId == widget.sessionId &&
+        oldWidget.projectPath == widget.projectPath &&
+        oldWidget.worktreePath == widget.worktreePath &&
+        oldWidget.gitBranch == widget.gitBranch &&
+        oldWidget.isPending == widget.isPending &&
+        oldWidget.initialPermissionMode == widget.initialPermissionMode &&
+        oldWidget.initialSandboxMode == widget.initialSandboxMode &&
+        oldWidget.initialApprovalPolicy == widget.initialApprovalPolicy) {
+      return;
+    }
+
+    final explorerHistory = context.read<BridgeService>().getExplorerHistory(
+      widget.sessionId,
+    );
+    setState(() {
+      _sessionId = widget.sessionId;
+      _projectPath = widget.projectPath;
+      _worktreePath = widget.worktreePath;
+      _gitBranch = widget.gitBranch;
+      _isPending = widget.isPending;
+      _sandboxMode = sandboxModeFromRaw(widget.initialSandboxMode);
+      _permissionMode = permissionModeFromRaw(widget.initialPermissionMode);
+      _codexApprovalPolicy = codexApprovalPolicyFromRaw(
+        widget.initialApprovalPolicy,
+      );
+      _explorerCurrentPath = explorerHistory.currentPath;
+      _recentPeekedFiles = explorerHistory.recentPeekedFiles;
     });
   }
 
@@ -634,29 +668,48 @@ class _CodexChatBody extends HookWidget {
                     onPressed: () async {
                       final parentState = context
                           .findAncestorStateOfType<_CodexSessionScreenState>();
+                      void handleResult(ExploreScreenResult result) {
+                        if (!context.mounted) return;
+                        parentState?.updateExplorerState(
+                          currentPath: result.currentPath,
+                          recentPeekedFiles: result.recentPeekedFiles,
+                        );
+                        final cubit = context.read<ChatSessionCubit>();
+                        cubit.setExplorerCurrentPath(result.currentPath);
+                        cubit.setRecentPeekedFiles(result.recentPeekedFiles);
+                      }
+
+                      final shell = WorkspaceShellScreen.maybeOf(context);
+                      final initialPath =
+                          parentState?._explorerCurrentPath ??
+                          sessionState.explorerCurrentPath;
+                      final recentPeekedFiles =
+                          parentState?._recentPeekedFiles ??
+                          sessionState.recentPeekedFiles;
+                      if (shell?.canOpenToolPane ?? false) {
+                        shell!.openExplorePane(
+                          sessionId: sessionId,
+                          projectPath: projectPath!,
+                          initialFiles: context.read<FileListCubit>().state,
+                          initialPath: initialPath,
+                          recentPeekedFiles: recentPeekedFiles,
+                          onResultChanged: handleResult,
+                        );
+                        return;
+                      }
                       final result = await context.router.push(
                         ExploreRoute(
                           sessionId: sessionId,
                           projectPath: projectPath!,
                           initialFiles: context.read<FileListCubit>().state,
-                          initialPath:
-                              parentState?._explorerCurrentPath ??
-                              sessionState.explorerCurrentPath,
-                          recentPeekedFiles:
-                              parentState?._recentPeekedFiles ??
-                              sessionState.recentPeekedFiles,
+                          initialPath: initialPath,
+                          recentPeekedFiles: recentPeekedFiles,
                         ),
                       );
                       if (result is! ExploreScreenResult || !context.mounted) {
                         return;
                       }
-                      parentState?.updateExplorerState(
-                        currentPath: result.currentPath,
-                        recentPeekedFiles: result.recentPeekedFiles,
-                      );
-                      final cubit = context.read<ChatSessionCubit>();
-                      cubit.setExplorerCurrentPath(result.currentPath);
-                      cubit.setRecentPeekedFiles(result.recentPeekedFiles);
+                      handleResult(result);
                     },
                   ),
                 if ((projectPath ?? '').isNotEmpty)
@@ -946,6 +999,16 @@ Future<void> _openGitScreen(
   String? sessionId,
   String? worktreePath,
 }) async {
+  final shell = WorkspaceShellScreen.maybeOf(context);
+  if (shell?.canOpenToolPane ?? false) {
+    shell!.openGitPane(
+      projectPath: projectPath,
+      sessionId: sessionId,
+      worktreePath: worktreePath,
+      diffSelectionNotifier: diffSelectionNotifier,
+    );
+    return;
+  }
   final selection = await context.router.push<DiffSelection>(
     GitRoute(
       projectPath: projectPath,
@@ -953,9 +1016,9 @@ Future<void> _openGitScreen(
       worktreePath: worktreePath,
     ),
   );
-  diffSelectionNotifier.value = selection != null && !selection.isEmpty
-      ? selection
-      : null;
+  if (selection != null) {
+    diffSelectionNotifier.value = selection.isEmpty ? null : selection;
+  }
 }
 
 void _executeSideEffects(

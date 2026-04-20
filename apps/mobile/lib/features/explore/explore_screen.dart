@@ -17,6 +17,9 @@ class ExploreScreen extends StatelessWidget {
   final List<String> initialFiles;
   final String initialPath;
   final List<String> recentPeekedFiles;
+  final bool embedded;
+  final VoidCallback? onClose;
+  final ValueChanged<ExploreScreenResult>? onResultChanged;
 
   const ExploreScreen({
     super.key,
@@ -25,6 +28,9 @@ class ExploreScreen extends StatelessWidget {
     this.initialFiles = const [],
     this.initialPath = '',
     this.recentPeekedFiles = const [],
+    this.embedded = false,
+    this.onClose,
+    this.onResultChanged,
   });
 
   @override
@@ -37,7 +43,13 @@ class ExploreScreen extends StatelessWidget {
         initialPath: initialPath,
         recentPeekedFiles: recentPeekedFiles,
       ),
-      child: _ExploreScreenBody(sessionId: sessionId, projectPath: projectPath),
+      child: _ExploreScreenBody(
+        sessionId: sessionId,
+        projectPath: projectPath,
+        embedded: embedded,
+        onClose: onClose,
+        onResultChanged: onResultChanged,
+      ),
     );
   }
 }
@@ -45,10 +57,16 @@ class ExploreScreen extends StatelessWidget {
 class _ExploreScreenBody extends StatefulWidget {
   final String sessionId;
   final String projectPath;
+  final bool embedded;
+  final VoidCallback? onClose;
+  final ValueChanged<ExploreScreenResult>? onResultChanged;
 
   const _ExploreScreenBody({
     required this.sessionId,
     required this.projectPath,
+    this.embedded = false,
+    this.onClose,
+    this.onResultChanged,
   });
 
   @override
@@ -60,7 +78,17 @@ class _ExploreScreenBodyState extends State<_ExploreScreenBody> {
   String? _highlightedFilePath;
 
   void _closeExplorer() {
-    Navigator.of(context).pop(context.read<ExploreCubit>().buildResult());
+    final result = context.read<ExploreCubit>().buildResult();
+    widget.onResultChanged?.call(result);
+    if (widget.embedded) {
+      widget.onClose?.call();
+      return;
+    }
+    Navigator.of(context).pop(result);
+  }
+
+  void _notifyResultChanged(ExploreCubit cubit) {
+    widget.onResultChanged?.call(cubit.buildResult());
   }
 
   Future<void> _openRecentFilesSheet(ExploreCubit cubit) async {
@@ -88,6 +116,7 @@ class _ExploreScreenBodyState extends State<_ExploreScreenBody> {
     setState(() => _highlightedFilePath = filePath);
     if (navigateToFileDirectory) {
       cubit.jumpToFile(filePath);
+      _notifyResultChanged(cubit);
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
     }
@@ -98,6 +127,7 @@ class _ExploreScreenBodyState extends State<_ExploreScreenBody> {
       filePath: filePath,
       onOpened: () {
         cubit.recordPeekedFile(filePath);
+        _notifyResultChanged(cubit);
         if (mounted) {
           setState(() => _highlightedFilePath = filePath);
         }
@@ -134,9 +164,15 @@ class _ExploreScreenBodyState extends State<_ExploreScreenBody> {
           child: Scaffold(
             appBar: AppBar(
               title: const Text('Explorer'),
+              automaticallyImplyLeading: !widget.embedded,
               leading: IconButton(
+                key: ValueKey(
+                  widget.embedded
+                      ? 'close_explore_pane_button'
+                      : 'close_explore_screen_button',
+                ),
                 onPressed: _closeExplorer,
-                icon: const BackButtonIcon(),
+                icon: Icon(widget.embedded ? Icons.close : Icons.arrow_back),
               ),
               actions: [
                 IconButton(
@@ -157,6 +193,7 @@ class _ExploreScreenBodyState extends State<_ExploreScreenBody> {
                     setState(() => _highlightedFilePath = null);
                     if (crumb == state.currentPath) return;
                     cubit.openDirectory(crumb);
+                    _notifyResultChanged(cubit);
                   },
                 ),
                 Expanded(child: _buildBody(context, state)),
@@ -185,6 +222,7 @@ class _ExploreScreenBodyState extends State<_ExploreScreenBody> {
             if (entry.isDirectory) {
               setState(() => _highlightedFilePath = null);
               context.read<ExploreCubit>().openDirectory(entry.relativePath);
+              _notifyResultChanged(context.read<ExploreCubit>());
               return;
             }
             _openFilePeek(context.read<ExploreCubit>(), entry.relativePath);

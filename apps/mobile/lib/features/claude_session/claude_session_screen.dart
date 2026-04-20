@@ -23,6 +23,7 @@ import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/diff_parser.dart';
 import '../../utils/terminal_launcher.dart';
+import '../session_list/workspace_shell_screen.dart';
 import '../settings/state/settings_cubit.dart';
 import '../../widgets/approval_bar.dart';
 import '../../widgets/bubbles/ask_user_question_widget.dart';
@@ -255,6 +256,35 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       _permissionMode =
           permissionModeFromRaw(msg.permissionMode) ?? _permissionMode;
       _sandboxMode = sandboxModeFromRaw(msg.sandboxMode) ?? _sandboxMode;
+      _explorerCurrentPath = explorerHistory.currentPath;
+      _recentPeekedFiles = explorerHistory.recentPeekedFiles;
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant ClaudeSessionScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.sessionId == widget.sessionId &&
+        oldWidget.projectPath == widget.projectPath &&
+        oldWidget.worktreePath == widget.worktreePath &&
+        oldWidget.gitBranch == widget.gitBranch &&
+        oldWidget.isPending == widget.isPending &&
+        oldWidget.initialPermissionMode == widget.initialPermissionMode &&
+        oldWidget.initialSandboxMode == widget.initialSandboxMode) {
+      return;
+    }
+
+    final explorerHistory = context.read<BridgeService>().getExplorerHistory(
+      widget.sessionId,
+    );
+    setState(() {
+      _sessionId = widget.sessionId;
+      _projectPath = widget.projectPath;
+      _worktreePath = widget.worktreePath;
+      _gitBranch = widget.gitBranch;
+      _isPending = widget.isPending;
+      _permissionMode = permissionModeFromRaw(widget.initialPermissionMode);
+      _sandboxMode = sandboxModeFromRaw(widget.initialSandboxMode);
       _explorerCurrentPath = explorerHistory.currentPath;
       _recentPeekedFiles = explorerHistory.recentPeekedFiles;
     });
@@ -636,29 +666,48 @@ class _ChatScreenBody extends HookWidget {
                     onPressed: () async {
                       final parentState = context
                           .findAncestorStateOfType<_ClaudeSessionScreenState>();
+                      void handleResult(ExploreScreenResult result) {
+                        if (!context.mounted) return;
+                        parentState?.updateExplorerState(
+                          currentPath: result.currentPath,
+                          recentPeekedFiles: result.recentPeekedFiles,
+                        );
+                        final cubit = context.read<ChatSessionCubit>();
+                        cubit.setExplorerCurrentPath(result.currentPath);
+                        cubit.setRecentPeekedFiles(result.recentPeekedFiles);
+                      }
+
+                      final shell = WorkspaceShellScreen.maybeOf(context);
+                      final initialPath =
+                          parentState?._explorerCurrentPath ??
+                          sessionState.explorerCurrentPath;
+                      final recentPeekedFiles =
+                          parentState?._recentPeekedFiles ??
+                          sessionState.recentPeekedFiles;
+                      if (shell?.canOpenToolPane ?? false) {
+                        shell!.openExplorePane(
+                          sessionId: sessionId,
+                          projectPath: projectPath!,
+                          initialFiles: context.read<FileListCubit>().state,
+                          initialPath: initialPath,
+                          recentPeekedFiles: recentPeekedFiles,
+                          onResultChanged: handleResult,
+                        );
+                        return;
+                      }
                       final result = await context.router.push(
                         ExploreRoute(
                           sessionId: sessionId,
                           projectPath: projectPath!,
                           initialFiles: context.read<FileListCubit>().state,
-                          initialPath:
-                              parentState?._explorerCurrentPath ??
-                              sessionState.explorerCurrentPath,
-                          recentPeekedFiles:
-                              parentState?._recentPeekedFiles ??
-                              sessionState.recentPeekedFiles,
+                          initialPath: initialPath,
+                          recentPeekedFiles: recentPeekedFiles,
                         ),
                       );
                       if (result is! ExploreScreenResult || !context.mounted) {
                         return;
                       }
-                      parentState?.updateExplorerState(
-                        currentPath: result.currentPath,
-                        recentPeekedFiles: result.recentPeekedFiles,
-                      );
-                      final cubit = context.read<ChatSessionCubit>();
-                      cubit.setExplorerCurrentPath(result.currentPath);
-                      cubit.setRecentPeekedFiles(result.recentPeekedFiles);
+                      handleResult(result);
                     },
                   ),
                 if ((projectPath ?? '').isNotEmpty)
@@ -959,6 +1008,16 @@ Future<void> _openGitScreen(
   String? sessionId,
   String? worktreePath,
 }) async {
+  final shell = WorkspaceShellScreen.maybeOf(context);
+  if (shell?.canOpenToolPane ?? false) {
+    shell!.openGitPane(
+      projectPath: projectPath,
+      sessionId: sessionId,
+      worktreePath: worktreePath,
+      diffSelectionNotifier: diffSelectionNotifier,
+    );
+    return;
+  }
   final selection = await context.router.push<DiffSelection>(
     GitRoute(
       projectPath: projectPath,
@@ -966,9 +1025,9 @@ Future<void> _openGitScreen(
       worktreePath: worktreePath,
     ),
   );
-  diffSelectionNotifier.value = selection != null && !selection.isEmpty
-      ? selection
-      : null;
+  if (selection != null) {
+    diffSelectionNotifier.value = selection.isEmpty ? null : selection;
+  }
 }
 
 // ---------------------------------------------------------------------------

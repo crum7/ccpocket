@@ -38,13 +38,13 @@ class SessionListSliverAppBar extends StatelessWidget {
             smallSize: 8,
             child: const Icon(Icons.settings),
           ),
-          onPressed: () => context.router.push(SettingsRoute()),
+          onPressed: () => context.router.navigate(SettingsRoute()),
           tooltip: l.settings,
         ),
         IconButton(
           key: const ValueKey('gallery_button'),
           icon: const Icon(Icons.collections),
-          onPressed: () => context.router.push(GalleryRoute()),
+          onPressed: () => context.router.navigate(GalleryRoute()),
           tooltip: l.gallery,
         ),
         IconButton(
@@ -64,6 +64,7 @@ class SessionListPaneHeader extends StatelessWidget {
   final VoidCallback onOpenSettings;
   final VoidCallback? onOpenGallery;
   final VoidCallback? onDisconnect;
+  final VoidCallback? onTogglePaneVisibility;
 
   const SessionListPaneHeader({
     super.key,
@@ -72,6 +73,7 @@ class SessionListPaneHeader extends StatelessWidget {
     required this.onOpenSettings,
     this.onOpenGallery,
     this.onDisconnect,
+    this.onTogglePaneVisibility,
   });
 
   @override
@@ -109,6 +111,13 @@ class SessionListPaneHeader extends StatelessWidget {
                 onPressed: onOpenSettings,
                 tooltip: l.settings,
               ),
+              if (onTogglePaneVisibility != null)
+                IconButton(
+                  key: const ValueKey('collapse_left_pane_button'),
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: onTogglePaneVisibility,
+                  tooltip: 'Hide sessions',
+                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -124,11 +133,11 @@ class SessionListPaneHeader extends StatelessWidget {
                   label: const Text('New'),
                 ),
               if (onOpenGallery != null)
-                OutlinedButton.icon(
+                IconButton(
                   key: const ValueKey('gallery_button'),
                   onPressed: onOpenGallery,
-                  icon: const Icon(Icons.collections_outlined, size: 18),
-                  label: Text(l.gallery),
+                  icon: const Icon(Icons.collections_outlined),
+                  tooltip: l.gallery,
                 ),
               if (onDisconnect != null)
                 IconButton(

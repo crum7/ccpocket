@@ -30,6 +30,7 @@ import 'widgets/connect_form.dart';
 import 'widgets/home_content.dart';
 import 'widgets/machine_edit_sheet.dart';
 import 'widgets/session_list_app_bar.dart';
+import 'workspace_shell_screen.dart';
 
 // ---- Testable helpers (top-level) ----
 
@@ -133,12 +134,14 @@ class SessionListScreen extends StatefulWidget {
   /// Pre-populated sessions for UI testing (skips bridge connection).
   final List<RecentSession>? debugRecentSessions;
   final bool embedded;
+  final VoidCallback? onTogglePaneVisibility;
 
   const SessionListScreen({
     super.key,
     this.deepLinkNotifier,
     this.debugRecentSessions,
     this.embedded = false,
+    this.onTogglePaneVisibility,
   });
 
   @override
@@ -498,7 +501,27 @@ class _SessionListScreenState extends State<SessionListScreen>
 
   void _disconnect() {
     context.read<BridgeService>().disconnect();
+    if (widget.embedded) {
+      context.router.replaceAll([WorkspacePlaceholderRoute()]);
+    }
+    WorkspaceShellScreen.maybeOf(context)?.resetWorkspace();
     context.read<SessionListCubit>().resetFilters();
+  }
+
+  Future<void> _openSettings() async {
+    if (widget.embedded) {
+      await context.router.navigate(SettingsRoute());
+      return;
+    }
+    await context.router.push(SettingsRoute());
+  }
+
+  Future<void> _openGallery() async {
+    if (widget.embedded) {
+      await context.router.navigate(GalleryRoute());
+      return;
+    }
+    await context.router.push(GalleryRoute());
   }
 
   void _refresh() {
@@ -1060,7 +1083,7 @@ class _SessionListScreenState extends State<SessionListScreen>
       ),
     };
     final navigation = widget.embedded
-        ? context.router.replace(route)
+        ? context.router.replaceAll([route])
         : context.router.push(route);
     navigation.then((_) {
       if (!mounted) return;
@@ -1385,15 +1408,8 @@ class _SessionListScreenState extends State<SessionListScreen>
     );
 
     if (widget.embedded) {
-      return DecoratedBox(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border(
-            right: BorderSide(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.12),
-            ),
-          ),
-        ),
+      return Material(
+        color: Theme.of(context).colorScheme.surface,
         child: SafeArea(
           bottom: false,
           child: Column(
@@ -1401,11 +1417,12 @@ class _SessionListScreenState extends State<SessionListScreen>
               SessionListPaneHeader(
                 onTitleTap: _onTitleTap,
                 onNewSession: showConnectedUI ? _showNewSessionDialog : null,
-                onOpenSettings: () => context.router.push(SettingsRoute()),
+                onOpenSettings: _openSettings,
                 onOpenGallery: showConnectedUI
-                    ? () => context.router.push(GalleryRoute())
+                    ? _openGallery
                     : null,
                 onDisconnect: showConnectedUI ? _disconnect : null,
+                onTogglePaneVisibility: widget.onTogglePaneVisibility,
               ),
               Expanded(child: body),
             ],
@@ -1431,7 +1448,7 @@ class _SessionListScreenState extends State<SessionListScreen>
                     smallSize: 8,
                     child: const Icon(Icons.settings),
                   ),
-                  onPressed: () => context.router.push(SettingsRoute()),
+                  onPressed: _openSettings,
                   tooltip: l.settings,
                 ),
               ],
