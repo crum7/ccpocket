@@ -18,6 +18,9 @@ import 'session_list_screen.dart';
 const _twoPaneBreakpoint = 600.0;
 const _threePaneBreakpoint = 1100.0;
 const _twoPaneDividerWidth = 1.0;
+const _paneResizeHandleWidth = _twoPaneDividerWidth;
+const _minCenterPaneWidth = 360.0;
+const _minRightPaneWidth = 320.0;
 
 enum _WorkspaceLayoutMode { single, doublePane, triplePane }
 
@@ -35,6 +38,24 @@ double _rightPaneWidth(double width, _WorkspaceLayoutMode mode) {
     return width >= 1360 ? 380 : 320;
   }
   return width >= 900 ? 360 : 320;
+}
+
+double _maxRightPaneWidth({
+  required double totalWidth,
+  required _WorkspaceLayoutMode mode,
+  required bool showLeftPane,
+}) {
+  final leftWidth = showLeftPane ? _leftPaneWidth(totalWidth, mode) : 0.0;
+  final dividerCount = (showLeftPane ? 1 : 0) + 1;
+  final reservedWidth =
+      leftWidth + (dividerCount * _paneResizeHandleWidth) + _minCenterPaneWidth;
+  final availableWidth = totalWidth - reservedWidth;
+  return availableWidth < _minRightPaneWidth ? availableWidth : availableWidth;
+}
+
+double _minAllowedRightPaneWidth(double maxWidth) {
+  if (maxWidth <= 0) return 0;
+  return maxWidth < _minRightPaneWidth ? maxWidth : _minRightPaneWidth;
 }
 
 _WorkspaceLayoutMode _layoutModeForWidth(double width) {
@@ -143,6 +164,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   bool _shouldRestoreLeftPaneOnToolClose = false;
   _WorkspaceLayoutMode _layoutMode = _WorkspaceLayoutMode.single;
   WorkspaceSessionSelection? _selectedSession;
+  double? _rightPaneUserWidth;
   final ValueNotifier<int> _presentationVersion = ValueNotifier<int>(0);
 
   bool get canOpenToolPane => _layoutMode != _WorkspaceLayoutMode.single;
@@ -155,6 +177,8 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   void _notifyPresentationChanged() {
     _presentationVersion.value++;
   }
+
+  bool isToolPaneOpen(String paneId) => _toolPane?.id == paneId;
 
   void openGitPane({
     required String projectPath,
@@ -196,6 +220,10 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
     if (_layoutMode == _WorkspaceLayoutMode.single) {
       return;
     }
+    if (_toolPane?.id == pane.id) {
+      closeToolPane();
+      return;
+    }
     setState(() {
       _toolPane = pane;
       if (_layoutMode == _WorkspaceLayoutMode.doublePane) {
@@ -206,6 +234,19 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
       }
     });
     _notifyPresentationChanged();
+  }
+
+  void resizeRightPane(double nextWidth, double totalWidth) {
+    if (_toolPane == null) return;
+    final maxWidth = _maxRightPaneWidth(
+      totalWidth: totalWidth,
+      mode: _layoutMode,
+      showLeftPane: _showLeftPane,
+    );
+    final minWidth = _minAllowedRightPaneWidth(maxWidth);
+    setState(() {
+      _rightPaneUserWidth = nextWidth.clamp(minWidth, maxWidth).toDouble();
+    });
   }
 
   void closeToolPane() {
@@ -359,7 +400,20 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
           final showLeftPane = _showLeftPane;
           final showRightPane = _toolPane != null;
           final leftWidth = _leftPaneWidth(constraints.maxWidth, layoutMode);
-          final rightWidth = _rightPaneWidth(constraints.maxWidth, layoutMode);
+          final rightWidth = showRightPane
+              ? (() {
+                  final maxWidth = _maxRightPaneWidth(
+                    totalWidth: constraints.maxWidth,
+                    mode: layoutMode,
+                    showLeftPane: showLeftPane,
+                  );
+                  final minWidth = _minAllowedRightPaneWidth(maxWidth);
+                  return (_rightPaneUserWidth ??
+                          _rightPaneWidth(constraints.maxWidth, layoutMode))
+                      .clamp(minWidth, maxWidth)
+                      .toDouble();
+                })()
+              : _rightPaneWidth(constraints.maxWidth, layoutMode);
           final children = <Widget>[
             if (showLeftPane)
               SizedBox(
@@ -375,8 +429,10 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
               ),
             Expanded(child: _WorkspaceContentHost(selection: _selectedSession)),
             if (showRightPane)
-              _WorkspacePaneDivider(
+              _WorkspaceResizeDivider(
                 color: Theme.of(context).dividerColor.withValues(alpha: 0.18),
+                onDragUpdate: (delta) =>
+                    resizeRightPane(rightWidth - delta, constraints.maxWidth),
               ),
             if (showRightPane)
               SizedBox(
@@ -445,6 +501,33 @@ class _WorkspacePaneDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(width: _twoPaneDividerWidth, color: color);
+  }
+}
+
+class _WorkspaceResizeDivider extends StatelessWidget {
+  final Color color;
+  final ValueChanged<double> onDragUpdate;
+
+  const _WorkspaceResizeDivider({
+    required this.color,
+    required this.onDragUpdate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.resizeColumn,
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragUpdate: (details) => onDragUpdate(details.delta.dx),
+        child: SizedBox(
+          width: _paneResizeHandleWidth,
+          child: Center(
+            child: Container(width: _twoPaneDividerWidth, color: color),
+          ),
+        ),
+      ),
+    );
   }
 }
 
