@@ -93,29 +93,49 @@ jobs:
             exit 1
           fi
 
-          # Re-sign the final app bundle for notarization requirements.
-          # Xcode's initial signing gets the embedded provisioning profile in place,
-          # then we enforce hardened runtime + secure timestamp with release entitlements.
-          codesign --force --deep --timestamp --options runtime \
+          PROFILE_PATH="$APP_PATH/Contents/embedded.provisionprofile"
+          if [ ! -f "$PROFILE_PATH" ]; then
+            echo "::error::missing embedded.provisionprofile in signed macOS app bundle before re-signing"
+            exit 1
+          fi
+
+          # Preserve the entitlements Xcode generated from the provisioning
+          # profile, then remove get-task-allow before Developer ID re-signing.
+          # Replacing them with the raw Release.entitlements file can break
+          # keychain access in the distributed artifact.
+          EXTRACTED_ENTITLEMENTS_PATH="$RUNNER_TEMP/extracted-app-entitlements.plist"
+          RESIGNED_ENTITLEMENTS_PATH="$RUNNER_TEMP/resigned-app-entitlements.plist"
+          codesign -d --entitlements :- "$APP_PATH" > "$EXTRACTED_ENTITLEMENTS_PATH"
+          if [ ! -s "$EXTRACTED_ENTITLEMENTS_PATH" ]; then
+            echo "::error::Failed to extract entitlements from Xcode-signed app"
+            exit 1
+          fi
+          /usr/libexec/PlistBuddy -c "Delete :com.apple.security.get-task-allow" "$EXTRACTED_ENTITLEMENTS_PATH" || true
+
+          # Re-sign the final app bundle for notarization requirements while
+          # keeping the provisioning-derived keychain entitlements intact.
+          codesign --force --timestamp --options runtime \
             --sign "$IDENTITY" \
-            --entitlements apps/mobile/macos/Runner/Release.entitlements \
+            --entitlements "$EXTRACTED_ENTITLEMENTS_PATH" \
             "$APP_PATH"
 
           codesign --verify --deep --strict "$APP_PATH"
 
-          PROFILE_PATH="$APP_PATH/Contents/embedded.provisionprofile"
+          # Confirm the provisioning profile survived re-signing.
           if [ ! -f "$PROFILE_PATH" ]; then
             echo "::error::missing embedded.provisionprofile in signed macOS app bundle"
             exit 1
           fi
 
-          ENTITLEMENTS_PATH="$RUNNER_TEMP/app-entitlements.plist"
-          codesign -d --entitlements :- "$APP_PATH" > "$ENTITLEMENTS_PATH"
-          if grep -q "com.apple.security.get-task-allow" "$ENTITLEMENTS_PATH"; then
+          codesign -d --entitlements :- "$APP_PATH" > "$RESIGNED_ENTITLEMENTS_PATH"
+          if grep -q "com.apple.security.get-task-allow" "$RESIGNED_ENTITLEMENTS_PATH"; then
             echo "::error::get-task-allow entitlement is still present after re-signing"
-            cat "$ENTITLEMENTS_PATH"
+            cat "$RESIGNED_ENTITLEMENTS_PATH"
             exit 1
           fi
+
+          echo "Entitlements after re-sign:"
+          plutil -p "$RESIGNED_ENTITLEMENTS_PATH"
 
           echo "✅ Code signing verified"
           echo "✅ embedded.provisionprofile present"
