@@ -2,6 +2,15 @@
 
 All notable changes to `@ccpocket/bridge` will be documented in this file.
 
+## [1.39.1] - 2026-04-20
+
+### Changed
+- Preserve Codex thread-start reasoning effort by sending `model_reasoning_effort` through app-server config overrides
+
+### Fixed
+- Keep non-ASCII and space-containing Git diff paths readable across Bridge diff/staging flows
+- Preserve Codex reasoning effort consistently across Bridge start, turn-start, and session restoration flows
+
 ## [1.39.0] - 2026-04-17
 
 ### Added
