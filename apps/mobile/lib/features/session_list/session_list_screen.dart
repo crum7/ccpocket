@@ -135,6 +135,7 @@ class SessionListScreen extends StatefulWidget {
   final List<RecentSession>? debugRecentSessions;
   final bool embedded;
   final VoidCallback? onTogglePaneVisibility;
+  final ValueChanged<WorkspaceSessionSelection>? onSelectWorkspaceSession;
 
   const SessionListScreen({
     super.key,
@@ -142,6 +143,7 @@ class SessionListScreen extends StatefulWidget {
     this.debugRecentSessions,
     this.embedded = false,
     this.onTogglePaneVisibility,
+    this.onSelectWorkspaceSession,
   });
 
   @override
@@ -501,9 +503,6 @@ class _SessionListScreenState extends State<SessionListScreen>
 
   void _disconnect() {
     context.read<BridgeService>().disconnect();
-    if (widget.embedded) {
-      context.router.replaceAll([WorkspacePlaceholderRoute()]);
-    }
     WorkspaceShellScreen.maybeOf(context)?.resetWorkspace();
     context.read<SessionListCubit>().resetFilters();
   }
@@ -1059,7 +1058,25 @@ class _SessionListScreenState extends State<SessionListScreen>
       _pendingSessionCreated.value = null;
     }
     final pendingNotifier = isPending ? _pendingSessionCreated : null;
-    final PageRouteInfo route = switch (provider) {
+    if (widget.embedded) {
+      widget.onSelectWorkspaceSession?.call(
+        WorkspaceSessionSelection(
+          sessionId: sessionId,
+          projectPath: projectPath,
+          gitBranch: gitBranch,
+          worktreePath: worktreePath,
+          isPending: isPending,
+          provider: provider,
+          permissionMode: permissionMode,
+          sandboxMode: sandboxMode,
+          approvalPolicy: approvalPolicy,
+          pendingSessionCreated: pendingNotifier,
+        ),
+      );
+      return;
+    }
+
+    final navigation = context.router.push(switch (provider) {
       Provider.codex => CodexSessionRoute(
         sessionId: sessionId,
         projectPath: projectPath,
@@ -1081,33 +1098,7 @@ class _SessionListScreenState extends State<SessionListScreen>
         initialSandboxMode: sandboxMode,
         pendingSessionCreated: pendingNotifier,
       ),
-    };
-    final PageRouteInfo workspaceRoute = switch (provider) {
-      Provider.codex => WorkspaceCodexSessionRoute(
-        sessionId: sessionId,
-        projectPath: projectPath,
-        gitBranch: gitBranch,
-        worktreePath: worktreePath,
-        isPending: isPending,
-        initialSandboxMode: sandboxMode,
-        initialPermissionMode: permissionMode,
-        initialApprovalPolicy: approvalPolicy,
-        pendingSessionCreated: pendingNotifier,
-      ),
-      _ => WorkspaceClaudeSessionRoute(
-        sessionId: sessionId,
-        projectPath: projectPath,
-        gitBranch: gitBranch,
-        worktreePath: worktreePath,
-        isPending: isPending,
-        initialPermissionMode: permissionMode,
-        initialSandboxMode: sandboxMode,
-        pendingSessionCreated: pendingNotifier,
-      ),
-    };
-    final navigation = widget.embedded
-        ? context.router.replaceAll([workspaceRoute])
-        : context.router.push(route);
+    });
     navigation.then((_) {
       if (!mounted) return;
       final isConnected =

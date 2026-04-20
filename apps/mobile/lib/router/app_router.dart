@@ -29,26 +29,7 @@ part 'app_router.gr.dart';
 class AppRouter extends RootStackRouter {
   @override
   List<AutoRoute> get routes => [
-    AutoRoute(
-      page: AdaptiveHomeRoute.page,
-      path: '/',
-      initial: true,
-      children: [
-        AutoRoute(
-          page: WorkspacePlaceholderRoute.page,
-          path: '',
-          initial: true,
-        ),
-        AutoRoute(
-          page: WorkspaceClaudeSessionRoute.page,
-          path: 'session/:sessionId',
-        ),
-        AutoRoute(
-          page: WorkspaceCodexSessionRoute.page,
-          path: 'codex-session/:sessionId',
-        ),
-      ],
-    ),
+    AutoRoute(page: AdaptiveHomeRoute.page, path: '/', initial: true),
     AutoRoute(page: ClaudeSessionRoute.page, path: '/session/:sessionId'),
     AutoRoute(page: CodexSessionRoute.page, path: '/codex-session/:sessionId'),
     AutoRoute(page: ExploreRoute.page, path: '/explore'),

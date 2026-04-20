@@ -82,6 +82,7 @@ class CodexSessionScreen extends StatefulWidget {
   final String? initialSandboxMode;
   final String? initialPermissionMode;
   final String? initialApprovalPolicy;
+  final VoidCallback? onBackToSessions;
 
   /// Notifier from the parent that may already hold a [SystemMessage]
   /// with subtype `session_created` (race condition fix).
@@ -98,6 +99,7 @@ class CodexSessionScreen extends StatefulWidget {
     this.initialPermissionMode,
     this.initialApprovalPolicy,
     this.pendingSessionCreated,
+    this.onBackToSessions,
   });
 
   @override
@@ -115,6 +117,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
   final String? initialPermissionMode;
   final String? initialApprovalPolicy;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
+  final VoidCallback? onBackToSessions;
 
   const WorkspaceCodexSessionScreen({
     super.key,
@@ -127,6 +130,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
     this.initialPermissionMode,
     this.initialApprovalPolicy,
     this.pendingSessionCreated,
+    this.onBackToSessions,
   });
 
   @override
@@ -141,6 +145,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
       initialPermissionMode: initialPermissionMode,
       initialApprovalPolicy: initialApprovalPolicy,
       pendingSessionCreated: pendingSessionCreated,
+      onBackToSessions: onBackToSessions,
     );
   }
 }
@@ -360,9 +365,16 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       final shell = WorkspaceShellScreen.maybeOf(context);
       return Scaffold(
         appBar: AppBar(
-          leading: _sessionAppBarLeading(context, shell),
+          leading: _sessionAppBarLeading(
+            context,
+            shell,
+            onBackToSessions: widget.onBackToSessions,
+          ),
           automaticallyImplyLeading: false,
-          leadingWidth: _sessionAppBarLeadingWidth(shell),
+          leadingWidth: _sessionAppBarLeadingWidth(
+            shell,
+            onBackToSessions: widget.onBackToSessions,
+          ),
         ),
         body: const Center(
           child: Column(
@@ -388,6 +400,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       sandboxMode: _sandboxMode,
       permissionMode: _permissionMode,
       codexApprovalPolicy: _codexApprovalPolicy,
+      onBackToSessions: widget.onBackToSessions,
     );
   }
 }
@@ -406,6 +419,7 @@ class _CodexProviders extends StatelessWidget {
   final SandboxMode? sandboxMode;
   final PermissionMode? permissionMode;
   final CodexApprovalPolicy? codexApprovalPolicy;
+  final VoidCallback? onBackToSessions;
 
   const _CodexProviders({
     super.key,
@@ -418,6 +432,7 @@ class _CodexProviders extends StatelessWidget {
     this.sandboxMode,
     this.permissionMode,
     this.codexApprovalPolicy,
+    this.onBackToSessions,
   });
 
   @override
@@ -446,6 +461,7 @@ class _CodexProviders extends StatelessWidget {
         projectPath: projectPath,
         gitBranch: gitBranch,
         worktreePath: worktreePath,
+        onBackToSessions: onBackToSessions,
       ),
     );
   }
@@ -460,12 +476,14 @@ class _CodexChatBody extends HookWidget {
   final String? projectPath;
   final String? gitBranch;
   final String? worktreePath;
+  final VoidCallback? onBackToSessions;
 
   const _CodexChatBody({
     required this.sessionId,
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
+    this.onBackToSessions,
   });
 
   @override
@@ -701,13 +719,20 @@ class _CodexChatBody extends HookWidget {
             builder: (context, child) {
               final currentShell = WorkspaceShellScreen.maybeOf(context);
               final isSinglePane = currentShell?.isSinglePane ?? true;
-              final leading = _sessionAppBarLeading(context, currentShell);
+              final leading = _sessionAppBarLeading(
+                context,
+                currentShell,
+                onBackToSessions: onBackToSessions,
+              );
 
               return Scaffold(
                 appBar: AppBar(
                   leading: leading,
                   automaticallyImplyLeading: false,
-                  leadingWidth: _sessionAppBarLeadingWidth(currentShell),
+                  leadingWidth: _sessionAppBarLeadingWidth(
+                    currentShell,
+                    onBackToSessions: onBackToSessions,
+                  ),
                   titleSpacing: isSinglePane
                       ? NavigationToolbar.kMiddleSpacing
                       : (leading == null ? 16 : 12),
@@ -1071,13 +1096,13 @@ class _CodexChatBody extends HookWidget {
 
 Widget? _sessionAppBarLeading(
   BuildContext context,
-  WorkspaceShellScreenState? shell,
-) {
-  if (shell?.isSinglePane ?? true) {
+  WorkspaceShellScreenState? shell, {
+  VoidCallback? onBackToSessions,
+}) {
+  if (onBackToSessions != null) {
     return BackButton(
       key: const ValueKey('session_back_button'),
-      onPressed: () =>
-          context.router.replace(const WorkspacePlaceholderRoute()),
+      onPressed: onBackToSessions,
     );
   }
   if (shell?.shouldShowLeftPaneButton ?? false) {
@@ -1096,11 +1121,17 @@ Widget? _sessionAppBarLeading(
       icon: const Icon(Icons.chevron_right),
     );
   }
-  return null;
+  return BackButton(
+    key: const ValueKey('session_back_button'),
+    onPressed: () => Navigator.of(context).maybePop(),
+  );
 }
 
-double? _sessionAppBarLeadingWidth(WorkspaceShellScreenState? shell) {
-  if (shell?.isSinglePane ?? true) {
+double? _sessionAppBarLeadingWidth(
+  WorkspaceShellScreenState? shell, {
+  VoidCallback? onBackToSessions,
+}) {
+  if (onBackToSessions != null) {
     return null;
   }
   return shell?.shouldShowLeftPaneButton ?? false ? 64 : null;

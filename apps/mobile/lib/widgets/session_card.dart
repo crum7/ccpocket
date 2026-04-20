@@ -24,6 +24,7 @@ class RunningSessionCard extends StatefulWidget {
   final void Function(String toolUseId, {String? message})? onReject;
   final void Function(String toolUseId, String result)? onAnswer;
   final bool isUnseen;
+  final bool isSelected;
 
   const RunningSessionCard({
     super.key,
@@ -35,6 +36,7 @@ class RunningSessionCard extends StatefulWidget {
     this.onReject,
     this.onAnswer,
     this.isUnseen = false,
+    this.isSelected = false,
   });
 
   @override
@@ -121,8 +123,23 @@ class _RunningSessionCardState extends State<RunningSessionCard> {
     final displayMessage = formatCommandText(
       session.lastMessage.replaceAll(RegExp(r'\s+'), ' ').trim(),
     );
+    final colorScheme = Theme.of(context).colorScheme;
+    final selectionColor = colorScheme.primary;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 0),
+      elevation: 0,
+      color: widget.isSelected
+          ? selectionColor.withValues(alpha: 0.08)
+          : colorScheme.surfaceContainerHigh,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: widget.isSelected
+              ? selectionColor.withValues(alpha: 0.4)
+              : colorScheme.outlineVariant.withValues(alpha: 0.5),
+          width: widget.isSelected ? 1.2 : 1,
+        ),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: widget.onTap,
@@ -2298,6 +2315,7 @@ class RecentSessionCard extends StatelessWidget {
   final SessionDisplayMode displayMode;
   final String? draftText;
   final bool isProcessing;
+  final bool isSelected;
 
   const RecentSessionCard({
     super.key,
@@ -2308,6 +2326,7 @@ class RecentSessionCard extends StatelessWidget {
     this.displayMode = SessionDisplayMode.first,
     this.draftText,
     this.isProcessing = false,
+    this.isSelected = false,
   });
 
   @override
@@ -2318,6 +2337,7 @@ class RecentSessionCard extends StatelessWidget {
     final provider = providerFromRaw(session.provider);
     final providerStyle = providerStyleFor(context, provider);
     final isCodex = session.provider == 'codex';
+    final selectionColor = colorScheme.primary;
     final agentLabel = _formatAgentLabel(
       session.agentNickname,
       session.agentRole,
@@ -2327,11 +2347,16 @@ class RecentSessionCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
       elevation: 0,
-      color: colorScheme.surfaceContainerHigh,
+      color: isSelected
+          ? selectionColor.withValues(alpha: 0.08)
+          : colorScheme.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: isSelected
+              ? selectionColor.withValues(alpha: 0.4)
+              : colorScheme.outlineVariant.withValues(alpha: 0.5),
+          width: isSelected ? 1.2 : 1,
         ),
       ),
       clipBehavior: Clip.antiAlias,

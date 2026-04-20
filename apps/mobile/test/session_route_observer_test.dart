@@ -19,6 +19,7 @@ Route<dynamic> _route({String? name, Object? arguments}) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   final observer = SessionRouteObserver();
 
   setUp(() {
@@ -77,42 +78,6 @@ void main() {
     );
   });
 
-  test('tracks workspace claude session route', () {
-    observer.didPush(
-      _route(
-        name: WorkspaceClaudeSessionRoute.name,
-        arguments: _SessionArgs('workspace-claude-1'),
-      ),
-      null,
-    );
-
-    expect(
-      NotificationService.instance.isActiveSession(
-        sessionId: 'workspace-claude-1',
-        provider: 'claude',
-      ),
-      isTrue,
-    );
-  });
-
-  test('tracks workspace codex session route', () {
-    observer.didPush(
-      _route(
-        name: WorkspaceCodexSessionRoute.name,
-        arguments: _SessionArgs('workspace-codex-1'),
-      ),
-      null,
-    );
-
-    expect(
-      NotificationService.instance.isActiveSession(
-        sessionId: 'workspace-codex-1',
-        provider: 'codex',
-      ),
-      isTrue,
-    );
-  });
-
   test('supports map-style arguments', () {
     observer.didPush(
       _route(
@@ -129,5 +94,17 @@ void main() {
       ),
       isTrue,
     );
+  });
+
+  test('clears active session for non-session routes', () {
+    NotificationService.instance.setActiveSession(
+      sessionId: 'seed',
+      provider: 'claude',
+    );
+
+    observer.didPush(_route(name: SettingsRoute.name), null);
+
+    expect(NotificationService.instance.activeSessionId, isNull);
+    expect(NotificationService.instance.activeProvider, isNull);
   });
 }

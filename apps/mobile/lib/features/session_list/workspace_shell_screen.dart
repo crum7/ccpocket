@@ -2,6 +2,8 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../features/claude_session/claude_session_screen.dart';
+import '../../features/codex_session/codex_session_screen.dart';
 import '../../features/explore/explore_screen.dart';
 import '../../features/explore/state/explore_state.dart';
 import '../../features/git/git_screen.dart';
@@ -9,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/messages.dart';
 import '../../providers/bridge_cubits.dart';
 import '../../services/connection_url_parser.dart';
+import '../../services/notification_service.dart';
 import '../../utils/diff_parser.dart';
 import 'session_list_screen.dart';
 
@@ -91,18 +94,40 @@ class _ExploreToolPaneData extends _WorkspaceToolPaneData {
   String get title => 'Explorer';
 }
 
+class WorkspaceSessionSelection {
+  final String sessionId;
+  final String? projectPath;
+  final String? gitBranch;
+  final String? worktreePath;
+  final bool isPending;
+  final Provider? provider;
+  final String? permissionMode;
+  final String? sandboxMode;
+  final String? approvalPolicy;
+  final ValueNotifier<SystemMessage?>? pendingSessionCreated;
+
+  const WorkspaceSessionSelection({
+    required this.sessionId,
+    this.projectPath,
+    this.gitBranch,
+    this.worktreePath,
+    this.isPending = false,
+    this.provider,
+    this.permissionMode,
+    this.sandboxMode,
+    this.approvalPolicy,
+    this.pendingSessionCreated,
+  });
+}
+
 class WorkspaceShellScreen extends StatefulWidget {
   final ValueNotifier<ConnectionParams?>? deepLinkNotifier;
   final List<RecentSession>? debugRecentSessions;
-  final Widget content;
-  final String? currentChildRouteName;
 
   const WorkspaceShellScreen({
     super.key,
     this.deepLinkNotifier,
     this.debugRecentSessions,
-    required this.content,
-    required this.currentChildRouteName,
   });
 
   static WorkspaceShellScreenState? maybeOf(BuildContext context) =>
@@ -117,7 +142,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   bool _showLeftPane = true;
   bool _shouldRestoreLeftPaneOnToolClose = false;
   _WorkspaceLayoutMode _layoutMode = _WorkspaceLayoutMode.single;
-  String? _activeChildRouteName;
+  WorkspaceSessionSelection? _selectedSession;
   final ValueNotifier<int> _presentationVersion = ValueNotifier<int>(0);
 
   bool get canOpenToolPane => _layoutMode != _WorkspaceLayoutMode.single;
@@ -196,12 +221,17 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   }
 
   void resetWorkspace() {
-    if (_toolPane == null && _showLeftPane) return;
+    final hadSelection = _selectedSession != null;
+    if (_toolPane == null && _showLeftPane && !hadSelection) return;
     setState(() {
       _toolPane = null;
       _showLeftPane = true;
       _shouldRestoreLeftPaneOnToolClose = false;
+      _selectedSession = null;
     });
+    if (hadSelection) {
+      NotificationService.instance.clearActiveSession();
+    }
     _notifyPresentationChanged();
   }
 
@@ -232,41 +262,50 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
     closeToolPane();
   }
 
-  void resetToPlaceholder() {
-    resetWorkspace();
+  void selectSession(WorkspaceSessionSelection selection) {
+    setState(() {
+      _selectedSession = selection;
+      if (_layoutMode == _WorkspaceLayoutMode.doublePane && _toolPane != null) {
+        _showLeftPane = false;
+        _shouldRestoreLeftPaneOnToolClose = true;
+      }
+    });
+    NotificationService.instance.setActiveSession(
+      sessionId: selection.sessionId,
+      provider: selection.provider == Provider.codex ? 'codex' : 'claude',
+    );
+    _notifyPresentationChanged();
   }
 
-  void _syncLayoutState(_WorkspaceLayoutMode nextMode, String? childRouteName) {
-    final shouldCloseToolForRoute =
-        _toolPane != null && !_isSessionRoute(childRouteName);
+  void clearSelectedSession() {
+    if (_selectedSession == null) return;
+    setState(() {
+      _selectedSession = null;
+      _toolPane = null;
+      _showLeftPane = true;
+      _shouldRestoreLeftPaneOnToolClose = false;
+    });
+    NotificationService.instance.clearActiveSession();
+    _notifyPresentationChanged();
+  }
 
-    if (nextMode == _layoutMode &&
-        childRouteName == _activeChildRouteName &&
-        !shouldCloseToolForRoute) {
+  void _syncLayoutState(_WorkspaceLayoutMode nextMode) {
+    if (nextMode == _layoutMode) {
       return;
     }
 
+    final previousMode = _layoutMode;
     _layoutMode = nextMode;
-    _activeChildRouteName = childRouteName;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (shouldCloseToolForRoute) {
-        closeToolPane();
+      final crossedSinglePane =
+          (previousMode == _WorkspaceLayoutMode.single) !=
+          (nextMode == _WorkspaceLayoutMode.single);
+      if (crossedSinglePane) {
+        resetWorkspace();
         return;
       }
-      if (nextMode == _WorkspaceLayoutMode.single) {
-        if (_toolPane != null || !_showLeftPane) {
-          setState(() {
-            _toolPane = null;
-            _showLeftPane = true;
-            _shouldRestoreLeftPaneOnToolClose = false;
-          });
-          _notifyPresentationChanged();
-        }
-        return;
-      }
-
       if (nextMode == _WorkspaceLayoutMode.triplePane &&
           _toolPane != null &&
           _shouldRestoreLeftPaneOnToolClose) {
@@ -292,13 +331,10 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
 
   @override
   void dispose() {
+    NotificationService.instance.clearActiveSession();
     _presentationVersion.dispose();
     super.dispose();
   }
-
-  bool _isSessionRoute(String? routeName) =>
-      routeName == 'WorkspaceClaudeSessionRoute' ||
-      routeName == 'WorkspaceCodexSessionRoute';
 
   @override
   Widget build(BuildContext context) {
@@ -311,12 +347,13 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final layoutMode = _layoutModeForWidth(constraints.maxWidth);
-          _syncLayoutState(layoutMode, widget.currentChildRouteName);
+          _syncLayoutState(layoutMode);
           final sessionList = SessionListScreen(
             deepLinkNotifier: widget.deepLinkNotifier,
             debugRecentSessions: widget.debugRecentSessions,
             embedded: true,
             onTogglePaneVisibility: toggleLeftPaneVisibility,
+            onSelectWorkspaceSession: selectSession,
           );
 
           final showLeftPane = _showLeftPane;
@@ -336,7 +373,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
               _WorkspacePaneDivider(
                 color: Theme.of(context).dividerColor.withValues(alpha: 0.18),
               ),
-            Expanded(child: widget.content),
+            Expanded(child: _WorkspaceContentHost(selection: _selectedSession)),
             if (showRightPane)
               _WorkspacePaneDivider(
                 color: Theme.of(context).dividerColor.withValues(alpha: 0.18),
@@ -384,27 +421,16 @@ class _AdaptiveHomeScreenState extends State<AdaptiveHomeScreen> {
             _layoutModeForWidth(constraints.maxWidth) ==
             _WorkspaceLayoutMode.single;
 
-        return AutoRouter(
-          builder: (routerContext, content) {
-            final currentChildName = AutoRouter.of(
-              routerContext,
-              watch: true,
-            ).currentChild?.name;
+        if (isSinglePane) {
+          return SessionListScreen(
+            deepLinkNotifier: widget.deepLinkNotifier,
+            debugRecentSessions: widget.debugRecentSessions,
+          );
+        }
 
-            if (isSinglePane) {
-              return SessionListScreen(
-                deepLinkNotifier: widget.deepLinkNotifier,
-                debugRecentSessions: widget.debugRecentSessions,
-              );
-            }
-
-            return WorkspaceShellScreen(
-              deepLinkNotifier: widget.deepLinkNotifier,
-              debugRecentSessions: widget.debugRecentSessions,
-              content: content,
-              currentChildRouteName: currentChildName,
-            );
-          },
+        return WorkspaceShellScreen(
+          deepLinkNotifier: widget.deepLinkNotifier,
+          debugRecentSessions: widget.debugRecentSessions,
         );
       },
     );
@@ -474,7 +500,52 @@ class _WorkspaceToolPaneHost extends StatelessWidget {
   }
 }
 
-@RoutePage()
+class _WorkspaceContentHost extends StatelessWidget {
+  final WorkspaceSessionSelection? selection;
+
+  const _WorkspaceContentHost({required this.selection});
+
+  @override
+  Widget build(BuildContext context) {
+    final selection = this.selection;
+    if (selection == null) {
+      return const WorkspacePlaceholderScreen();
+    }
+
+    return switch (selection.provider) {
+      Provider.codex => CodexSessionScreen(
+        key: ValueKey('workspace_codex_${selection.sessionId}'),
+        sessionId: selection.sessionId,
+        projectPath: selection.projectPath,
+        gitBranch: selection.gitBranch,
+        worktreePath: selection.worktreePath,
+        isPending: selection.isPending,
+        initialSandboxMode: selection.sandboxMode,
+        initialPermissionMode: selection.permissionMode,
+        initialApprovalPolicy: selection.approvalPolicy,
+        pendingSessionCreated: selection.pendingSessionCreated,
+        onBackToSessions: WorkspaceShellScreen.maybeOf(
+          context,
+        )?.clearSelectedSession,
+      ),
+      _ => ClaudeSessionScreen(
+        key: ValueKey('workspace_claude_${selection.sessionId}'),
+        sessionId: selection.sessionId,
+        projectPath: selection.projectPath,
+        gitBranch: selection.gitBranch,
+        worktreePath: selection.worktreePath,
+        isPending: selection.isPending,
+        initialPermissionMode: selection.permissionMode,
+        initialSandboxMode: selection.sandboxMode,
+        pendingSessionCreated: selection.pendingSessionCreated,
+        onBackToSessions: WorkspaceShellScreen.maybeOf(
+          context,
+        )?.clearSelectedSession,
+      ),
+    };
+  }
+}
+
 class WorkspacePlaceholderScreen extends StatelessWidget {
   const WorkspacePlaceholderScreen({super.key});
 

@@ -83,6 +83,7 @@ class ClaudeSessionScreen extends StatefulWidget {
   final bool isPending;
   final String? initialPermissionMode;
   final String? initialSandboxMode;
+  final VoidCallback? onBackToSessions;
 
   /// Notifier from the parent that may already hold a [SystemMessage]
   /// with subtype `session_created` (race condition fix).
@@ -98,6 +99,7 @@ class ClaudeSessionScreen extends StatefulWidget {
     this.initialPermissionMode,
     this.initialSandboxMode,
     this.pendingSessionCreated,
+    this.onBackToSessions,
   });
 
   @override
@@ -114,6 +116,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
   final String? initialPermissionMode;
   final String? initialSandboxMode;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
+  final VoidCallback? onBackToSessions;
 
   const WorkspaceClaudeSessionScreen({
     super.key,
@@ -125,6 +128,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
     this.initialPermissionMode,
     this.initialSandboxMode,
     this.pendingSessionCreated,
+    this.onBackToSessions,
   });
 
   @override
@@ -138,6 +142,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
       initialPermissionMode: initialPermissionMode,
       initialSandboxMode: initialSandboxMode,
       pendingSessionCreated: pendingSessionCreated,
+      onBackToSessions: onBackToSessions,
     );
   }
 }
@@ -354,9 +359,16 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       final shell = WorkspaceShellScreen.maybeOf(context);
       return Scaffold(
         appBar: AppBar(
-          leading: _sessionAppBarLeading(context, shell),
+          leading: _sessionAppBarLeading(
+            context,
+            shell,
+            onBackToSessions: widget.onBackToSessions,
+          ),
           automaticallyImplyLeading: false,
-          leadingWidth: _sessionAppBarLeadingWidth(shell),
+          leadingWidth: _sessionAppBarLeadingWidth(
+            shell,
+            onBackToSessions: widget.onBackToSessions,
+          ),
         ),
         body: Center(
           child: Column(
@@ -381,6 +393,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       recentPeekedFiles: _recentPeekedFiles,
       permissionMode: _permissionMode,
       sandboxMode: _sandboxMode,
+      onBackToSessions: widget.onBackToSessions,
     );
   }
 }
@@ -395,6 +408,7 @@ class _ChatScreenProviders extends StatelessWidget {
   final List<String> recentPeekedFiles;
   final PermissionMode? permissionMode;
   final SandboxMode? sandboxMode;
+  final VoidCallback? onBackToSessions;
 
   const _ChatScreenProviders({
     super.key,
@@ -406,6 +420,7 @@ class _ChatScreenProviders extends StatelessWidget {
     this.recentPeekedFiles = const [],
     this.permissionMode,
     this.sandboxMode,
+    this.onBackToSessions,
   });
 
   @override
@@ -433,6 +448,7 @@ class _ChatScreenProviders extends StatelessWidget {
         projectPath: projectPath,
         gitBranch: gitBranch,
         worktreePath: worktreePath,
+        onBackToSessions: onBackToSessions,
       ),
     );
   }
@@ -443,12 +459,14 @@ class _ChatScreenBody extends HookWidget {
   final String? projectPath;
   final String? gitBranch;
   final String? worktreePath;
+  final VoidCallback? onBackToSessions;
 
   const _ChatScreenBody({
     required this.sessionId,
     this.projectPath,
     this.gitBranch,
     this.worktreePath,
+    this.onBackToSessions,
   });
 
   @override
@@ -696,13 +714,20 @@ class _ChatScreenBody extends HookWidget {
             builder: (context, child) {
               final currentShell = WorkspaceShellScreen.maybeOf(context);
               final isSinglePane = currentShell?.isSinglePane ?? true;
-              final leading = _sessionAppBarLeading(context, currentShell);
+              final leading = _sessionAppBarLeading(
+                context,
+                currentShell,
+                onBackToSessions: onBackToSessions,
+              );
 
               return Scaffold(
                 appBar: AppBar(
                   leading: leading,
                   automaticallyImplyLeading: false,
-                  leadingWidth: _sessionAppBarLeadingWidth(currentShell),
+                  leadingWidth: _sessionAppBarLeadingWidth(
+                    currentShell,
+                    onBackToSessions: onBackToSessions,
+                  ),
                   titleSpacing: isSinglePane
                       ? NavigationToolbar.kMiddleSpacing
                       : (leading == null ? 16 : 12),
@@ -1080,13 +1105,13 @@ class _ChatScreenBody extends HookWidget {
 
 Widget? _sessionAppBarLeading(
   BuildContext context,
-  WorkspaceShellScreenState? shell,
-) {
-  if (shell?.isSinglePane ?? true) {
+  WorkspaceShellScreenState? shell, {
+  VoidCallback? onBackToSessions,
+}) {
+  if (onBackToSessions != null) {
     return BackButton(
       key: const ValueKey('session_back_button'),
-      onPressed: () =>
-          context.router.replace(const WorkspacePlaceholderRoute()),
+      onPressed: onBackToSessions,
     );
   }
   if (shell?.shouldShowLeftPaneButton ?? false) {
@@ -1105,11 +1130,17 @@ Widget? _sessionAppBarLeading(
       icon: const Icon(Icons.chevron_right),
     );
   }
-  return null;
+  return BackButton(
+    key: const ValueKey('session_back_button'),
+    onPressed: () => Navigator.of(context).maybePop(),
+  );
 }
 
-double? _sessionAppBarLeadingWidth(WorkspaceShellScreenState? shell) {
-  if (shell?.isSinglePane ?? true) {
+double? _sessionAppBarLeadingWidth(
+  WorkspaceShellScreenState? shell, {
+  VoidCallback? onBackToSessions,
+}) {
+  if (onBackToSessions != null) {
     return null;
   }
   return shell?.shouldShowLeftPaneButton ?? false ? 64 : null;
