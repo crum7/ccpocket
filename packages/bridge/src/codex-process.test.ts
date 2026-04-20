@@ -131,7 +131,7 @@ describe("CodexProcess (app-server)", () => {
     proc.stop();
   });
 
-  it("preserves xhigh reasoning effort on thread/start", async () => {
+  it("sends reasoning effort via config override on thread/start", async () => {
     const proc = new CodexProcess("linux");
 
     proc.start("/tmp/project-effort", {
@@ -155,7 +155,9 @@ describe("CodexProcess (app-server)", () => {
     const startReq = nextOutgoingRequest(child);
     expect(startReq.method).toBe("thread/start");
     expect(startReq.params).toMatchObject({
-      effort: "xhigh",
+      config: {
+        model_reasoning_effort: "xhigh",
+      },
     });
 
     proc.stop();
@@ -351,9 +353,20 @@ describe("CodexProcess (app-server)", () => {
     nextOutgoingNotification(child); // initialized
 
     const startReq = nextOutgoingRequest(child);
+    expect(startReq.params).toMatchObject({
+      config: {
+        model_reasoning_effort: "high",
+      },
+    });
     child.stdout.emit(
       "data",
-      `${JSON.stringify({ id: startReq.id, result: { thread: { id: "thr_default_effort" } } })}\n`,
+      `${JSON.stringify({
+        id: startReq.id,
+        result: {
+          thread: { id: "thr_default_effort" },
+          reasoningEffort: "high",
+        },
+      })}\n`,
     );
 
     await tick();
@@ -399,9 +412,20 @@ describe("CodexProcess (app-server)", () => {
     nextOutgoingNotification(child); // initialized
 
     const startReq = nextOutgoingRequest(child);
+    expect(startReq.params).toMatchObject({
+      config: {
+        model_reasoning_effort: "xhigh",
+      },
+    });
     child.stdout.emit(
       "data",
-      `${JSON.stringify({ id: startReq.id, result: { thread: { id: "thr_plan_effort" } } })}\n`,
+      `${JSON.stringify({
+        id: startReq.id,
+        result: {
+          thread: { id: "thr_plan_effort" },
+          reasoningEffort: "xhigh",
+        },
+      })}\n`,
     );
 
     await tick();

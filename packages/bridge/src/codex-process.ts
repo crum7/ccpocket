@@ -852,13 +852,16 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         experimentalRawEvents: false,
         persistExtendedHistory: true,
       };
+      const threadConfig: Record<string, unknown> = {};
       const requestedModel = sanitizeCodexModel(options?.model);
       const requestedReasoningEffort = options?.modelReasoningEffort
         ? normalizeReasoningEffort(options.modelReasoningEffort)
         : undefined;
       if (requestedModel) threadParams.model = requestedModel;
       if (requestedReasoningEffort) {
-        threadParams.effort = requestedReasoningEffort;
+        // app-server applies reasoning effort on thread start via config overrides,
+        // not the top-level thread/start payload.
+        threadConfig.model_reasoning_effort = requestedReasoningEffort;
       }
       if (options?.networkAccessEnabled !== undefined) {
         threadParams.sandboxPolicy = {
@@ -880,9 +883,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         threadParams.persistExtendedHistory = true;
       }
       if (options?.profile) {
+        threadConfig.profile = options.profile;
+      }
+      if (Object.keys(threadConfig).length > 0) {
         threadParams.config = {
-          profile: options.profile,
           ...(threadParams.config as Record<string, unknown> | undefined),
+          ...threadConfig,
         };
       }
 
