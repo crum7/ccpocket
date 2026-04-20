@@ -131,6 +131,36 @@ describe("CodexProcess (app-server)", () => {
     proc.stop();
   });
 
+  it("preserves xhigh reasoning effort on thread/start", async () => {
+    const proc = new CodexProcess("linux");
+
+    proc.start("/tmp/project-effort", {
+      sandboxMode: "workspace-write",
+      approvalPolicy: "on-request",
+      modelReasoningEffort: "xhigh",
+    });
+
+    const child = fakeChildren[0];
+    await tick();
+
+    const initReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: initReq.id, result: {} })}\n`,
+    );
+
+    await tick();
+    nextOutgoingNotification(child); // initialized
+
+    const startReq = nextOutgoingRequest(child);
+    expect(startReq.method).toBe("thread/start");
+    expect(startReq.params).toMatchObject({
+      effort: "xhigh",
+    });
+
+    proc.stop();
+  });
+
   it("sends selected profile via config override on thread/start", async () => {
     const proc = new CodexProcess("linux");
 
@@ -296,6 +326,101 @@ describe("CodexProcess (app-server)", () => {
     const initialized = nextOutgoingNotification(child);
     expect(initialized.method).toBe("initialized");
     expect(() => nextOutgoingRequest(child)).toThrow();
+
+    proc.stop();
+  });
+
+  it("sends reasoning effort on turn/start in default mode", async () => {
+    const proc = new CodexProcess("linux");
+
+    proc.start("/tmp/project-default-effort", {
+      sandboxMode: "workspace-write",
+      approvalPolicy: "on-request",
+      modelReasoningEffort: "high",
+    });
+
+    const child = fakeChildren[0];
+    await tick();
+
+    const initReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: initReq.id, result: {} })}\n`,
+    );
+    await tick();
+    nextOutgoingNotification(child); // initialized
+
+    const startReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: startReq.id, result: { thread: { id: "thr_default_effort" } } })}\n`,
+    );
+
+    await tick();
+    drainSkillsList(child);
+
+    proc.sendInput("continue");
+    await tick();
+    const turnReq = nextOutgoingRequest(child);
+    expect(turnReq.method).toBe("turn/start");
+    expect(turnReq.params).toMatchObject({
+      effort: "high",
+      collaborationMode: {
+        mode: "default",
+        settings: {
+          model: "gpt-5.4",
+          reasoning_effort: "high",
+        },
+      },
+    });
+
+    proc.stop();
+  });
+
+  it("does not downgrade reasoning effort to medium in plan mode", async () => {
+    const proc = new CodexProcess("linux");
+
+    proc.start("/tmp/project-plan-effort", {
+      sandboxMode: "workspace-write",
+      approvalPolicy: "on-request",
+      modelReasoningEffort: "xhigh",
+      collaborationMode: "plan",
+    });
+
+    const child = fakeChildren[0];
+    await tick();
+
+    const initReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: initReq.id, result: {} })}\n`,
+    );
+    await tick();
+    nextOutgoingNotification(child); // initialized
+
+    const startReq = nextOutgoingRequest(child);
+    child.stdout.emit(
+      "data",
+      `${JSON.stringify({ id: startReq.id, result: { thread: { id: "thr_plan_effort" } } })}\n`,
+    );
+
+    await tick();
+    drainSkillsList(child);
+
+    proc.sendInput("plan this");
+    await tick();
+    const turnReq = nextOutgoingRequest(child);
+    expect(turnReq.method).toBe("turn/start");
+    expect(turnReq.params).toMatchObject({
+      effort: "xhigh",
+      collaborationMode: {
+        mode: "plan",
+        settings: {
+          model: "gpt-5.4",
+          reasoning_effort: "xhigh",
+        },
+      },
+    });
 
     proc.stop();
   });

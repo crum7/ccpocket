@@ -853,11 +853,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         persistExtendedHistory: true,
       };
       const requestedModel = sanitizeCodexModel(options?.model);
+      const requestedReasoningEffort = options?.modelReasoningEffort
+        ? normalizeReasoningEffort(options.modelReasoningEffort)
+        : undefined;
       if (requestedModel) threadParams.model = requestedModel;
-      if (options?.modelReasoningEffort) {
-        threadParams.effort = normalizeReasoningEffort(
-          options.modelReasoningEffort,
-        );
+      if (requestedReasoningEffort) {
+        threadParams.effort = requestedReasoningEffort;
       }
       if (options?.networkAccessEnabled !== undefined) {
         threadParams.sandboxPolicy = {
@@ -923,6 +924,8 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
           : {}),
         ...(resolvedSettings.modelReasoningEffort
           ? { modelReasoningEffort: resolvedSettings.modelReasoningEffort }
+          : requestedReasoningEffort
+            ? { modelReasoningEffort: requestedReasoningEffort }
           : {}),
         ...(resolvedSettings.networkAccessEnabled !== undefined
           ? { networkAccessEnabled: resolvedSettings.networkAccessEnabled }
@@ -1168,11 +1171,12 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
           ),
         };
         const requestedModel = sanitizeCodexModel(options?.model);
+        const requestedReasoningEffort = options?.modelReasoningEffort
+          ? normalizeReasoningEffort(options.modelReasoningEffort)
+          : undefined;
         if (requestedModel) params.model = requestedModel;
-        if (options?.modelReasoningEffort) {
-          params.effort = normalizeReasoningEffort(
-            options.modelReasoningEffort,
-          );
+        if (requestedReasoningEffort) {
+          params.effort = requestedReasoningEffort;
         }
 
         // Always send collaborationMode so the server switches modes correctly.
@@ -1183,8 +1187,8 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
             || sanitizeCodexModel(this.startModel)
             || "gpt-5.4",
         };
-        if (this._collaborationMode === "plan") {
-          modeSettings.reasoning_effort = "medium";
+        if (requestedReasoningEffort) {
+          modeSettings.reasoning_effort = requestedReasoningEffort;
         }
         params.collaborationMode = {
           mode: this._collaborationMode,
@@ -2226,12 +2230,7 @@ function normalizeSandboxMode(value: CodexStartOptions["sandboxMode"]): string {
 function normalizeReasoningEffort(
   value: NonNullable<CodexStartOptions["modelReasoningEffort"]>,
 ): string {
-  switch (value) {
-    case "xhigh":
-      return "high";
-    default:
-      return value;
-  }
+  return value;
 }
 
 function sanitizeCodexModel(value: unknown): string | undefined {
@@ -2246,6 +2245,12 @@ function extractResolvedSettingsFromThreadResponse(
 ): CodexResolvedSettings {
   const thread = response.thread as Record<string, unknown> | undefined;
   const sandbox = response.sandbox as Record<string, unknown> | undefined;
+  const collaborationMode = response.collaborationMode as
+    | Record<string, unknown>
+    | undefined;
+  const collaborationSettings = collaborationMode?.settings as
+    | Record<string, unknown>
+    | undefined;
 
   return {
     model: sanitizeCodexModel(response.model)
@@ -2258,6 +2263,8 @@ function extractResolvedSettingsFromThreadResponse(
     modelReasoningEffort:
       typeof response.reasoningEffort === "string"
         ? response.reasoningEffort
+        : typeof collaborationSettings?.reasoning_effort === "string"
+          ? collaborationSettings.reasoning_effort
         : undefined,
     networkAccessEnabled:
       typeof sandbox?.networkAccess === "boolean"
