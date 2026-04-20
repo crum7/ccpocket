@@ -567,9 +567,8 @@ class HomeContentState extends State<HomeContent> {
                   child: RecentSessionCard(
                     session: session,
                     displayMode: _displayMode,
-                    isSelected:
-                        selectedSessionId == session.sessionId &&
-                        selectedSessionProvider == session.provider,
+                    // Only running sessions show the active selection state.
+                    isSelected: false,
                     draftText: context.read<DraftService>().getDraft(
                       session.sessionId,
                     ),

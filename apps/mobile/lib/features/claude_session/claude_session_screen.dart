@@ -84,6 +84,7 @@ class ClaudeSessionScreen extends StatefulWidget {
   final String? initialPermissionMode;
   final String? initialSandboxMode;
   final VoidCallback? onBackToSessions;
+  final bool hideAppBarLeading;
 
   /// Notifier from the parent that may already hold a [SystemMessage]
   /// with subtype `session_created` (race condition fix).
@@ -100,6 +101,7 @@ class ClaudeSessionScreen extends StatefulWidget {
     this.initialSandboxMode,
     this.pendingSessionCreated,
     this.onBackToSessions,
+    this.hideAppBarLeading = false,
   });
 
   @override
@@ -117,6 +119,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
   final String? initialSandboxMode;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
   final VoidCallback? onBackToSessions;
+  final bool hideAppBarLeading;
 
   const WorkspaceClaudeSessionScreen({
     super.key,
@@ -129,6 +132,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
     this.initialSandboxMode,
     this.pendingSessionCreated,
     this.onBackToSessions,
+    this.hideAppBarLeading = false,
   });
 
   @override
@@ -143,6 +147,7 @@ class WorkspaceClaudeSessionScreen extends StatelessWidget {
       initialSandboxMode: initialSandboxMode,
       pendingSessionCreated: pendingSessionCreated,
       onBackToSessions: onBackToSessions,
+      hideAppBarLeading: hideAppBarLeading,
     );
   }
 }
@@ -363,11 +368,13 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
             context,
             shell,
             onBackToSessions: widget.onBackToSessions,
+            hideAppBarLeading: widget.hideAppBarLeading,
           ),
           automaticallyImplyLeading: false,
           leadingWidth: _sessionAppBarLeadingWidth(
             shell,
             onBackToSessions: widget.onBackToSessions,
+            hideAppBarLeading: widget.hideAppBarLeading,
           ),
         ),
         body: Center(
@@ -394,6 +401,7 @@ class _ClaudeSessionScreenState extends State<ClaudeSessionScreen> {
       permissionMode: _permissionMode,
       sandboxMode: _sandboxMode,
       onBackToSessions: widget.onBackToSessions,
+      hideAppBarLeading: widget.hideAppBarLeading,
     );
   }
 }
@@ -409,6 +417,7 @@ class _ChatScreenProviders extends StatelessWidget {
   final PermissionMode? permissionMode;
   final SandboxMode? sandboxMode;
   final VoidCallback? onBackToSessions;
+  final bool hideAppBarLeading;
 
   const _ChatScreenProviders({
     super.key,
@@ -421,6 +430,7 @@ class _ChatScreenProviders extends StatelessWidget {
     this.permissionMode,
     this.sandboxMode,
     this.onBackToSessions,
+    this.hideAppBarLeading = false,
   });
 
   @override
@@ -449,6 +459,7 @@ class _ChatScreenProviders extends StatelessWidget {
         gitBranch: gitBranch,
         worktreePath: worktreePath,
         onBackToSessions: onBackToSessions,
+        hideAppBarLeading: hideAppBarLeading,
       ),
     );
   }
@@ -460,6 +471,7 @@ class _ChatScreenBody extends HookWidget {
   final String? gitBranch;
   final String? worktreePath;
   final VoidCallback? onBackToSessions;
+  final bool hideAppBarLeading;
 
   const _ChatScreenBody({
     required this.sessionId,
@@ -467,6 +479,7 @@ class _ChatScreenBody extends HookWidget {
     this.gitBranch,
     this.worktreePath,
     this.onBackToSessions,
+    this.hideAppBarLeading = false,
   });
 
   @override
@@ -718,6 +731,7 @@ class _ChatScreenBody extends HookWidget {
                 context,
                 currentShell,
                 onBackToSessions: onBackToSessions,
+                hideAppBarLeading: hideAppBarLeading,
               );
 
               return Scaffold(
@@ -727,6 +741,7 @@ class _ChatScreenBody extends HookWidget {
                   leadingWidth: _sessionAppBarLeadingWidth(
                     currentShell,
                     onBackToSessions: onBackToSessions,
+                    hideAppBarLeading: hideAppBarLeading,
                   ),
                   titleSpacing: isSinglePane
                       ? NavigationToolbar.kMiddleSpacing
@@ -1107,7 +1122,11 @@ Widget? _sessionAppBarLeading(
   BuildContext context,
   WorkspaceShellScreenState? shell, {
   VoidCallback? onBackToSessions,
+  bool hideAppBarLeading = false,
 }) {
+  if (hideAppBarLeading) {
+    return null;
+  }
   if (onBackToSessions != null) {
     return BackButton(
       key: const ValueKey('session_back_button'),
@@ -1139,7 +1158,11 @@ Widget? _sessionAppBarLeading(
 double? _sessionAppBarLeadingWidth(
   WorkspaceShellScreenState? shell, {
   VoidCallback? onBackToSessions,
+  bool hideAppBarLeading = false,
 }) {
+  if (hideAppBarLeading) {
+    return null;
+  }
   if (onBackToSessions != null) {
     return null;
   }

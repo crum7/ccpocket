@@ -39,6 +39,14 @@ SCREENSHOTS=(
   "08_dark_theme|Dark mode|Easy on the eyes|ダークモード|目に優しいダークテーマ|深色模式|护眼深色主题"
 )
 
+IPAD_SCREENSHOTS=(
+  "01_workspace_overview|Real workspace|Chat, sessions, and Git together|本物のワークスペース|会話、一覧、差分を同時表示|真正的工作区|会话、列表与差异并排查看"
+  "02_workspace_explorer|Explore while coding|Keep files next to the conversation|探索しながら開発|会話の横でファイルを確認|边写边看文件|在对话旁浏览项目结构"
+  "03_approval_context|Approve in context|Review requests without losing your place|文脈の中で承認|流れを切らさず判断できる|在上下文中审批|不离开当前工作流"
+  "04_approval_queue|Approval queue|Handle multiple active reviews together|承認キュー|複数の判断待ちをまとめてさばく|审批队列|同时处理多个待审批会话"
+  "05_dark_workspace|Dark workspace|A focused layout that feels like your desktop IDE|ダークワークスペース|集中できる大画面レイアウト|深色工作区|像桌面 IDE 一样沉浸的布局"
+)
+
 compose_screenshot() {
   local key="$1" keyword="$2" title="$3" lang_dir="$4" font_bold="$5" font_reg="$6"
   local input="${SCRIPT_DIR}/${lang_dir}/${key}.png"
@@ -46,7 +54,7 @@ compose_screenshot() {
 
   # Dark theme variant: dark background + white text
   local is_dark=false
-  case "$key" in 08_dark_theme) is_dark=true ;; esac
+  case "$key" in 08_dark_theme|05_dark_workspace) is_dark=true ;; esac
 
   if [ ! -f "$input" ]; then
     echo "SKIP: $input not found"
@@ -261,14 +269,14 @@ compose_ipad_screenshot() {
 
 echo ""
 echo "=== iPad English ==="
-for entry in "${SCREENSHOTS[@]}"; do
+for entry in "${IPAD_SCREENSHOTS[@]}"; do
   IFS='|' read -r key kw_en tt_en kw_ja tt_ja kw_zh tt_zh <<< "$entry"
   compose_ipad_screenshot "$key" "$kw_en" "$tt_en" "en-US" "$FONT_EN_BOLD" "$FONT_EN_REG" "en-US"
 done
 
 echo ""
 echo "=== iPad Japanese ==="
-for entry in "${SCREENSHOTS[@]}"; do
+for entry in "${IPAD_SCREENSHOTS[@]}"; do
   IFS='|' read -r key kw_en tt_en kw_ja tt_ja kw_zh tt_zh <<< "$entry"
   compose_ipad_screenshot "$key" "$kw_ja" "$tt_ja" "ja" "$FONT_JA_BOLD" "$FONT_JA_REG" "en-US"
 done

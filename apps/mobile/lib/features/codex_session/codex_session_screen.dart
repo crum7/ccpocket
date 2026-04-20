@@ -83,6 +83,7 @@ class CodexSessionScreen extends StatefulWidget {
   final String? initialPermissionMode;
   final String? initialApprovalPolicy;
   final VoidCallback? onBackToSessions;
+  final bool hideAppBarLeading;
 
   /// Notifier from the parent that may already hold a [SystemMessage]
   /// with subtype `session_created` (race condition fix).
@@ -100,6 +101,7 @@ class CodexSessionScreen extends StatefulWidget {
     this.initialApprovalPolicy,
     this.pendingSessionCreated,
     this.onBackToSessions,
+    this.hideAppBarLeading = false,
   });
 
   @override
@@ -118,6 +120,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
   final String? initialApprovalPolicy;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
   final VoidCallback? onBackToSessions;
+  final bool hideAppBarLeading;
 
   const WorkspaceCodexSessionScreen({
     super.key,
@@ -131,6 +134,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
     this.initialApprovalPolicy,
     this.pendingSessionCreated,
     this.onBackToSessions,
+    this.hideAppBarLeading = false,
   });
 
   @override
@@ -146,6 +150,7 @@ class WorkspaceCodexSessionScreen extends StatelessWidget {
       initialApprovalPolicy: initialApprovalPolicy,
       pendingSessionCreated: pendingSessionCreated,
       onBackToSessions: onBackToSessions,
+      hideAppBarLeading: hideAppBarLeading,
     );
   }
 }
@@ -369,11 +374,13 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
             context,
             shell,
             onBackToSessions: widget.onBackToSessions,
+            hideAppBarLeading: widget.hideAppBarLeading,
           ),
           automaticallyImplyLeading: false,
           leadingWidth: _sessionAppBarLeadingWidth(
             shell,
             onBackToSessions: widget.onBackToSessions,
+            hideAppBarLeading: widget.hideAppBarLeading,
           ),
         ),
         body: const Center(
@@ -401,6 +408,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
       permissionMode: _permissionMode,
       codexApprovalPolicy: _codexApprovalPolicy,
       onBackToSessions: widget.onBackToSessions,
+      hideAppBarLeading: widget.hideAppBarLeading,
     );
   }
 }
@@ -420,6 +428,7 @@ class _CodexProviders extends StatelessWidget {
   final PermissionMode? permissionMode;
   final CodexApprovalPolicy? codexApprovalPolicy;
   final VoidCallback? onBackToSessions;
+  final bool hideAppBarLeading;
 
   const _CodexProviders({
     super.key,
@@ -433,6 +442,7 @@ class _CodexProviders extends StatelessWidget {
     this.permissionMode,
     this.codexApprovalPolicy,
     this.onBackToSessions,
+    this.hideAppBarLeading = false,
   });
 
   @override
@@ -462,6 +472,7 @@ class _CodexProviders extends StatelessWidget {
         gitBranch: gitBranch,
         worktreePath: worktreePath,
         onBackToSessions: onBackToSessions,
+        hideAppBarLeading: hideAppBarLeading,
       ),
     );
   }
@@ -477,6 +488,7 @@ class _CodexChatBody extends HookWidget {
   final String? gitBranch;
   final String? worktreePath;
   final VoidCallback? onBackToSessions;
+  final bool hideAppBarLeading;
 
   const _CodexChatBody({
     required this.sessionId,
@@ -484,6 +496,7 @@ class _CodexChatBody extends HookWidget {
     this.gitBranch,
     this.worktreePath,
     this.onBackToSessions,
+    this.hideAppBarLeading = false,
   });
 
   @override
@@ -723,6 +736,7 @@ class _CodexChatBody extends HookWidget {
                 context,
                 currentShell,
                 onBackToSessions: onBackToSessions,
+                hideAppBarLeading: hideAppBarLeading,
               );
 
               return Scaffold(
@@ -732,6 +746,7 @@ class _CodexChatBody extends HookWidget {
                   leadingWidth: _sessionAppBarLeadingWidth(
                     currentShell,
                     onBackToSessions: onBackToSessions,
+                    hideAppBarLeading: hideAppBarLeading,
                   ),
                   titleSpacing: isSinglePane
                       ? NavigationToolbar.kMiddleSpacing
@@ -1098,7 +1113,11 @@ Widget? _sessionAppBarLeading(
   BuildContext context,
   WorkspaceShellScreenState? shell, {
   VoidCallback? onBackToSessions,
+  bool hideAppBarLeading = false,
 }) {
+  if (hideAppBarLeading) {
+    return null;
+  }
   if (onBackToSessions != null) {
     return BackButton(
       key: const ValueKey('session_back_button'),
@@ -1130,7 +1149,11 @@ Widget? _sessionAppBarLeading(
 double? _sessionAppBarLeadingWidth(
   WorkspaceShellScreenState? shell, {
   VoidCallback? onBackToSessions,
+  bool hideAppBarLeading = false,
 }) {
+  if (hideAppBarLeading) {
+    return null;
+  }
   if (onBackToSessions != null) {
     return null;
   }

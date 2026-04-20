@@ -41,7 +41,7 @@ head -80 CHANGELOG.md
 AskUserQuestion（multiSelect）で更新対象を確認する。
 変更分析結果に基づいて推奨をdescriptionに含める。
 
-**スクリーンショット（8シナリオ）:**
+**iPhone スクリーンショット（8シナリオ）:**
 
 | Key | シナリオ名 | 内容 | テーマ |
 |-----|-----------|------|--------|
@@ -53,6 +53,16 @@ AskUserQuestion（multiSelect）で更新対象を確認する。
 | `06_git_diff` | Git Diff | Diff表示画面 | ライト |
 | `07_new_session` | New Session | 新規セッションシート | ライト |
 | `08_dark_theme` | Session List | 承認待ち一覧（ダークモード訴求） | ダーク |
+
+**iPad スクリーンショット（4シナリオ）:**
+
+| Key | シナリオ名 | 内容 | テーマ |
+|-----|-----------|------|--------|
+| `01_workspace_overview` | Workspace Overview | 左一覧 + 中央チャット + 右Git | ライト |
+| `02_workspace_explorer` | Workspace Explorer | 左一覧 + 中央チャット + 右Explorer | ライト |
+| `03_approval_context` | Approval In Context | 左一覧 + 中央承認UI | ライト |
+| `04_approval_queue` | Approval Queue | 複数の承認待ちセッションを同時に確認 | ライト |
+| `05_dark_workspace` | Dark Workspace | 3-pane ワークスペースのダークテーマ訴求 | ダーク |
 
 **メタデータテキスト:**
 
@@ -148,7 +158,8 @@ dart-mcp `stop_app` でアプリを停止。
 
 ### Step 5: iPad スクリーンショット撮影（選択された場合）
 
-Step 4と同じフローをiPadで実行。
+iPad は iPhone とは別セットを撮影する。既存の mobile 専用シナリオを流用せず、
+workspace レイアウト前提の 4 シナリオを撮る。
 
 #### 5-1. iPadシミュレーターの全画面表示を保証
 
@@ -194,7 +205,33 @@ swift .claude/skills/update-store/scripts/sim-tap.swift dismiss-dialogs iphone
 while swift .claude/skills/update-store/scripts/sim-tap.swift tap "許可" 2>/dev/null; do sleep 1; done
 ```
 
-#### 5-2. スクショ撮影 & 解像度検証
+#### 5-2. シナリオ撮影 & 解像度検証
+
+各シナリオに対して:
+
+1. marionette `call_custom_extension`
+   - extension: `ccpocket.navigateToStoreScenario`
+   - params: `{ "scenario": "<シナリオ名>" }`
+   - 値:
+     - `Workspace Overview`
+     - `Workspace Explorer`
+     - `Approval In Context`
+     - `Approval Queue`
+     - `Dark Workspace`
+
+2. 2-3秒待機
+
+3. 撮影
+   ```bash
+   xcrun simctl io booted screenshot apps/mobile/fastlane/screenshots/en-US/ipad_<key>.png
+   ```
+
+4. marionette `call_custom_extension`
+   - extension: `ccpocket.popToRoot`
+
+5. 1秒待機
+
+#### 5-3. 解像度検証
 
 撮影後、スクショの解像度がiPadのネイティブ解像度と一致するか検証する:
 
@@ -211,7 +248,7 @@ echo "Screenshot: ${WIDTH}x${HEIGHT}"
 
 もし解像度が期待値と異なる場合は、`flutter clean` → `flutter build ios --simulator` でクリーンビルドしてやり直すこと。
 
-#### 5-3. アプリ停止
+#### 5-4. アプリ停止
 
 dart-mcp `stop_app` でアプリを停止。
 **シミュレーターはシャットダウンしない**（compose.sh 実行や確認に支障はない）。

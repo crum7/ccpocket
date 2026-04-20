@@ -154,6 +154,49 @@ class _ExploreScreenBodyState extends State<_ExploreScreenBody> {
       builder: (context, state) {
         _ensureHighlightedVisible();
         final cubit = context.read<ExploreCubit>();
+        final scaffold = Scaffold(
+          appBar: AppBar(
+            title: const Text('Explorer'),
+            automaticallyImplyLeading: !widget.embedded,
+            leading: IconButton(
+              key: ValueKey(
+                widget.embedded
+                    ? 'close_explore_pane_button'
+                    : 'close_explore_screen_button',
+              ),
+              onPressed: _closeExplorer,
+              icon: Icon(widget.embedded ? Icons.close : Icons.arrow_back),
+            ),
+            actions: [
+              IconButton(
+                key: const ValueKey('explore_recent_files_button'),
+                onPressed: () => _openRecentFilesSheet(cubit),
+                icon: const Icon(Icons.history),
+                tooltip: 'Recent files',
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              ExploreBreadcrumbs(
+                projectName: widget.projectPath.split('/').last,
+                currentPath: state.currentPath,
+                breadcrumbs: cubit.breadcrumbs,
+                onTapCrumb: (crumb) {
+                  setState(() => _highlightedFilePath = null);
+                  if (crumb == state.currentPath) return;
+                  cubit.openDirectory(crumb);
+                  _notifyResultChanged(cubit);
+                },
+              ),
+              Expanded(child: _buildBody(context, state)),
+            ],
+          ),
+        );
+
+        if (widget.embedded) {
+          return scaffold;
+        }
 
         return PopScope<void>(
           canPop: false,
@@ -161,45 +204,7 @@ class _ExploreScreenBodyState extends State<_ExploreScreenBody> {
             if (didPop) return;
             _closeExplorer();
           },
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text('Explorer'),
-              automaticallyImplyLeading: !widget.embedded,
-              leading: IconButton(
-                key: ValueKey(
-                  widget.embedded
-                      ? 'close_explore_pane_button'
-                      : 'close_explore_screen_button',
-                ),
-                onPressed: _closeExplorer,
-                icon: Icon(widget.embedded ? Icons.close : Icons.arrow_back),
-              ),
-              actions: [
-                IconButton(
-                  key: const ValueKey('explore_recent_files_button'),
-                  onPressed: () => _openRecentFilesSheet(cubit),
-                  icon: const Icon(Icons.history),
-                  tooltip: 'Recent files',
-                ),
-              ],
-            ),
-            body: Column(
-              children: [
-                ExploreBreadcrumbs(
-                  projectName: widget.projectPath.split('/').last,
-                  currentPath: state.currentPath,
-                  breadcrumbs: cubit.breadcrumbs,
-                  onTapCrumb: (crumb) {
-                    setState(() => _highlightedFilePath = null);
-                    if (crumb == state.currentPath) return;
-                    cubit.openDirectory(crumb);
-                    _notifyResultChanged(cubit);
-                  },
-                ),
-                Expanded(child: _buildBody(context, state)),
-              ],
-            ),
-          ),
+          child: scaffold,
         );
       },
     );
