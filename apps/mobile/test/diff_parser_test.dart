@@ -174,6 +174,54 @@ Binary files a/image.png and b/image.png differ
       expect(files[0].hunks, isEmpty);
     });
 
+    test('parses non-ASCII paths from unquoted diff headers', () {
+      const diff = '''
+diff --git a/docs/あいう.md b/docs/あいう.md
+new file mode 100644
+index 0000000..ce01362
+--- /dev/null
++++ b/docs/あいう.md
+@@ -0,0 +1 @@
++hello
+''';
+      final files = parseDiff(diff);
+
+      expect(files.length, 1);
+      expect(files[0].filePath, 'docs/あいう.md');
+    });
+
+    test('parses quoted escaped paths from diff headers', () {
+      const diff = r'''
+diff --git "a/docs/\343\201\202\343\201\204\343\201\206.md" "b/docs/\343\201\202\343\201\204\343\201\206.md"
+new file mode 100644
+index 0000000..ce01362
+--- /dev/null
++++ "b/docs/\343\201\202\343\201\204\343\201\206.md"
+@@ -0,0 +1 @@
++hello
+''';
+      final files = parseDiff(diff);
+
+      expect(files.length, 1);
+      expect(files[0].filePath, 'docs/あいう.md');
+    });
+
+    test('parses quoted escaped paths that also contain spaces', () {
+      const diff = r'''
+diff --git "a/docs/\347\251\272 \347\231\275.md" "b/docs/\347\251\272 \347\231\275.md"
+new file mode 100644
+index 0000000..ce01362
+--- /dev/null
++++ "b/docs/\347\251\272 \347\231\275.md"
+@@ -0,0 +1 @@
++hello
+''';
+      final files = parseDiff(diff);
+
+      expect(files.length, 1);
+      expect(files[0].filePath, 'docs/空 白.md');
+    });
+
     test('parses tool result diff without diff --git header', () {
       const toolResultDiff = '''
 --- a/lib/main.dart

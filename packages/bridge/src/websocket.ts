@@ -4121,12 +4121,17 @@ export class BridgeWebSocketServer {
     options?: { staged?: boolean; unstaged?: boolean },
   ): void {
     const execOpts = { cwd, maxBuffer: 10 * 1024 * 1024 };
+    const gitArgs = (...args: string[]) => [
+      "-c",
+      "core.quotePath=false",
+      ...args,
+    ];
 
     // Staged only: git diff --cached
     if (options?.staged) {
       execFile(
         "git",
-        ["diff", "--cached", "--no-color"],
+        gitArgs("diff", "--cached", "--no-color"),
         execOpts,
         (err, stdout) => {
           if (err) {
@@ -4167,7 +4172,11 @@ export class BridgeWebSocketServer {
         }
       }
 
-      execFile("git", ["diff", "--no-color"], execOpts, (err, stdout) => {
+      execFile(
+        "git",
+        gitArgs("diff", "--no-color"),
+        execOpts,
+        (err, stdout) => {
         // Revert intent-to-add for untracked files.
         if (untrackedFiles.length > 0) {
           try {
@@ -4182,7 +4191,8 @@ export class BridgeWebSocketServer {
           return;
         }
         callback({ diff: stdout });
-      });
+        },
+      );
       return;
     }
 
@@ -4211,21 +4221,26 @@ export class BridgeWebSocketServer {
       }
     }
 
-    execFile("git", ["diff", "HEAD", "--no-color"], execOpts, (err, stdout) => {
-      if (untrackedFilesAll.length > 0) {
-        try {
-          execFileSync("git", ["reset", "--", ...untrackedFilesAll], { cwd });
-        } catch {
-          // Ignore
+    execFile(
+      "git",
+      gitArgs("diff", "HEAD", "--no-color"),
+      execOpts,
+      (err, stdout) => {
+        if (untrackedFilesAll.length > 0) {
+          try {
+            execFileSync("git", ["reset", "--", ...untrackedFilesAll], { cwd });
+          } catch {
+            // Ignore
+          }
         }
-      }
 
-      if (err) {
-        callback({ diff: "", error: err.message });
-        return;
-      }
-      callback({ diff: stdout });
-    });
+        if (err) {
+          callback({ diff: "", error: err.message });
+          return;
+        }
+        callback({ diff: stdout });
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------

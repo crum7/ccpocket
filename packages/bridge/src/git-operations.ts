@@ -34,8 +34,15 @@ function resolveProject(projectPath: string): string {
   return realpathSync(resolve(projectPath));
 }
 
+function withGitPathConfig(args: string[]): string[] {
+  return ["-c", "core.quotePath=false", ...args];
+}
+
 function git(args: string[], cwd: string): string {
-  return execFileSync("git", args, { cwd, encoding: "utf-8" }).trim();
+  return execFileSync("git", withGitPathConfig(args), {
+    cwd,
+    encoding: "utf-8",
+  }).trim();
 }
 
 function buildHunkPatch(
@@ -188,10 +195,14 @@ export function gitCommit(projectPath: string, message: string): CommitResult {
 /** Return staged diff content for commit-message generation. */
 export function getStagedDiff(projectPath: string): string {
   const cwd = resolveProject(projectPath);
-  return execFileSync("git", ["diff", "--cached", "--no-color"], {
-    cwd,
-    encoding: "utf-8",
-  });
+  return execFileSync(
+    "git",
+    withGitPathConfig(["diff", "--cached", "--no-color"]),
+    {
+      cwd,
+      encoding: "utf-8",
+    },
+  );
 }
 
 /** Push to remote. */

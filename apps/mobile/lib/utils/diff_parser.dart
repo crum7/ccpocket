@@ -1,5 +1,6 @@
 // Unified diff parser — converts raw `git diff` output into structured data.
 
+import 'dart:convert';
 import 'dart:typed_data';
 
 enum DiffLineType { context, addition, deletion }
@@ -266,8 +267,12 @@ DiffFile _parseSingleFileDiff(List<String> lines) {
       filePath = line.substring(6);
       break;
     }
+    if (line.startsWith('+++ "b/')) {
+      filePath = _decodeGitPathToken(line.substring(4));
+      break;
+    }
     if (line.startsWith('+++ ') && !line.startsWith('+++ /dev/null')) {
-      filePath = line.substring(4);
+      filePath = _decodeGitPathToken(line.substring(4));
       break;
     }
   }
@@ -674,11 +679,113 @@ void _writeFileHeader(StringBuffer buffer, DiffFile file) {
 
 /// Extract file path from `diff --git a/path b/path`.
 String _extractFilePath(String diffGitLine) {
-  // Format: diff --git a/some/path b/some/path
-  final parts = diffGitLine.split(' b/');
-  if (parts.length >= 2) {
-    return parts.last;
+  final payload = diffGitLine.replaceFirst('diff --git ', '');
+  final tokens = <String>[];
+  final buffer = StringBuffer();
+  var inQuotes = false;
+  var escaping = false;
+
+  for (final rune in payload.runes) {
+    final char = String.fromCharCode(rune);
+    if (escaping) {
+      buffer.write(char);
+      escaping = false;
+      continue;
+    }
+    if (char == r'\') {
+      buffer.write(char);
+      if (inQuotes) escaping = true;
+      continue;
+    }
+    if (char == '"') {
+      inQuotes = !inQuotes;
+      buffer.write(char);
+      continue;
+    }
+    if (char == ' ' && !inQuotes) {
+      if (buffer.isNotEmpty) {
+        tokens.add(buffer.toString());
+        buffer.clear();
+      }
+      continue;
+    }
+    buffer.write(char);
   }
-  // Fallback: remove prefix
-  return diffGitLine.replaceFirst('diff --git ', '').split(' ').last;
+
+  if (buffer.isNotEmpty) {
+    tokens.add(buffer.toString());
+  }
+
+  if (tokens.length >= 2) {
+    return _decodeGitPathToken(tokens[1]);
+  }
+
+  return _decodeGitPathToken(payload);
+}
+
+String _decodeGitPathToken(String token) {
+  var normalized = token.trim();
+  if (normalized.startsWith('"') && normalized.endsWith('"')) {
+    normalized = normalized.substring(1, normalized.length - 1);
+  }
+
+  if (normalized.startsWith('a/') || normalized.startsWith('b/')) {
+    normalized = normalized.substring(2);
+  }
+
+  if (!normalized.contains(r'\')) {
+    return normalized;
+  }
+
+  final bytes = <int>[];
+  for (var i = 0; i < normalized.length; i++) {
+    final char = normalized[i];
+    if (char != r'\') {
+      bytes.addAll(utf8.encode(char));
+      continue;
+    }
+
+    if (i + 3 < normalized.length) {
+      final octal = normalized.substring(i + 1, i + 4);
+      if (_isOctal(octal)) {
+        bytes.add(int.parse(octal, radix: 8));
+        i += 3;
+        continue;
+      }
+    }
+
+    if (i + 1 < normalized.length) {
+      final escaped = normalized[++i];
+      switch (escaped) {
+        case 't':
+          bytes.add(0x09);
+          break;
+        case 'n':
+          bytes.add(0x0A);
+          break;
+        case 'r':
+          bytes.add(0x0D);
+          break;
+        case '"':
+        case r'\':
+          bytes.addAll(utf8.encode(escaped));
+          break;
+        default:
+          bytes.addAll(utf8.encode(escaped));
+          break;
+      }
+      continue;
+    }
+
+    bytes.addAll(utf8.encode(char));
+  }
+
+  return utf8.decode(bytes, allowMalformed: true);
+}
+
+bool _isOctal(String value) {
+  for (final rune in value.runes) {
+    if (rune < 0x30 || rune > 0x37) return false;
+  }
+  return value.isNotEmpty;
 }

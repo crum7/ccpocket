@@ -40,7 +40,11 @@ function createTempRepo(): string {
 }
 
 function gitCmd(args: string[], cwd: string): string {
-  return execFileSync("git", args, { cwd, encoding: "utf-8" }).trim();
+  return execFileSync(
+    "git",
+    ["-c", "core.quotePath=false", ...args],
+    { cwd, encoding: "utf-8" },
+  ).trim();
 }
 
 function createBareRemote(): string {
@@ -84,6 +88,26 @@ describe("stageFiles", () => {
 
   it("throws for non-existent file", () => {
     expect(() => stageFiles(repo, ["nonexistent.txt"])).toThrow();
+  });
+
+  it("stages a file with non-ASCII characters in the path", () => {
+    mkdirSync(join(repo, "docs"), { recursive: true });
+    writeFileSync(join(repo, "docs", "あいう.md"), "hello\n");
+
+    stageFiles(repo, ["docs/あいう.md"]);
+
+    const staged = gitCmd(["diff", "--cached", "--name-only"], repo);
+    expect(staged).toBe("docs/あいう.md");
+  });
+
+  it("stages a file with spaces in the path", () => {
+    mkdirSync(join(repo, "docs"), { recursive: true });
+    writeFileSync(join(repo, "docs", "空 白.md"), "hello\n");
+
+    stageFiles(repo, ["docs/空 白.md"]);
+
+    const staged = gitCmd(["diff", "--cached", "--name-only"], repo);
+    expect(staged).toBe("docs/空 白.md");
   });
 });
 
@@ -168,6 +192,18 @@ describe("stageHunks", () => {
     const cachedDiff = gitCmd(["diff", "--cached", "--", "new.txt"], repo);
     expect(cachedDiff).toContain("new file mode 100644");
     expect(cachedDiff).toContain("+line 0");
+  });
+
+  it("stages a hunk from an untracked file with non-ASCII path", () => {
+    mkdirSync(join(repo, "docs"), { recursive: true });
+    const content = Array.from({ length: 12 }, (_, i) => `line ${i}`).join("\n");
+    writeFileSync(join(repo, "docs", "あいう.md"), `${content}\n`);
+
+    stageHunks(repo, [{ file: "docs/あいう.md", hunkIndex: 0 }]);
+
+    const cachedDiff = gitCmd(["diff", "--cached", "--", "docs/あいう.md"], repo);
+    expect(cachedDiff).toContain("new file mode 100644");
+    expect(cachedDiff).toContain("+++ b/docs/あいう.md");
   });
 });
 
@@ -392,6 +428,28 @@ describe("getStagedDiff", () => {
 
   it("returns empty string for clean repo", () => {
     expect(getStagedDiff(repo)).toBe("");
+  });
+
+  it("returns an unescaped diff for non-ASCII paths", () => {
+    mkdirSync(join(repo, "docs"), { recursive: true });
+    writeFileSync(join(repo, "docs", "あいう.md"), "hello\n");
+    execFileSync("git", ["add", "docs/あいう.md"], { cwd: repo });
+
+    const diff = getStagedDiff(repo);
+
+    expect(diff).toContain("diff --git a/docs/あいう.md b/docs/あいう.md");
+    expect(diff).not.toContain("\\343\\201");
+  });
+
+  it("returns an unescaped diff for paths with spaces", () => {
+    mkdirSync(join(repo, "docs"), { recursive: true });
+    writeFileSync(join(repo, "docs", "空 白.md"), "hello\n");
+    execFileSync("git", ["add", "docs/空 白.md"], { cwd: repo });
+
+    const diff = getStagedDiff(repo);
+
+    expect(diff).toContain("diff --git a/docs/空 白.md b/docs/空 白.md");
+    expect(diff).not.toContain("\\347\\251\\272");
   });
 });
 
