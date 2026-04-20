@@ -58,6 +58,16 @@ const _fileListRefreshToolNames = {
   'Bash',
 };
 
+class _NoopListenable implements Listenable {
+  const _NoopListenable();
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
+}
+
 /// Outer widget that creates screen-scoped [ChatSessionCubit] and
 /// [StreamingStateCubit] via [MultiBlocProvider], replacing Riverpod's
 /// Family (autoDispose) pattern.
@@ -446,8 +456,7 @@ class _ChatScreenBody extends HookWidget {
     final l = AppLocalizations.of(context);
     final appColors = Theme.of(context).extension<AppColors>()!;
     final shell = WorkspaceShellScreen.maybeOf(context);
-    final isSinglePane = shell?.isSinglePane ?? true;
-    final leading = _sessionAppBarLeading(context, shell);
+    final presentationListenable = shell?.presentationListenable;
 
     // Mutable branch state (refreshed from Bridge)
     final currentBranch = useState(gitBranch);
@@ -682,212 +691,233 @@ class _ChatScreenBody extends HookWidget {
         },
         child: Focus(
           autofocus: true,
-          child: Scaffold(
-            appBar: AppBar(
-              leading: leading,
-              automaticallyImplyLeading: false,
-              leadingWidth: _sessionAppBarLeadingWidth(shell),
-              titleSpacing: isSinglePane
-                  ? NavigationToolbar.kMiddleSpacing
-                  : (leading == null ? 16 : 12),
-              title: SessionNameTitle(
-                sessionId: sessionId,
-                projectPath: projectPath,
-              ),
-              flexibleSpace: StatusLineFlexibleSpace(
-                status: status,
-                inPlanMode: inPlanMode,
-              ),
-              actions: [
-                // View Changes button
-                if ((projectPath ?? '').isNotEmpty)
-                  IconButton(
-                    key: const ValueKey('appbar_explore_button'),
-                    icon: Icon(
-                      Icons.folder_outlined,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
-                    ),
-                    tooltip: 'Explore',
-                    onPressed: () async {
-                      final parentState = context
-                          .findAncestorStateOfType<_ClaudeSessionScreenState>();
-                      void handleResult(ExploreScreenResult result) {
-                        if (!context.mounted) return;
-                        parentState?.updateExplorerState(
-                          currentPath: result.currentPath,
-                          recentPeekedFiles: result.recentPeekedFiles,
-                        );
-                        final cubit = context.read<ChatSessionCubit>();
-                        cubit.setExplorerCurrentPath(result.currentPath);
-                        cubit.setRecentPeekedFiles(result.recentPeekedFiles);
-                      }
+          child: ListenableBuilder(
+            listenable: presentationListenable ?? const _NoopListenable(),
+            builder: (context, child) {
+              final currentShell = WorkspaceShellScreen.maybeOf(context);
+              final isSinglePane = currentShell?.isSinglePane ?? true;
+              final leading = _sessionAppBarLeading(context, currentShell);
 
-                      final shell = WorkspaceShellScreen.maybeOf(context);
-                      final initialPath =
-                          parentState?._explorerCurrentPath ??
-                          sessionState.explorerCurrentPath;
-                      final recentPeekedFiles =
-                          parentState?._recentPeekedFiles ??
-                          sessionState.recentPeekedFiles;
-                      if (shell?.canOpenToolPane ?? false) {
-                        shell!.openExplorePane(
-                          sessionId: sessionId,
-                          projectPath: projectPath!,
-                          initialFiles: context.read<FileListCubit>().state,
-                          initialPath: initialPath,
-                          recentPeekedFiles: recentPeekedFiles,
-                          onResultChanged: handleResult,
-                        );
-                        return;
-                      }
-                      final result = await context.router.push(
-                        ExploreRoute(
-                          sessionId: sessionId,
-                          projectPath: projectPath!,
-                          initialFiles: context.read<FileListCubit>().state,
-                          initialPath: initialPath,
-                          recentPeekedFiles: recentPeekedFiles,
+              return Scaffold(
+                appBar: AppBar(
+                  leading: leading,
+                  automaticallyImplyLeading: false,
+                  leadingWidth: _sessionAppBarLeadingWidth(currentShell),
+                  titleSpacing: isSinglePane
+                      ? NavigationToolbar.kMiddleSpacing
+                      : (leading == null ? 16 : 12),
+                  title: SessionNameTitle(
+                    sessionId: sessionId,
+                    projectPath: projectPath,
+                  ),
+                  flexibleSpace: StatusLineFlexibleSpace(
+                    status: status,
+                    inPlanMode: inPlanMode,
+                  ),
+                  actions: [
+                    if ((projectPath ?? '').isNotEmpty)
+                      IconButton(
+                        key: const ValueKey('appbar_explore_button'),
+                        icon: Icon(
+                          Icons.folder_outlined,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
-                      );
-                      if (result is! ExploreScreenResult || !context.mounted) {
-                        return;
-                      }
-                      handleResult(result);
-                    },
-                  ),
-                if ((projectPath ?? '').isNotEmpty)
-                  IconButton(
-                    key: const ValueKey('appbar_view_changes'),
-                    icon: Icon(
-                      Icons.difference,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
-                    ),
-                    onPressed: () {
-                      _openGitScreen(
-                        context,
-                        worktreePath ?? projectPath!,
-                        diffSelectionFromNav,
-                        sessionId: sessionId,
-                        worktreePath: worktreePath,
-                      );
-                    },
-                  ),
-                // Overflow menu
-                PopupMenuButton<String>(
-                  key: const ValueKey('session_overflow_menu'),
-                  icon: Icon(
-                    Icons.more_horiz,
-                    size: 18,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 32,
-                    minHeight: 32,
-                  ),
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'history':
-                        _showUserMessageHistory(context, scrollToUserEntry);
-                      case 'screenshot':
-                        if (projectPath == null) return;
-                        showScreenshotSheet(
-                          context: context,
-                          bridge: context.read<BridgeService>(),
-                          projectPath: projectPath!,
-                          sessionId: sessionId,
-                        );
-                      case 'gallery':
-                        context.router.push(GalleryRoute(sessionId: sessionId));
-                      case 'rename':
-                        _renameSession(context, sessionId);
-                      case 'terminal':
-                        _openInTerminal(context, projectPath);
-                    }
-                  },
-                  itemBuilder: (context) {
-                    final terminalConfig = context
-                        .read<SettingsCubit>()
-                        .state
-                        .terminalApp;
-                    return [
-                      PopupMenuItem(
-                        key: const ValueKey('menu_rename'),
-                        value: 'rename',
-                        child: ListTile(
-                          leading: const Icon(Icons.edit_outlined, size: 20),
-                          title: Text(l.rename),
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
                         ),
-                      ),
-                      PopupMenuItem(
-                        key: const ValueKey('menu_message_history'),
-                        value: 'history',
-                        child: ListTile(
-                          leading: const Icon(Icons.chat_outlined, size: 20),
-                          title: Text(l.messageHistory),
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                      if (projectPath != null)
-                        PopupMenuItem(
-                          key: const ValueKey('menu_screenshot'),
-                          value: 'screenshot',
-                          child: ListTile(
-                            leading: const Icon(
-                              Icons.screenshot_monitor,
-                              size: 20,
+                        tooltip: 'Explore',
+                        onPressed: () async {
+                          final parentState = context
+                              .findAncestorStateOfType<
+                                _ClaudeSessionScreenState
+                              >();
+                          void handleResult(ExploreScreenResult result) {
+                            if (!context.mounted) return;
+                            parentState?.updateExplorerState(
+                              currentPath: result.currentPath,
+                              recentPeekedFiles: result.recentPeekedFiles,
+                            );
+                            final cubit = context.read<ChatSessionCubit>();
+                            cubit.setExplorerCurrentPath(result.currentPath);
+                            cubit.setRecentPeekedFiles(
+                              result.recentPeekedFiles,
+                            );
+                          }
+
+                          final shell = WorkspaceShellScreen.maybeOf(context);
+                          final initialPath =
+                              parentState?._explorerCurrentPath ??
+                              sessionState.explorerCurrentPath;
+                          final recentPeekedFiles =
+                              parentState?._recentPeekedFiles ??
+                              sessionState.recentPeekedFiles;
+                          if (shell?.canOpenToolPane ?? false) {
+                            shell!.openExplorePane(
+                              sessionId: sessionId,
+                              projectPath: projectPath!,
+                              initialFiles: context.read<FileListCubit>().state,
+                              initialPath: initialPath,
+                              recentPeekedFiles: recentPeekedFiles,
+                              onResultChanged: handleResult,
+                            );
+                            return;
+                          }
+                          final result = await context.router.push(
+                            ExploreRoute(
+                              sessionId: sessionId,
+                              projectPath: projectPath!,
+                              initialFiles: context.read<FileListCubit>().state,
+                              initialPath: initialPath,
+                              recentPeekedFiles: recentPeekedFiles,
                             ),
-                            title: Text(l.screenshot),
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
-                        ),
-                      PopupMenuItem(
-                        key: const ValueKey('menu_gallery'),
-                        value: 'gallery',
-                        child: ListTile(
-                          leading: const Icon(Icons.collections, size: 20),
-                          title: Text(l.gallery),
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
+                          );
+                          if (result is! ExploreScreenResult ||
+                              !context.mounted) {
+                            return;
+                          }
+                          handleResult(result);
+                        },
                       ),
-                      if (FeatureFlags.current.isEnabled(
-                            AppFeature.terminalAppIntegration,
-                          ) &&
-                          terminalConfig.isConfigured &&
-                          projectPath != null)
-                        PopupMenuItem(
-                          key: const ValueKey('menu_terminal'),
-                          value: 'terminal',
-                          child: ListTile(
-                            leading: const Icon(Icons.terminal, size: 20),
-                            title: Text(l.openInTerminal),
-                            dense: true,
-                            contentPadding: EdgeInsets.zero,
-                          ),
+                    if ((projectPath ?? '').isNotEmpty)
+                      IconButton(
+                        key: const ValueKey('appbar_view_changes'),
+                        icon: Icon(
+                          Icons.difference,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
-                    ];
-                  },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                        onPressed: () {
+                          _openGitScreen(
+                            context,
+                            worktreePath ?? projectPath!,
+                            diffSelectionFromNav,
+                            sessionId: sessionId,
+                            worktreePath: worktreePath,
+                          );
+                        },
+                      ),
+                    PopupMenuButton<String>(
+                      key: const ValueKey('session_overflow_menu'),
+                      icon: Icon(
+                        Icons.more_horiz,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'history':
+                            _showUserMessageHistory(context, scrollToUserEntry);
+                          case 'screenshot':
+                            if (projectPath == null) return;
+                            showScreenshotSheet(
+                              context: context,
+                              bridge: context.read<BridgeService>(),
+                              projectPath: projectPath!,
+                              sessionId: sessionId,
+                            );
+                          case 'gallery':
+                            context.router.push(
+                              GalleryRoute(sessionId: sessionId),
+                            );
+                          case 'rename':
+                            _renameSession(context, sessionId);
+                          case 'terminal':
+                            _openInTerminal(context, projectPath);
+                        }
+                      },
+                      itemBuilder: (context) {
+                        final terminalConfig = context
+                            .read<SettingsCubit>()
+                            .state
+                            .terminalApp;
+                        return [
+                          PopupMenuItem(
+                            key: const ValueKey('menu_rename'),
+                            value: 'rename',
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.edit_outlined,
+                                size: 20,
+                              ),
+                              title: Text(l.rename),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          PopupMenuItem(
+                            key: const ValueKey('menu_message_history'),
+                            value: 'history',
+                            child: ListTile(
+                              leading: const Icon(
+                                Icons.chat_outlined,
+                                size: 20,
+                              ),
+                              title: Text(l.messageHistory),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          if (projectPath != null)
+                            PopupMenuItem(
+                              key: const ValueKey('menu_screenshot'),
+                              value: 'screenshot',
+                              child: ListTile(
+                                leading: const Icon(
+                                  Icons.screenshot_monitor,
+                                  size: 20,
+                                ),
+                                title: Text(l.screenshot),
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          PopupMenuItem(
+                            key: const ValueKey('menu_gallery'),
+                            value: 'gallery',
+                            child: ListTile(
+                              leading: const Icon(Icons.collections, size: 20),
+                              title: Text(l.gallery),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          if (FeatureFlags.current.isEnabled(
+                                AppFeature.terminalAppIntegration,
+                              ) &&
+                              terminalConfig.isConfigured &&
+                              projectPath != null)
+                            PopupMenuItem(
+                              key: const ValueKey('menu_terminal'),
+                              value: 'terminal',
+                              child: ListTile(
+                                leading: const Icon(Icons.terminal, size: 20),
+                                title: Text(l.openInTerminal),
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                        ];
+                      },
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            body: Column(
+                body: child,
+              );
+            },
+            child: Column(
               children: [
                 UsageSummaryBar(
                   totalCost: sessionState.totalCost,

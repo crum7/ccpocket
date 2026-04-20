@@ -118,12 +118,18 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
   bool _shouldRestoreLeftPaneOnToolClose = false;
   _WorkspaceLayoutMode _layoutMode = _WorkspaceLayoutMode.single;
   String? _activeChildRouteName;
+  final ValueNotifier<int> _presentationVersion = ValueNotifier<int>(0);
 
   bool get canOpenToolPane => _layoutMode != _WorkspaceLayoutMode.single;
   bool get isSinglePane => _layoutMode == _WorkspaceLayoutMode.single;
   bool get isLeftPaneVisible => _showLeftPane;
   bool get shouldShowLeftPaneButton =>
       _layoutMode != _WorkspaceLayoutMode.single && !_showLeftPane;
+  ValueNotifier<int> get presentationListenable => _presentationVersion;
+
+  void _notifyPresentationChanged() {
+    _presentationVersion.value++;
+  }
 
   void openGitPane({
     required String projectPath,
@@ -174,6 +180,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
         _shouldRestoreLeftPaneOnToolClose = false;
       }
     });
+    _notifyPresentationChanged();
   }
 
   void closeToolPane() {
@@ -185,6 +192,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
       }
       _shouldRestoreLeftPaneOnToolClose = false;
     });
+    _notifyPresentationChanged();
   }
 
   void resetWorkspace() {
@@ -194,6 +202,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
       _showLeftPane = true;
       _shouldRestoreLeftPaneOnToolClose = false;
     });
+    _notifyPresentationChanged();
   }
 
   void toggleLeftPaneVisibility() {
@@ -207,6 +216,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
       _showLeftPane = !_showLeftPane;
       _shouldRestoreLeftPaneOnToolClose = false;
     });
+    _notifyPresentationChanged();
   }
 
   void _handleExploreResult(ExploreScreenResult result) {
@@ -252,6 +262,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
             _showLeftPane = true;
             _shouldRestoreLeftPaneOnToolClose = false;
           });
+          _notifyPresentationChanged();
         }
         return;
       }
@@ -263,6 +274,7 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
           _showLeftPane = true;
           _shouldRestoreLeftPaneOnToolClose = false;
         });
+        _notifyPresentationChanged();
         return;
       }
 
@@ -273,8 +285,15 @@ class WorkspaceShellScreenState extends State<WorkspaceShellScreen> {
           _shouldRestoreLeftPaneOnToolClose = true;
           _showLeftPane = false;
         });
+        _notifyPresentationChanged();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _presentationVersion.dispose();
+    super.dispose();
   }
 
   bool _isSessionRoute(String? routeName) =>
@@ -463,74 +482,113 @@ class WorkspacePlaceholderScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l = AppLocalizations.of(context);
+    final shell = WorkspaceShellScreen.maybeOf(context);
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerLowest,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(
-                  color: theme.dividerColor.withValues(alpha: 0.2),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
+    return ListenableBuilder(
+      listenable:
+          shell?.presentationListenable ?? const _PlaceholderNoopListenable(),
+      builder: (context, _) {
+        final currentShell = WorkspaceShellScreen.maybeOf(context);
+        final fabTheme = theme.floatingActionButtonTheme;
+
+        return Scaffold(
+          backgroundColor: theme.colorScheme.surfaceContainerLowest,
+          appBar: currentShell?.shouldShowLeftPaneButton ?? false
+              ? AppBar(
+                  leadingWidth: 64,
+                  leading: IconButton.filled(
+                    key: const ValueKey('show_left_pane_button'),
+                    onPressed: currentShell!.toggleLeftPaneVisibility,
+                    tooltip: 'Show sessions',
+                    style: IconButton.styleFrom(
+                      backgroundColor:
+                          fabTheme.backgroundColor ??
+                          theme.colorScheme.primaryContainer,
+                      foregroundColor:
+                          fabTheme.foregroundColor ??
+                          theme.colorScheme.onPrimaryContainer,
+                    ),
+                    icon: const Icon(Icons.chevron_right),
                   ),
-                ],
-              ),
+                )
+              : null,
+          body: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 28,
-                  vertical: 32,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        Icons.forum_outlined,
-                        color: theme.colorScheme.onPrimaryContainer,
-                        size: 32,
-                      ),
+                padding: const EdgeInsets.all(32),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: theme.dividerColor.withValues(alpha: 0.2),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      l.appTitle,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 24,
+                        offset: const Offset(0, 10),
                       ),
-                      textAlign: TextAlign.center,
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 28,
+                      vertical: 32,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Select a session on the left, or start a new one.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        height: 1.4,
-                      ),
-                      textAlign: TextAlign.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.forum_outlined,
+                            color: theme.colorScheme.onPrimaryContainer,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          l.appTitle,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Select a session on the left, or start a new one.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            height: 1.4,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
+}
+
+class _PlaceholderNoopListenable implements Listenable {
+  const _PlaceholderNoopListenable();
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
 }
