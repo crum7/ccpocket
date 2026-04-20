@@ -184,8 +184,9 @@ xcrun simctl boot "iPad Pro 13-inch (M4)" 2>/dev/null || true
 swift .claude/skills/update-store/scripts/sim-tap.swift prepare-store ipad
 ```
 これで以下をまとめて行う:
+- `simctl privacy grant` で通知 / 音声認識 / マイク権限を事前付与
 - Simulator を前面化
-- `Device > Rotate Right` で landscape 化
+- `Device > Orientation > Landscape Left` で iPad を明示的に横向き固定
 - 通知許諾などのネイティブダイアログを dismiss
 
 撮影中に向きが崩れた場合や許諾ダイアログが再表示された場合も、スクショを撮る前に再度これを実行する。

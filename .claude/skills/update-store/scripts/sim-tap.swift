@@ -13,6 +13,8 @@
 import AppKit
 import Foundation
 
+let storeScreenshotBundleId = "com.k9i.ccpocket"
+
 // MARK: - AX Helpers
 
 func axValue<T>(_ element: AXUIElement, _ attr: String) -> T? {
@@ -196,20 +198,44 @@ func captureStoreScreenshot(device: String, outputPath: String) -> Bool {
     return true
 }
 
+func setSimulatorOrientation(_ orientationItem: String) -> Bool {
+    guard activateSimulator() else { return false }
+    let orientationScript = """
+    tell application "Simulator" to activate
+    tell application "System Events"
+      tell process "Simulator"
+        click menu item "\(orientationItem)" of menu 1 of menu item "Orientation" of menu "Device" of menu bar 1
+      end tell
+    end tell
+    """
+    if runAppleScript(orientationScript) {
+        usleep(300_000)
+        return true
+    }
+    return false
+}
+
 func rotateSimulator(direction: String) -> Bool {
     guard activateSimulator() else { return false }
     let menuItem: String
     let keyCode: Int
+    let orientationItem: String
     switch direction.lowercased() {
     case "right":
         menuItem = "Rotate Right"
         keyCode = 124
+        orientationItem = "Landscape Right"
     case "left":
         menuItem = "Rotate Left"
         keyCode = 123
+        orientationItem = "Landscape Left"
     default:
         fputs("Error: Unknown rotate direction \"\(direction)\". Use 'left' or 'right'.\n", stderr)
         return false
+    }
+
+    if setSimulatorOrientation(orientationItem) {
+        return true
     }
 
     let menuScript = """
@@ -272,13 +298,17 @@ func findElement(named name: String) -> ElementInfo? {
     return elements.first(where: { $0.label.contains(name) })
 }
 
-func tap(name: String) -> Bool {
+func tap(name: String, quiet: Bool = false) -> Bool {
     guard let info = findElement(named: name) else {
-        fputs("Error: Element \"\(name)\" not found.\n", stderr)
+        if !quiet {
+            fputs("Error: Element \"\(name)\" not found.\n", stderr)
+        }
         return false
     }
     guard let pos = info.position, let size = info.size else {
-        fputs("Error: Element \"\(name)\" has no position.\n", stderr)
+        if !quiet {
+            fputs("Error: Element \"\(name)\" has no position.\n", stderr)
+        }
         return false
     }
     let centerX = pos.x + size.width / 2
@@ -332,6 +362,33 @@ func findSimulatorWindowBounds() -> CGRect? {
     return nil
 }
 
+func simulatorLooksLandscape() -> Bool? {
+    guard let bounds = findSimulatorWindowBounds() else { return nil }
+    let titleBarH: CGFloat = 22
+    let contentHeight = max(0, bounds.height - titleBarH)
+    return bounds.width > contentHeight
+}
+
+func grantSimulatorPermission(service: String, bundleId: String = storeScreenshotBundleId) -> Bool {
+    let grant = runCommand("/usr/bin/xcrun", ["simctl", "privacy", "booted", "grant", service, bundleId])
+    if grant.status == 0 {
+        return true
+    }
+    fputs("Warning: Failed to grant \(service) permission for \(bundleId).\n\(grant.stderr)\n", stderr)
+    return false
+}
+
+func prepareStorePermissions(bundleId: String = storeScreenshotBundleId) -> Int {
+    let services = ["notifications", "speech-recognition", "microphone"]
+    var granted = 0
+    for service in services {
+        if grantSimulatorPermission(service: service, bundleId: bundleId) {
+            granted += 1
+        }
+    }
+    return granted
+}
+
 /// Clicks a point in the simulator by mapping iPad/iPhone coordinates to screen coordinates.
 func clickInSimulator(simX: CGFloat, simY: CGFloat, deviceWidth: CGFloat, deviceHeight: CGFloat) -> Bool {
     guard let winBounds = findSimulatorWindowBounds() else {
@@ -367,7 +424,7 @@ func dismissDialogs(labels: [String], buttonPositions: [(CGFloat, CGFloat)], dev
         var found = false
         // Try AX-based tap first
         for label in labels {
-            if tap(name: label) {
+            if tap(name: label, quiet: true) {
                 dismissed += 1
                 found = true
                 Thread.sleep(forTimeInterval: 1.0)
@@ -412,9 +469,24 @@ func dismissIPadDialogs() -> Int {
     let positions: [(CGFloat, CGFloat)] = [
         (1242, 1180),  // Standard centered dialog - right button
         (1092, 1180),  // Lower dialog variant
+        (1380, 1180),  // Wider system prompt variant
     ]
     return dismissDialogs(
-        labels: ["許可", "Allow", "OK"],
+        labels: [
+            "許可",
+            "Allow",
+            "OK",
+            "続ける",
+            "Continue",
+            "今はしない",
+            "Not Now",
+            "後で",
+            "Later",
+            "許可しない",
+            "Don't Allow",
+            "ディクテーションを有効にする",
+            "Enable Dictation",
+        ],
         buttonPositions: positions,
         deviceWidth: 2752,
         deviceHeight: 2064
@@ -437,15 +509,24 @@ func dismissIPhoneDialogs() -> Int {
 func prepareStoreCapture(device: String) -> Bool {
     switch device.lowercased() {
     case "ipad":
-        guard rotateSimulator(direction: "right") else { return false }
+        let granted = prepareStorePermissions()
+        guard setSimulatorOrientation("Landscape Left") else {
+            fputs("Error: Failed to set iPad simulator orientation to Landscape Left.\n", stderr)
+            return false
+        }
         Thread.sleep(forTimeInterval: 0.8)
-        let count = dismissIPadDialogs()
-        print("Prepared iPad simulator. Dismissed \(count) dialog(s).")
+        var dismissed = dismissIPadDialogs()
+        Thread.sleep(forTimeInterval: 1.0)
+        dismissed += dismissIPadDialogs()
+        print("Prepared iPad simulator. Granted \(granted) permission(s), dismissed \(dismissed) dialog(s).")
         return true
     case "iphone":
         guard activateSimulator() else { return false }
-        let count = dismissIPhoneDialogs()
-        print("Prepared iPhone simulator. Dismissed \(count) dialog(s).")
+        let granted = prepareStorePermissions()
+        var dismissed = dismissIPhoneDialogs()
+        Thread.sleep(forTimeInterval: 1.0)
+        dismissed += dismissIPhoneDialogs()
+        print("Prepared iPhone simulator. Granted \(granted) permission(s), dismissed \(dismissed) dialog(s).")
         return true
     default:
         fputs("Error: Unknown device \"\(device)\". Use 'iphone' or 'ipad'.\n", stderr)
