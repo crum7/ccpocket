@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.67.0] - 2026-04-20
+
+### Added
+- Add an adaptive workspace layout that expands into 2-pane and 3-pane views on iPad and macOS
+- Add dedicated iPad App Store screenshot scenarios for the workspace, approval context, and dark workspace flows
+
+### Changed
+- Split narrow mobile navigation from the multi-pane workspace shell so phone and tablet layouts behave independently
+- Refresh the iPad screenshot capture workflow to target landscape layouts and keep the generated store assets aligned with the new workspace scenarios
+
+### Fixed
+- Improve pane headers, session highlighting, and tool-pane resizing so the multi-pane workspace is stable in daily use
+- Prevent Tab indentation from firing during Japanese IME composition in the message composer
+
 ## [1.66.2] - 2026-04-20
 
 ### Fixed
