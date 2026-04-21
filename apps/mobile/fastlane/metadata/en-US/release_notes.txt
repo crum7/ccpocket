@@ -1,3 +1,2 @@
-- Added support for selecting a globally configured profile when starting a Codex session
-- Added Auto mode for Claude sessions
-- Explorer now keeps recently opened file history until the session is stopped
+- Added an adaptive workspace that shows sessions, chat, and Git diff in 2- or 3-pane layouts on wider screens such as iPad
+- Fixed an issue where pressing Tab during IME composition would insert indentation
