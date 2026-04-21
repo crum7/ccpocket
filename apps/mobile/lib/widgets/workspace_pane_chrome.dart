@@ -9,7 +9,10 @@ const kWorkspaceMacOSToolbarHeight = 52.0;
 const kWorkspaceMacOSLeadingInset = 88.0;
 const kWorkspaceMacOSToolbarButtonExtent = 32.0;
 const kWorkspaceMacOSToolbarLeadingSlotWidth = 44.0;
-const kWorkspaceMacOSSinglePaneTopInset = 28.0;
+// Single-pane macOS windows still render traffic lights above the content.
+// Keep a slightly larger clearance so the session status line does not sit
+// under the window controls when the app collapses to the mobile layout.
+const kWorkspaceMacOSSinglePaneTopInset = 36.0;
 const kWorkspacePaneHorizontalPadding = 12.0;
 const kWorkspacePaneVerticalPadding = 10.0;
 const kWorkspacePaneActionGap = 4.0;
