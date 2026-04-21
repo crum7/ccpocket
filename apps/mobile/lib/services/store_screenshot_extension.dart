@@ -1133,7 +1133,7 @@ class _StoreWorkspaceListPane extends StatelessWidget {
               onOpenSettings: () {},
               onOpenGallery: () {},
               onDisconnect: () {},
-              onTogglePaneVisibility: null,
+              onTogglePaneVisibility: () {},
             ),
             Expanded(
               child: HomeContent(
