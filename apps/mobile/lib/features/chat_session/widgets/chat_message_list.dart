@@ -173,96 +173,108 @@ class _ChatMessageListState extends State<ChatMessageList> {
         }
         return false;
       },
-      child: ListView.builder(
-        controller: widget.scrollController,
-        reverse: true,
-        padding: EdgeInsets.only(top: 36, bottom: widget.bottomPadding),
-        itemCount: totalCount,
-        itemBuilder: (context, index) {
-          // index 0 = newest entry (bottom of chat)
-          // Map to actual entry index:
-          final entryIndex = totalCount - 1 - index;
-
-          // Streaming entry is at totalCount - 1 (index 0 in reverse)
-          if (hasStreaming && entryIndex == allEntries.length) {
-            // Scoped BlocBuilder: only this widget rebuilds on streaming deltas
-            return BlocBuilder<StreamingStateCubit, StreamingState>(
-              builder: (context, streamingState) {
-                if (!streamingState.isStreaming) {
-                  return const SizedBox.shrink();
-                }
-                return ChatEntryWidget(
-                  entry: StreamingChatEntry(text: streamingState.text),
-                  previous: null,
-                  httpBaseUrl: widget.httpBaseUrl,
-                  onRetryMessage: null,
-                  collapseToolResults: null,
-                  hiddenToolUseIds: const {},
-                );
-              },
-            );
-          }
-
-          final entry = allEntries[entryIndex];
-          final previous = entryIndex > 0 ? allEntries[entryIndex - 1] : null;
-
-          Widget child = ChatEntryWidget(
-            entry: entry,
-            previous: previous,
-            httpBaseUrl: widget.httpBaseUrl,
-            onRetryMessage: widget.onRetryMessage,
-            onRewindMessage: widget.onRewindMessage,
-            collapseToolResults: widget.collapseToolResults,
-            editedPlanText: widget.editedPlanText,
-            resolvedPlanText: _resolvePlanText(entry),
-            allowPlanEditing: widget.allowPlanEditing,
-            pendingPlanToolUseId: widget.pendingPlanToolUseId,
-            hiddenToolUseIds: hiddenToolUseIds,
-            onFileTap: (filePath) {
-              final projectPath = widget.projectPath;
-              if (projectPath == null || projectPath.isEmpty) return;
-              openFilePeek(
-                context,
-                bridge: context.read<BridgeService>(),
-                projectPath: projectPath,
-                filePath: filePath,
-                projectFiles: context.read<FileListCubit>().state,
-              );
-            },
-            onImageTap: (user) {
-              final claudeSessionId = context
-                  .read<ChatSessionCubit>()
-                  .state
-                  .claudeSessionId;
-              final httpBaseUrl = widget.httpBaseUrl;
-              if (claudeSessionId == null ||
-                  claudeSessionId.isEmpty ||
-                  httpBaseUrl == null) {
-                return;
-              }
-              Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => MessageImagesScreen(
-                    bridge: context.read<BridgeService>(),
-                    httpBaseUrl: httpBaseUrl,
-                    claudeSessionId: claudeSessionId,
-                    messageUuid: user.messageUuid!,
-                    imageCount: user.imageCount,
-                  ),
-                ),
-              );
-            },
-          );
-          // Wrap with AutoScrollTag for scroll-to-index support.
-          // Use entryIndex (not reverse index) as the AutoScrollTag index.
-          child = AutoScrollTag(
-            key: ValueKey(_entryKey(entry, entryIndex)),
+      child: DefaultSelectionStyle(
+        // Make the selection highlight visibly distinct in both light and
+        // dark mode. The default uses the platform's selection color which
+        // is barely visible against dark backgrounds.
+        selectionColor: Theme.of(context).colorScheme.primary.withValues(
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.45 : 0.30,
+        ),
+        child: SelectionArea(
+          child: ListView.builder(
             controller: widget.scrollController,
-            index: entryIndex,
-            child: child,
-          );
-          return child;
-        },
+            reverse: true,
+            padding: EdgeInsets.only(top: 36, bottom: widget.bottomPadding),
+            itemCount: totalCount,
+            itemBuilder: (context, index) {
+              // index 0 = newest entry (bottom of chat)
+              // Map to actual entry index:
+              final entryIndex = totalCount - 1 - index;
+
+              // Streaming entry is at totalCount - 1 (index 0 in reverse)
+              if (hasStreaming && entryIndex == allEntries.length) {
+                // Scoped BlocBuilder: only this widget rebuilds on streaming deltas
+                return BlocBuilder<StreamingStateCubit, StreamingState>(
+                  builder: (context, streamingState) {
+                    if (!streamingState.isStreaming) {
+                      return const SizedBox.shrink();
+                    }
+                    return ChatEntryWidget(
+                      entry: StreamingChatEntry(text: streamingState.text),
+                      previous: null,
+                      httpBaseUrl: widget.httpBaseUrl,
+                      onRetryMessage: null,
+                      collapseToolResults: null,
+                      hiddenToolUseIds: const {},
+                    );
+                  },
+                );
+              }
+
+              final entry = allEntries[entryIndex];
+              final previous = entryIndex > 0
+                  ? allEntries[entryIndex - 1]
+                  : null;
+
+              Widget child = ChatEntryWidget(
+                entry: entry,
+                previous: previous,
+                httpBaseUrl: widget.httpBaseUrl,
+                onRetryMessage: widget.onRetryMessage,
+                onRewindMessage: widget.onRewindMessage,
+                collapseToolResults: widget.collapseToolResults,
+                editedPlanText: widget.editedPlanText,
+                resolvedPlanText: _resolvePlanText(entry),
+                allowPlanEditing: widget.allowPlanEditing,
+                pendingPlanToolUseId: widget.pendingPlanToolUseId,
+                hiddenToolUseIds: hiddenToolUseIds,
+                onFileTap: (filePath) {
+                  final projectPath = widget.projectPath;
+                  if (projectPath == null || projectPath.isEmpty) return;
+                  openFilePeek(
+                    context,
+                    bridge: context.read<BridgeService>(),
+                    projectPath: projectPath,
+                    filePath: filePath,
+                    projectFiles: context.read<FileListCubit>().state,
+                  );
+                },
+                onImageTap: (user) {
+                  final claudeSessionId = context
+                      .read<ChatSessionCubit>()
+                      .state
+                      .claudeSessionId;
+                  final httpBaseUrl = widget.httpBaseUrl;
+                  if (claudeSessionId == null ||
+                      claudeSessionId.isEmpty ||
+                      httpBaseUrl == null) {
+                    return;
+                  }
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MessageImagesScreen(
+                        bridge: context.read<BridgeService>(),
+                        httpBaseUrl: httpBaseUrl,
+                        claudeSessionId: claudeSessionId,
+                        messageUuid: user.messageUuid!,
+                        imageCount: user.imageCount,
+                      ),
+                    ),
+                  );
+                },
+              );
+              // Wrap with AutoScrollTag for scroll-to-index support.
+              // Use entryIndex (not reverse index) as the AutoScrollTag index.
+              child = AutoScrollTag(
+                key: ValueKey(_entryKey(entry, entryIndex)),
+                controller: widget.scrollController,
+                index: entryIndex,
+                child: child,
+              );
+              return child;
+            },
+          ),
+        ),
       ),
     );
   }

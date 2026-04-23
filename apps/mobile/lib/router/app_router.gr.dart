@@ -444,6 +444,22 @@ class LicensesRoute extends PageRouteInfo<void> {
 }
 
 /// generated route for
+/// [MacTabsHostScreen]
+class MacTabsHostRoute extends PageRouteInfo<void> {
+  const MacTabsHostRoute({List<PageRouteInfo>? children})
+    : super(MacTabsHostRoute.name, initialChildren: children);
+
+  static const String name = 'MacTabsHostRoute';
+
+  static PageInfo page = PageInfo(
+    name,
+    builder: (data) {
+      return const MacTabsHostScreen();
+    },
+  );
+}
+
+/// generated route for
 /// [MockPreviewScreen]
 class MockPreviewRoute extends PageRouteInfo<void> {
   const MockPreviewRoute({List<PageRouteInfo>? children})

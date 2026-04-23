@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:highlight/highlight.dart' as hl;
 import 'package:markdown/markdown.dart' as md;
 import 'package:syntax_highlight/syntax_highlight.dart';
@@ -512,11 +513,85 @@ Color? _parseHexColor(String hex) {
   }
 }
 
-/// Custom inline syntaxes for color code preview.
-List<md.InlineSyntax> get colorCodeInlineSyntaxes => [ColorCodeSyntax()];
+/// Inline syntax that captures `$$ ... $$` LaTeX display math on one line.
+///
+/// Greedy single-line match prevents accidental matches across lines, and
+/// the negative lookahead avoids consuming a sequence like `$$$$` partially.
+class MathDisplaySyntax extends md.InlineSyntax {
+  MathDisplaySyntax() : super(r'\$\$([^\n]+?)\$\$');
 
-/// Custom element builders for color code preview.
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(md.Element.text('mathDisplay', match[1]!));
+    return true;
+  }
+}
+
+/// Inline syntax that captures `\( ... \)` LaTeX inline math on one line.
+///
+/// We require explicit `\(` / `\)` delimiters rather than single `$` to avoid
+/// false positives on currency text like `$10` or `$0.5`.
+class MathInlineSyntax extends md.InlineSyntax {
+  MathInlineSyntax() : super(r'\\\(([^\n]+?)\\\)');
+
+  @override
+  bool onMatch(md.InlineParser parser, Match match) {
+    parser.addNode(md.Element.text('mathInline', match[1]!));
+    return true;
+  }
+}
+
+/// Renders `$$ ... $$` as a centered display-style math widget.
+class MathDisplayBuilder extends MarkdownElementBuilder {
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final tex = element.textContent;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Center(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Math.tex(
+            tex,
+            mathStyle: MathStyle.display,
+            textStyle: preferredStyle,
+            onErrorFallback: (err) =>
+                Text('\$\$$tex\$\$', style: preferredStyle),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Renders `\( ... \)` as inline-style math.
+class MathInlineBuilder extends MarkdownElementBuilder {
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final tex = element.textContent;
+    return Math.tex(
+      tex,
+      mathStyle: MathStyle.text,
+      textStyle: preferredStyle,
+      onErrorFallback: (err) => Text('\\($tex\\)', style: preferredStyle),
+    );
+  }
+}
+
+/// Custom inline syntaxes for color code preview and math rendering.
+///
+/// Math syntaxes come first so `$$...$$` matches before `$...$` patterns
+/// could accidentally fire.
+List<md.InlineSyntax> get colorCodeInlineSyntaxes => [
+  MathDisplaySyntax(),
+  MathInlineSyntax(),
+  ColorCodeSyntax(),
+];
+
+/// Custom element builders for color code preview, code blocks, and math.
 Map<String, MarkdownElementBuilder> get markdownBuilders => {
   'colorCode': ColorCodeBuilder(),
   'pre': FencedCodeBlockBuilder(),
+  'mathDisplay': MathDisplayBuilder(),
+  'mathInline': MathInlineBuilder(),
 };

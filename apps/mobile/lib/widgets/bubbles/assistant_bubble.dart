@@ -254,13 +254,9 @@ class _DefaultLayout extends StatelessWidget {
                 horizontal: AppSpacing.bubbleMarginH,
               ),
               child: plainTextMode
-                  ? SelectableText(
-                      text,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    )
+                  ? Text(text, style: Theme.of(context).textTheme.bodyMedium)
                   : MarkdownBody(
                       data: text,
-                      selectable: true,
                       styleSheet: buildMarkdownStyle(context),
                       onTapLink: handleMarkdownLink,
                       inlineSyntaxes: [

@@ -24,6 +24,9 @@ import 'widgets/app_locale_bottom_sheet.dart';
 
 import 'widgets/new_session_tabs_bottom_sheet.dart';
 import 'widgets/speech_locale_bottom_sheet.dart';
+import 'widgets/tts_voice_bottom_sheet.dart';
+import 'widgets/voicevox_speaker_bottom_sheet.dart';
+import '../../services/tts_service.dart';
 import 'widgets/terminal_app_bottom_sheet.dart';
 import 'widgets/theme_bottom_sheet.dart';
 import 'widgets/backup_section.dart';
@@ -168,6 +171,108 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           .read<SettingsCubit>()
                           .setHideVoiceInput(value),
                     ),
+                    Divider(
+                      height: 1,
+                      indent: 16,
+                      endIndent: 16,
+                      color: cs.outlineVariant,
+                    ),
+                    // TTS: read assistant replies aloud
+                    SwitchListTile(
+                      secondary: Icon(Icons.volume_up, color: cs.primary),
+                      title: const Text('読み上げ (TTS)'),
+                      subtitle: const Text('アシスタントの返答を音声で読み上げます'),
+                      value: state.ttsEnabled,
+                      onChanged: (value) =>
+                          context.read<SettingsCubit>().setTtsEnabled(value),
+                    ),
+                    if (state.ttsEnabled) ...[
+                      // Engine selector
+                      ListTile(
+                        leading: Icon(Icons.settings_voice, color: cs.primary),
+                        title: const Text('エンジン'),
+                        subtitle: Text(
+                          state.ttsEngine == 'voicevox'
+                              ? 'VOICEVOX'
+                              : 'システム (macOS)',
+                        ),
+                        trailing: const Icon(Icons.chevron_right, size: 20),
+                        onTap: () => _showTtsEngineSheet(context, state),
+                      ),
+                      // System voice (only for system engine)
+                      if (state.ttsEngine == 'system')
+                        ListTile(
+                          leading: Icon(
+                            Icons.record_voice_over,
+                            color: cs.primary,
+                          ),
+                          title: const Text('音声'),
+                          subtitle: Text(
+                            state.ttsVoiceName.isEmpty
+                                ? 'システムデフォルト'
+                                : state.ttsVoiceName,
+                          ),
+                          trailing: const Icon(Icons.chevron_right, size: 20),
+                          onTap: () => showTtsVoiceBottomSheet(
+                            context: context,
+                            ttsService: context.read<TtsService>(),
+                            currentVoiceName: state.ttsVoiceName,
+                            onSelected: (name) => context
+                                .read<SettingsCubit>()
+                                .setTtsVoiceName(name),
+                          ),
+                        ),
+                      // VOICEVOX URL + speaker
+                      if (state.ttsEngine == 'voicevox') ...[
+                        ListTile(
+                          leading: Icon(Icons.link, color: cs.primary),
+                          title: const Text('VOICEVOX URL'),
+                          subtitle: Text(state.ttsVoicevoxUrl),
+                          trailing: const Icon(Icons.edit, size: 18),
+                          onTap: () => _showVoicevoxUrlDialog(context, state),
+                        ),
+                        ListTile(
+                          leading: Icon(
+                            Icons.record_voice_over,
+                            color: cs.primary,
+                          ),
+                          title: const Text('話者'),
+                          subtitle: Text('id: ${state.ttsVoicevoxSpeaker}'),
+                          trailing: const Icon(Icons.chevron_right, size: 20),
+                          onTap: () => showVoicevoxSpeakerBottomSheet(
+                            context: context,
+                            ttsService: context.read<TtsService>(),
+                            voicevoxUrl: state.ttsVoicevoxUrl,
+                            currentSpeakerId: state.ttsVoicevoxSpeaker,
+                            onSelected: (id) => context
+                                .read<SettingsCubit>()
+                                .setTtsVoicevoxSpeaker(id),
+                          ),
+                        ),
+                      ],
+                      // Speech rate slider
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.speed, color: cs.primary),
+                            const SizedBox(width: 16),
+                            const Text('速度'),
+                            const Spacer(),
+                            Text('${state.ttsRate.toStringAsFixed(2)}x'),
+                          ],
+                        ),
+                      ),
+                      Slider(
+                        value: state.ttsRate,
+                        min: 0.5,
+                        max: 2.0,
+                        divisions: 15,
+                        label: '${state.ttsRate.toStringAsFixed(2)}x',
+                        onChanged: (v) =>
+                            context.read<SettingsCubit>().setTtsRate(v),
+                      ),
+                    ],
                     Divider(
                       height: 1,
                       indent: 16,
@@ -553,6 +658,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
     return null;
+  }
+
+  void _showTtsEngineSheet(BuildContext context, SettingsState state) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetCtx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Text('システム (macOS)'),
+              subtitle: const Text('追加の設定不要'),
+              value: 'system',
+              groupValue: state.ttsEngine,
+              onChanged: (v) {
+                if (v != null) {
+                  context.read<SettingsCubit>().setTtsEngine(v);
+                }
+                Navigator.of(sheetCtx).pop();
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('VOICEVOX'),
+              subtitle: const Text('VOICEVOXアプリをローカルで起動しておく必要があります'),
+              value: 'voicevox',
+              groupValue: state.ttsEngine,
+              onChanged: (v) {
+                if (v != null) {
+                  context.read<SettingsCubit>().setTtsEngine(v);
+                }
+                Navigator.of(sheetCtx).pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showVoicevoxUrlDialog(
+    BuildContext context,
+    SettingsState state,
+  ) async {
+    final controller = TextEditingController(text: state.ttsVoicevoxUrl);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('VOICEVOX URL'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(hintText: 'http://localhost:50021'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(dialogCtx).pop(controller.text.trim()),
+            child: const Text('保存'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty && context.mounted) {
+      context.read<SettingsCubit>().setTtsVoicevoxUrl(result);
+    }
   }
 }
 

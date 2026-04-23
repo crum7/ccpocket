@@ -66,6 +66,27 @@ abstract class SettingsState with _$SettingsState {
 
     /// Visible tabs (and their order) in the new session sheet.
     @Default(defaultNewSessionTabs) List<NewSessionTab> newSessionTabs,
+
+    /// UI scale factor for macOS (0.8 – 2.0, default 1.0).
+    @Default(1.0) double uiScale,
+
+    /// Whether to read assistant replies aloud via TTS.
+    @Default(false) bool ttsEnabled,
+
+    /// Selected system TTS voice name. Empty = system default.
+    @Default('') String ttsVoiceName,
+
+    /// TTS engine: 'system' (flutter_tts) or 'voicevox'.
+    @Default('system') String ttsEngine,
+
+    /// VOICEVOX engine HTTP URL.
+    @Default('http://localhost:50021') String ttsVoicevoxUrl,
+
+    /// VOICEVOX speaker (style) id.
+    @Default(3) int ttsVoicevoxSpeaker,
+
+    /// Speech rate / playback speed (0.5 – 2.0, 1.0 = normal).
+    @Default(1.0) double ttsRate,
   }) = _SettingsState;
 
   /// Whether push notifications are enabled for the currently connected machine.

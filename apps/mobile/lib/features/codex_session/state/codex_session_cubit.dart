@@ -13,6 +13,7 @@ class CodexSessionCubit extends ChatSessionCubit {
     required super.sessionId,
     required super.bridge,
     required super.streamingCubit,
+    super.tts,
     super.initialSandboxMode,
     super.initialPermissionMode,
   }) : super(provider: Provider.codex);

@@ -13,6 +13,7 @@ import '../../../models/terminal_app.dart';
 import '../../../services/bridge_service.dart';
 import '../../../services/fcm_service.dart';
 import '../../../services/machine_manager_service.dart';
+import '../../../services/tts_service.dart';
 import 'settings_state.dart';
 
 /// Manages user settings with SharedPreferences persistence.
@@ -21,6 +22,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   final BridgeService? _bridge;
   final MachineManagerService? _machineManager;
   final FcmService _fcmService;
+  final TtsService? _tts;
   StreamSubscription<BridgeConnectionState>? _bridgeSub;
   StreamSubscription<String>? _tokenRefreshSub;
   String? _activeToken;
@@ -37,6 +39,13 @@ class SettingsCubit extends Cubit<SettingsState> {
   static const _keyHideVoiceInput = 'settings_hide_voice_input';
   static const _keyTerminalApp = 'settings_terminal_app';
   static const _keyNewSessionTabs = 'settings_new_session_tabs';
+  static const _keyUiScale = 'settings_ui_scale';
+  static const _keyTtsEnabled = 'settings_tts_enabled';
+  static const _keyTtsVoiceName = 'settings_tts_voice_name';
+  static const _keyTtsEngine = 'settings_tts_engine';
+  static const _keyTtsVoicevoxUrl = 'settings_tts_voicevox_url';
+  static const _keyTtsVoicevoxSpeaker = 'settings_tts_voicevox_speaker';
+  static const _keyTtsRate = 'settings_tts_rate';
   // Legacy key for migration
   static const _keyIndentSize = 'settings_indent_size';
   // Legacy key for migration
@@ -47,10 +56,14 @@ class SettingsCubit extends Cubit<SettingsState> {
     BridgeService? bridgeService,
     MachineManagerService? machineManager,
     FcmService? fcmService,
+    TtsService? ttsService,
   }) : _bridge = bridgeService,
        _machineManager = machineManager,
        _fcmService = fcmService ?? FcmService(),
+       _tts = ttsService,
        super(_load(_prefs)) {
+    // Push initial TTS settings to the service.
+    unawaited(_pushTtsSettings());
     final bridge = _bridge;
     if (bridge != null) {
       _bridgeSub = bridge.connectionStatus.listen((status) {
@@ -159,6 +172,15 @@ class SettingsCubit extends Cubit<SettingsState> {
       newSessionTabs = tabsFromJson(tabsJson) ?? defaultNewSessionTabs;
     }
 
+    final uiScale = prefs.getDouble(_keyUiScale) ?? 1.0;
+    final ttsEnabled = prefs.getBool(_keyTtsEnabled) ?? false;
+    final ttsVoiceName = prefs.getString(_keyTtsVoiceName) ?? '';
+    final ttsEngine = prefs.getString(_keyTtsEngine) ?? 'system';
+    final ttsVoicevoxUrl =
+        prefs.getString(_keyTtsVoicevoxUrl) ?? 'http://localhost:50021';
+    final ttsVoicevoxSpeaker = prefs.getInt(_keyTtsVoicevoxSpeaker) ?? 3;
+    final ttsRate = prefs.getDouble(_keyTtsRate) ?? 1.0;
+
     return SettingsState(
       themeMode:
           (themeModeIndex != null &&
@@ -175,6 +197,13 @@ class SettingsCubit extends Cubit<SettingsState> {
       hideVoiceInput: hideVoiceInput,
       terminalApp: terminalApp,
       newSessionTabs: newSessionTabs,
+      uiScale: uiScale.clamp(0.8, 2.0),
+      ttsEnabled: ttsEnabled,
+      ttsVoiceName: ttsVoiceName,
+      ttsEngine: ttsEngine,
+      ttsVoicevoxUrl: ttsVoicevoxUrl,
+      ttsVoicevoxSpeaker: ttsVoicevoxSpeaker,
+      ttsRate: ttsRate.clamp(0.5, 2.0),
     );
   }
 
@@ -258,6 +287,62 @@ class SettingsCubit extends Cubit<SettingsState> {
   void clearTerminalApp() {
     _prefs.remove(_keyTerminalApp);
     emit(state.copyWith(terminalApp: TerminalAppConfig.empty));
+  }
+
+  void setUiScale(double scale) {
+    final clamped = scale.clamp(0.8, 2.0);
+    _prefs.setDouble(_keyUiScale, clamped);
+    emit(state.copyWith(uiScale: clamped));
+  }
+
+  Future<void> _pushTtsSettings() async {
+    final tts = _tts;
+    if (tts == null) return;
+    await tts.applySettings(
+      enabled: state.ttsEnabled,
+      engine: ttsEngineFromString(state.ttsEngine),
+      systemVoiceName: state.ttsVoiceName,
+      voicevoxUrl: state.ttsVoicevoxUrl,
+      voicevoxSpeaker: state.ttsVoicevoxSpeaker,
+      rate: state.ttsRate,
+    );
+  }
+
+  void setTtsEnabled(bool enabled) {
+    _prefs.setBool(_keyTtsEnabled, enabled);
+    emit(state.copyWith(ttsEnabled: enabled));
+    unawaited(_pushTtsSettings());
+  }
+
+  void setTtsVoiceName(String voiceName) {
+    _prefs.setString(_keyTtsVoiceName, voiceName);
+    emit(state.copyWith(ttsVoiceName: voiceName));
+    unawaited(_pushTtsSettings());
+  }
+
+  void setTtsEngine(String engine) {
+    _prefs.setString(_keyTtsEngine, engine);
+    emit(state.copyWith(ttsEngine: engine));
+    unawaited(_pushTtsSettings());
+  }
+
+  void setTtsVoicevoxUrl(String url) {
+    _prefs.setString(_keyTtsVoicevoxUrl, url);
+    emit(state.copyWith(ttsVoicevoxUrl: url));
+    unawaited(_pushTtsSettings());
+  }
+
+  void setTtsVoicevoxSpeaker(int speaker) {
+    _prefs.setInt(_keyTtsVoicevoxSpeaker, speaker);
+    emit(state.copyWith(ttsVoicevoxSpeaker: speaker));
+    unawaited(_pushTtsSettings());
+  }
+
+  void setTtsRate(double rate) {
+    final clamped = rate.clamp(0.5, 2.0);
+    _prefs.setDouble(_keyTtsRate, clamped);
+    emit(state.copyWith(ttsRate: clamped));
+    unawaited(_pushTtsSettings());
   }
 
   void setNewSessionTabs(List<NewSessionTab> tabs) {

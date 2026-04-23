@@ -31,6 +31,8 @@ import 'l10n/app_localizations.dart';
 import 'features/session_list/state/session_list_cubit.dart';
 import 'features/settings/state/settings_cubit.dart';
 import 'features/settings/state/settings_state.dart';
+import 'features/tabs/tabs_cubit.dart';
+import 'features/tabs/tabs_state.dart';
 import 'models/messages.dart';
 import 'providers/bridge_cubits.dart';
 import 'providers/machine_manager_cubit.dart';
@@ -46,10 +48,12 @@ import 'services/machine_manager_service.dart';
 import 'services/notification_service.dart';
 import 'services/prompt_history_service.dart';
 import 'services/ssh_startup_service.dart';
+import 'services/tts_service.dart';
 import 'theme/app_theme.dart';
 import 'services/store_screenshot_extension.dart';
 import 'theme/markdown_style.dart';
 import 'utils/platform_helper.dart';
+import 'widgets/desktop_zoom_wrapper.dart';
 
 /// Top-level handler for FCM background messages.
 /// Required by firebase_messaging to process messages when app is in background.
@@ -137,6 +141,8 @@ void main() async {
   StoreScreenshotState.draftService = draftService;
   final dbService = DatabaseService();
   final promptHistoryService = PromptHistoryService(dbService);
+  final ttsService = TtsService();
+  unawaited(ttsService.initialize());
   runApp(
     MultiRepositoryProvider(
       providers: [
@@ -153,6 +159,7 @@ void main() async {
         ),
         if (sshStartupService != null)
           RepositoryProvider<SshStartupService>.value(value: sshStartupService),
+        RepositoryProvider<TtsService>.value(value: ttsService),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -178,6 +185,7 @@ void main() async {
                 ProjectHistoryCubit(const [], bridge.projectHistoryStream),
           ),
           BlocProvider(create: (_) => ServerDiscoveryCubit()),
+          BlocProvider(create: (_) => TabsCubit()),
           BlocProvider(
             create: (ctx) =>
                 SessionListCubit(bridge: ctx.read<BridgeService>()),
@@ -191,6 +199,7 @@ void main() async {
               prefs,
               bridgeService: bridge,
               machineManager: machineManagerService,
+              ttsService: ttsService,
             ),
           ),
         ],
@@ -332,6 +341,20 @@ class _CcpocketAppState extends State<CcpocketApp> {
     final sessionId = data['sessionId']?.toString();
     if (sessionId == null || sessionId.isEmpty) return;
     final provider = _normalizeProvider(data['provider']?.toString());
+    // On macOS, open as a tab via TabsCubit instead of pushing a route.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS && mounted) {
+      try {
+        context.read<TabsCubit>().openSession(
+          sessionId: sessionId,
+          provider: provider == 'codex'
+              ? TabProvider.codex
+              : TabProvider.claude,
+        );
+        return;
+      } catch (_) {
+        // Fall through to router navigation if cubit not available.
+      }
+    }
     if (provider == 'codex') {
       _appRouter.navigate(CodexSessionRoute(sessionId: sessionId));
       return;
@@ -385,7 +408,7 @@ class _CcpocketAppState extends State<CcpocketApp> {
       case ConnectionParams():
         _deepLinkNotifier.value = params;
       case SessionLinkParams(:final sessionId):
-        _appRouter.push(ClaudeSessionRoute(sessionId: sessionId));
+        _openSessionFromData({'sessionId': sessionId, 'provider': 'claude'});
     }
   }
 
@@ -406,20 +429,22 @@ class _CcpocketAppState extends State<CcpocketApp> {
 
     return BlocBuilder<SettingsCubit, SettingsState>(
       builder: (context, settings) {
-        return MaterialApp.router(
-          title: 'CC Pocket',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: settings.themeMode,
-          locale: settings.appLocaleId.isEmpty
-              ? null
-              : Locale(settings.appLocaleId),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: _appRouter.config(
-            navigatorObservers: () => [_sessionRouteObserver],
+        return DesktopZoomWrapper(
+          child: MaterialApp.router(
+            title: 'CC Pocket',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: settings.themeMode,
+            locale: settings.appLocaleId.isEmpty
+                ? null
+                : Locale(settings.appLocaleId),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: _appRouter.config(
+              navigatorObservers: () => [_sessionRouteObserver],
+            ),
+            debugShowCheckedModeBanner: false,
           ),
-          debugShowCheckedModeBanner: false,
         );
       },
     );

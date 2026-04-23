@@ -8,6 +8,7 @@ import '../features/codex_session/codex_session_screen.dart';
 import '../features/git/git_screen.dart';
 import '../features/gallery/gallery_screen.dart';
 import '../features/session_list/session_list_screen.dart';
+import '../features/tabs/mac_tabs_host_screen.dart';
 import '../features/settings/auth_help_screen.dart';
 import '../features/settings/changelog_screen.dart';
 import '../features/settings/licenses_screen.dart';
@@ -24,7 +25,8 @@ part 'app_router.gr.dart';
 class AppRouter extends RootStackRouter {
   @override
   List<AutoRoute> get routes => [
-    AutoRoute(page: SessionListRoute.page, path: '/', initial: true),
+    AutoRoute(page: MacTabsHostRoute.page, path: '/', initial: true),
+    AutoRoute(page: SessionListRoute.page, path: '/sessions'),
     AutoRoute(page: ClaudeSessionRoute.page, path: '/session/:sessionId'),
     AutoRoute(page: CodexSessionRoute.page, path: '/codex-session/:sessionId'),
     AutoRoute(page: GalleryRoute.page, path: '/gallery'),
