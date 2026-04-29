@@ -10,6 +10,7 @@ import '../features/explore/state/explore_state.dart';
 import '../features/git/git_screen.dart';
 import '../features/gallery/gallery_screen.dart';
 import '../features/session_list/workspace_shell_screen.dart';
+import '../features/tabs/mac_tabs_host_screen.dart';
 import '../features/settings/auth_help_screen.dart';
 import '../features/settings/changelog_screen.dart';
 import '../features/settings/licenses_screen.dart';
@@ -29,7 +30,8 @@ part 'app_router.gr.dart';
 class AppRouter extends RootStackRouter {
   @override
   List<AutoRoute> get routes => [
-    AutoRoute(page: AdaptiveHomeRoute.page, path: '/', initial: true),
+    AutoRoute(page: MacTabsHostRoute.page, path: '/', initial: true),
+    AutoRoute(page: AdaptiveHomeRoute.page, path: '/home'),
     AutoRoute(page: ClaudeSessionRoute.page, path: '/session/:sessionId'),
     AutoRoute(page: CodexSessionRoute.page, path: '/codex-session/:sessionId'),
     AutoRoute(page: ExploreRoute.page, path: '/explore'),

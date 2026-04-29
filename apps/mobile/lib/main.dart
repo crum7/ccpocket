@@ -32,6 +32,8 @@ import 'l10n/app_localizations.dart';
 import 'features/session_list/state/session_list_cubit.dart';
 import 'features/settings/state/settings_cubit.dart';
 import 'features/settings/state/settings_state.dart';
+import 'features/tabs/tabs_cubit.dart';
+import 'features/tabs/tabs_state.dart';
 import 'models/messages.dart';
 import 'providers/bridge_cubits.dart';
 import 'providers/machine_manager_cubit.dart';
@@ -196,6 +198,7 @@ void main() async {
                 ProjectHistoryCubit(const [], bridge.projectHistoryStream),
           ),
           BlocProvider(create: (_) => ServerDiscoveryCubit()),
+          BlocProvider(create: (_) => TabsCubit()),
           BlocProvider(
             create: (ctx) =>
                 SessionListCubit(bridge: ctx.read<BridgeService>()),
@@ -351,6 +354,22 @@ class _CcpocketAppState extends State<CcpocketApp> {
     final sessionId = data['sessionId']?.toString();
     if (sessionId == null || sessionId.isEmpty) return;
     final provider = _normalizeProvider(data['provider']?.toString());
+    // On macOS, open as a tab via TabsCubit instead of pushing a route.
+    if (!kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.macOS &&
+        mounted) {
+      try {
+        context.read<TabsCubit>().openSession(
+          sessionId: sessionId,
+          provider: provider == 'codex'
+              ? TabProvider.codex
+              : TabProvider.claude,
+        );
+        return;
+      } catch (_) {
+        // Fall through if cubit isn't yet available.
+      }
+    }
     if (provider == 'codex') {
       _appRouter.navigate(CodexSessionRoute(sessionId: sessionId));
       return;
@@ -404,7 +423,7 @@ class _CcpocketAppState extends State<CcpocketApp> {
       case ConnectionParams():
         _deepLinkNotifier.value = params;
       case SessionLinkParams(:final sessionId):
-        _appRouter.push(ClaudeSessionRoute(sessionId: sessionId));
+        _openSessionFromData({'sessionId': sessionId, 'provider': 'claude'});
     }
   }
 

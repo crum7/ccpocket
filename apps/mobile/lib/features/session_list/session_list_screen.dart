@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:auto_route/auto_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -23,6 +24,8 @@ import '../../services/connection_url_parser.dart';
 import '../../services/server_discovery_service.dart';
 import '../../widgets/workspace_pane_chrome.dart';
 import '../../widgets/new_session_sheet.dart';
+import '../tabs/tabs_cubit.dart';
+import '../tabs/tabs_state.dart';
 import '../../widgets/rename_session_dialog.dart';
 import '../settings/state/settings_cubit.dart';
 import 'state/session_list_cubit.dart';
@@ -1084,6 +1087,24 @@ class _SessionListScreenState extends State<SessionListScreen>
           approvalPolicy: approvalPolicy,
           pendingSessionCreated: pendingNotifier,
         ),
+      );
+      return;
+    }
+
+    // On macOS (non-embedded), open the session as a tab.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.macOS) {
+      context.read<TabsCubit>().openSession(
+        sessionId: sessionId,
+        provider: provider == Provider.codex
+            ? TabProvider.codex
+            : TabProvider.claude,
+        projectPath: projectPath,
+        gitBranch: gitBranch,
+        worktreePath: worktreePath,
+        isPending: isPending,
+        initialPermissionMode: permissionMode,
+        initialSandboxMode: sandboxMode,
+        pendingSessionCreated: pendingNotifier,
       );
       return;
     }
