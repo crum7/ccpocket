@@ -590,9 +590,7 @@ sealed class ServerMessage {
       ),
       'past_history' => PastHistoryMessage(
         claudeSessionId: json['claudeSessionId'] as String? ?? '',
-        messages: (json['messages'] as List)
-            .map((m) => PastMessage.fromJson(m as Map<String, dynamic>))
-            .toList(),
+        messages: PastMessage.parseListResilient(json['messages']),
       ),
       'gallery_list' => GalleryListMessage(
         images: (json['images'] as List)
@@ -2376,18 +2374,48 @@ class PastMessage {
     required this.content,
   });
 
+  /// Parse a list of past messages, skipping any individual entries that
+  /// fail to deserialize. Without this, one malformed past message would
+  /// cause the whole `past_history` payload to throw at the
+  /// `ServerMessage.fromJson` call site, leaving the UI with no past
+  /// assistant text after a tab is reopened.
+  static List<PastMessage> parseListResilient(dynamic raw) {
+    if (raw is! List) return const [];
+    final result = <PastMessage>[];
+    for (final m in raw) {
+      if (m is! Map) continue;
+      try {
+        result.add(PastMessage.fromJson(Map<String, dynamic>.from(m)));
+      } catch (_) {
+        // Skip unparseable entries.
+      }
+    }
+    return result;
+  }
+
   factory PastMessage.fromJson(Map<String, dynamic> json) {
     final rawContent = json['content'];
-    final List<AssistantContent> contentList;
+    final contentList = <AssistantContent>[];
     if (rawContent is String) {
       // Handle string content (e.g. user message after interrupt)
-      contentList = rawContent.isNotEmpty
-          ? [TextContent(text: rawContent)]
-          : [];
-    } else {
-      contentList = (rawContent as List? ?? [])
-          .map((c) => AssistantContent.fromJson(c as Map<String, dynamic>))
-          .toList();
+      if (rawContent.isNotEmpty) {
+        contentList.add(TextContent(text: rawContent));
+      }
+    } else if (rawContent is List) {
+      // Parse each content item independently. A single malformed item must
+      // not drop the whole message — otherwise one bad assistant payload on
+      // disk would erase ALL past_history (assistant text included) on
+      // reopen.
+      for (final c in rawContent) {
+        if (c is! Map) continue;
+        try {
+          contentList.add(
+            AssistantContent.fromJson(Map<String, dynamic>.from(c)),
+          );
+        } catch (_) {
+          // Skip unparseable content items.
+        }
+      }
     }
     return PastMessage(
       role: json['role'] as String? ?? '',
