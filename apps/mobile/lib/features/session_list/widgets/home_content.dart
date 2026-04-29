@@ -340,9 +340,12 @@ class HomeContentState extends State<HomeContent> {
 
     // All filtering (project, provider, namedOnly, searchQuery) is applied
     // server-side. Only deduplicate running sessions here.
+    // Sort by `modified` (last activity) descending so the most recently
+    // updated session shows up at the top.
     final filteredSessions = widget.recentSessions
         .where((s) => !isDuplicate(s))
-        .toList();
+        .toList()
+      ..sort((a, b) => b.modified.compareTo(a.modified));
 
     final hasActiveFilter =
         widget.currentProjectFilter != null ||
