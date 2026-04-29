@@ -177,6 +177,9 @@ class _TabsBar extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Reserve space for the macOS traffic-light buttons (red/yellow/green)
+          // so they don't overlap the Home tab.
+          const SizedBox(width: 78),
           _TabChip(
             label: 'Home',
             icon: Icons.home_outlined,

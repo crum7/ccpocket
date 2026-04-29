@@ -412,6 +412,18 @@ class ChatMessageHandler {
     List<PastMessage> messages, {
     String? claudeSessionId,
   }) {
+    // Diagnostic: count user/assistant entries arriving from disk so we can
+    // see at runtime whether past assistant text is making it through.
+    final userCount = messages.where((m) => m.role == 'user').length;
+    final asstCount = messages.where((m) => m.role == 'assistant').length;
+    final asstWithContent = messages
+        .where((m) => m.role == 'assistant' && m.content.isNotEmpty)
+        .length;
+    logger.info(
+      '[past_history] received ${messages.length} msgs '
+      '(user=$userCount assistant=$asstCount asst_with_content=$asstWithContent) '
+      'claudeSessionId=$claudeSessionId',
+    );
     final entries = <ChatEntry>[];
     for (final m in messages) {
       final ts = m.timestamp != null
@@ -460,6 +472,16 @@ class ChatMessageHandler {
   }
 
   ChatStateUpdate _handleHistory(List<ServerMessage> messages) {
+    // Diagnostic: count assistant messages in the in-memory history snapshot.
+    final asstCount = messages.whereType<AssistantServerMessage>().length;
+    final initCount = messages
+        .whereType<SystemMessage>()
+        .where((m) => m.subtype == 'init')
+        .length;
+    logger.info(
+      '[history] received ${messages.length} msgs '
+      '(assistant=$asstCount init=$initCount)',
+    );
     final entries = <ChatEntry>[];
     ProcessStatus? lastStatus;
     List<SlashCommand>? commands;
