@@ -51,10 +51,12 @@ import 'services/prompt_history_service.dart';
 import 'services/revenuecat_service.dart';
 import 'services/ssh_startup_service.dart';
 import 'services/support_banner_service.dart';
+import 'services/tts_service.dart';
 import 'theme/app_theme.dart';
 import 'services/store_screenshot_extension.dart';
 import 'theme/markdown_style.dart';
 import 'utils/platform_helper.dart';
+import 'widgets/desktop_zoom_wrapper.dart';
 
 /// Top-level handler for FCM background messages.
 /// Required by firebase_messaging to process messages when app is in background.
@@ -145,6 +147,8 @@ void main() async {
   final appIconService = AppIconService();
   final revenueCatService = RevenueCatService();
   unawaited(revenueCatService.initialize());
+  final ttsService = TtsService();
+  unawaited(ttsService.initialize());
   runApp(
     MultiRepositoryProvider(
       providers: [
@@ -161,6 +165,7 @@ void main() async {
         ),
         RepositoryProvider<AppIconService>.value(value: appIconService),
         RepositoryProvider<RevenueCatService>.value(value: revenueCatService),
+        RepositoryProvider<TtsService>.value(value: ttsService),
         RepositoryProvider<MachineManagerService>.value(
           value: machineManagerService,
         ),
@@ -207,6 +212,7 @@ void main() async {
               fcmService: fcmService,
               revenueCatService: revenueCatService,
               appIconService: appIconService,
+              ttsService: ttsService,
             ),
           ),
         ],
@@ -422,20 +428,22 @@ class _CcpocketAppState extends State<CcpocketApp> {
         if (settings.fcmEnabledMachines.isNotEmpty && settings.fcmAvailable) {
           _initFcmHandlers();
         }
-        return MaterialApp.router(
-          title: 'CC Pocket',
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: settings.themeMode,
-          locale: settings.appLocaleId.isEmpty
-              ? null
-              : Locale(settings.appLocaleId),
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: _appRouter.config(
-            navigatorObservers: () => [SessionRouteObserver()],
+        return DesktopZoomWrapper(
+          child: MaterialApp.router(
+            title: 'CC Pocket',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: settings.themeMode,
+            locale: settings.appLocaleId.isEmpty
+                ? null
+                : Locale(settings.appLocaleId),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: _appRouter.config(
+              navigatorObservers: () => [SessionRouteObserver()],
+            ),
+            debugShowCheckedModeBanner: false,
           ),
-          debugShowCheckedModeBanner: false,
         );
       },
     );

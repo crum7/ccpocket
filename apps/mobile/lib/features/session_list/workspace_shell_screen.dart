@@ -928,7 +928,7 @@ class WorkspaceLandingScreen extends StatelessWidget {
                             onPressed:
                                 currentShell?.openSetupGuideCenter ??
                                 () => context.router.push(
-                                  const SetupGuideRoute(),
+                                  SetupGuideRoute(),
                                 ),
                             icon: const Icon(Icons.lightbulb_outline),
                             label: Text('${l.setupGuide} →'),

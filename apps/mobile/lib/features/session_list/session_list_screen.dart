@@ -1670,7 +1670,7 @@ class _SessionListScreenState extends State<SessionListScreen>
           shell.openSetupGuideCenter();
           return;
         }
-        context.router.push(const SetupGuideRoute());
+        context.router.push(SetupGuideRoute());
       },
       onConnectToDiscovered: _connectToDiscovered,
       onConnectToMachine: _connectToMachine,

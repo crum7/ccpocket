@@ -15,6 +15,7 @@ import '../../models/messages.dart';
 import '../../providers/bridge_cubits.dart';
 import '../../providers/machine_manager_cubit.dart';
 import '../../services/bridge_service.dart';
+import '../../services/tts_service.dart';
 import '../../widgets/rename_session_dialog.dart';
 import '../../services/chat_message_handler.dart';
 import '../../services/draft_service.dart';
@@ -456,6 +457,7 @@ class _CodexProviders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bridge = context.read<BridgeService>();
+    final tts = context.read<TtsService>();
     final streamingCubit = StreamingStateCubit();
     return MultiBlocProvider(
       providers: [
@@ -465,6 +467,7 @@ class _CodexProviders extends StatelessWidget {
             sessionId: sessionId,
             bridge: bridge,
             streamingCubit: streamingCubit,
+            tts: tts,
             initialExplorerCurrentPath: explorerCurrentPath,
             initialRecentPeekedFiles: recentPeekedFiles,
             initialSandboxMode: sandboxMode,

@@ -127,6 +127,8 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
     String? initialPermissionMode,
     String? initialSandboxMode,
     ValueNotifier<SystemMessage?>? pendingSessionCreated,
+    VoidCallback? onBackToSessions,
+    bool hideSessionBackButton = false,
     List<PageRouteInfo>? children,
   }) : super(
          ClaudeSessionRoute.name,
@@ -140,6 +142,8 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
            initialPermissionMode: initialPermissionMode,
            initialSandboxMode: initialSandboxMode,
            pendingSessionCreated: pendingSessionCreated,
+           onBackToSessions: onBackToSessions,
+           hideSessionBackButton: hideSessionBackButton,
          ),
          initialChildren: children,
        );
@@ -160,6 +164,8 @@ class ClaudeSessionRoute extends PageRouteInfo<ClaudeSessionRouteArgs> {
         initialPermissionMode: args.initialPermissionMode,
         initialSandboxMode: args.initialSandboxMode,
         pendingSessionCreated: args.pendingSessionCreated,
+        onBackToSessions: args.onBackToSessions,
+        hideSessionBackButton: args.hideSessionBackButton,
       );
     },
   );
@@ -176,6 +182,8 @@ class ClaudeSessionRouteArgs {
     this.initialPermissionMode,
     this.initialSandboxMode,
     this.pendingSessionCreated,
+    this.onBackToSessions,
+    this.hideSessionBackButton = false,
   });
 
   final Key? key;
@@ -196,9 +204,13 @@ class ClaudeSessionRouteArgs {
 
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  final VoidCallback? onBackToSessions;
+
+  final bool hideSessionBackButton;
+
   @override
   String toString() {
-    return 'ClaudeSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialPermissionMode: $initialPermissionMode, initialSandboxMode: $initialSandboxMode, pendingSessionCreated: $pendingSessionCreated}';
+    return 'ClaudeSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialPermissionMode: $initialPermissionMode, initialSandboxMode: $initialSandboxMode, pendingSessionCreated: $pendingSessionCreated, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
   }
 
   @override
@@ -213,7 +225,9 @@ class ClaudeSessionRouteArgs {
         isPending == other.isPending &&
         initialPermissionMode == other.initialPermissionMode &&
         initialSandboxMode == other.initialSandboxMode &&
-        pendingSessionCreated == other.pendingSessionCreated;
+        pendingSessionCreated == other.pendingSessionCreated &&
+        onBackToSessions == other.onBackToSessions &&
+        hideSessionBackButton == other.hideSessionBackButton;
   }
 
   @override
@@ -226,7 +240,9 @@ class ClaudeSessionRouteArgs {
       isPending.hashCode ^
       initialPermissionMode.hashCode ^
       initialSandboxMode.hashCode ^
-      pendingSessionCreated.hashCode;
+      pendingSessionCreated.hashCode ^
+      onBackToSessions.hashCode ^
+      hideSessionBackButton.hashCode;
 }
 
 /// generated route for
@@ -243,6 +259,8 @@ class CodexSessionRoute extends PageRouteInfo<CodexSessionRouteArgs> {
     String? initialPermissionMode,
     String? initialApprovalPolicy,
     ValueNotifier<SystemMessage?>? pendingSessionCreated,
+    VoidCallback? onBackToSessions,
+    bool hideSessionBackButton = false,
     List<PageRouteInfo>? children,
   }) : super(
          CodexSessionRoute.name,
@@ -257,6 +275,8 @@ class CodexSessionRoute extends PageRouteInfo<CodexSessionRouteArgs> {
            initialPermissionMode: initialPermissionMode,
            initialApprovalPolicy: initialApprovalPolicy,
            pendingSessionCreated: pendingSessionCreated,
+           onBackToSessions: onBackToSessions,
+           hideSessionBackButton: hideSessionBackButton,
          ),
          initialChildren: children,
        );
@@ -278,6 +298,8 @@ class CodexSessionRoute extends PageRouteInfo<CodexSessionRouteArgs> {
         initialPermissionMode: args.initialPermissionMode,
         initialApprovalPolicy: args.initialApprovalPolicy,
         pendingSessionCreated: args.pendingSessionCreated,
+        onBackToSessions: args.onBackToSessions,
+        hideSessionBackButton: args.hideSessionBackButton,
       );
     },
   );
@@ -295,6 +317,8 @@ class CodexSessionRouteArgs {
     this.initialPermissionMode,
     this.initialApprovalPolicy,
     this.pendingSessionCreated,
+    this.onBackToSessions,
+    this.hideSessionBackButton = false,
   });
 
   final Key? key;
@@ -317,9 +341,13 @@ class CodexSessionRouteArgs {
 
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  final VoidCallback? onBackToSessions;
+
+  final bool hideSessionBackButton;
+
   @override
   String toString() {
-    return 'CodexSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialSandboxMode: $initialSandboxMode, initialPermissionMode: $initialPermissionMode, initialApprovalPolicy: $initialApprovalPolicy, pendingSessionCreated: $pendingSessionCreated}';
+    return 'CodexSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialSandboxMode: $initialSandboxMode, initialPermissionMode: $initialPermissionMode, initialApprovalPolicy: $initialApprovalPolicy, pendingSessionCreated: $pendingSessionCreated, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
   }
 
   @override
@@ -335,7 +363,9 @@ class CodexSessionRouteArgs {
         initialSandboxMode == other.initialSandboxMode &&
         initialPermissionMode == other.initialPermissionMode &&
         initialApprovalPolicy == other.initialApprovalPolicy &&
-        pendingSessionCreated == other.pendingSessionCreated;
+        pendingSessionCreated == other.pendingSessionCreated &&
+        onBackToSessions == other.onBackToSessions &&
+        hideSessionBackButton == other.hideSessionBackButton;
   }
 
   @override
@@ -349,7 +379,9 @@ class CodexSessionRouteArgs {
       initialSandboxMode.hashCode ^
       initialPermissionMode.hashCode ^
       initialApprovalPolicy.hashCode ^
-      pendingSessionCreated.hashCode;
+      pendingSessionCreated.hashCode ^
+      onBackToSessions.hashCode ^
+      hideSessionBackButton.hashCode;
 }
 
 /// generated route for
@@ -489,12 +521,24 @@ class ExploreRouteArgs {
 /// generated route for
 /// [GalleryScreen]
 class GalleryRoute extends PageRouteInfo<GalleryRouteArgs> {
-  GalleryRoute({Key? key, String? sessionId, List<PageRouteInfo>? children})
-    : super(
-        GalleryRoute.name,
-        args: GalleryRouteArgs(key: key, sessionId: sessionId),
-        initialChildren: children,
-      );
+  GalleryRoute({
+    Key? key,
+    String? sessionId,
+    bool embedded = false,
+    VoidCallback? onBack,
+    VoidCallback? onClose,
+    List<PageRouteInfo>? children,
+  }) : super(
+         GalleryRoute.name,
+         args: GalleryRouteArgs(
+           key: key,
+           sessionId: sessionId,
+           embedded: embedded,
+           onBack: onBack,
+           onClose: onClose,
+         ),
+         initialChildren: children,
+       );
 
   static const String name = 'GalleryRoute';
 
@@ -504,32 +548,59 @@ class GalleryRoute extends PageRouteInfo<GalleryRouteArgs> {
       final args = data.argsAs<GalleryRouteArgs>(
         orElse: () => const GalleryRouteArgs(),
       );
-      return GalleryScreen(key: args.key, sessionId: args.sessionId);
+      return GalleryScreen(
+        key: args.key,
+        sessionId: args.sessionId,
+        embedded: args.embedded,
+        onBack: args.onBack,
+        onClose: args.onClose,
+      );
     },
   );
 }
 
 class GalleryRouteArgs {
-  const GalleryRouteArgs({this.key, this.sessionId});
+  const GalleryRouteArgs({
+    this.key,
+    this.sessionId,
+    this.embedded = false,
+    this.onBack,
+    this.onClose,
+  });
 
   final Key? key;
 
   final String? sessionId;
 
+  final bool embedded;
+
+  final VoidCallback? onBack;
+
+  final VoidCallback? onClose;
+
   @override
   String toString() {
-    return 'GalleryRouteArgs{key: $key, sessionId: $sessionId}';
+    return 'GalleryRouteArgs{key: $key, sessionId: $sessionId, embedded: $embedded, onBack: $onBack, onClose: $onClose}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! GalleryRouteArgs) return false;
-    return key == other.key && sessionId == other.sessionId;
+    return key == other.key &&
+        sessionId == other.sessionId &&
+        embedded == other.embedded &&
+        onBack == other.onBack &&
+        onClose == other.onClose;
   }
 
   @override
-  int get hashCode => key.hashCode ^ sessionId.hashCode;
+  int get hashCode =>
+      key.hashCode ^
+      sessionId.hashCode ^
+      embedded.hashCode ^
+      onBack.hashCode ^
+      onClose.hashCode;
 }
 
 /// generated route for
@@ -703,10 +774,17 @@ class SettingsRoute extends PageRouteInfo<SettingsRouteArgs> {
   SettingsRoute({
     Key? key,
     bool focusSupport = false,
+    bool embedded = false,
+    VoidCallback? onBack,
     List<PageRouteInfo>? children,
   }) : super(
          SettingsRoute.name,
-         args: SettingsRouteArgs(key: key, focusSupport: focusSupport),
+         args: SettingsRouteArgs(
+           key: key,
+           focusSupport: focusSupport,
+           embedded: embedded,
+           onBack: onBack,
+         ),
          initialChildren: children,
        );
 
@@ -718,48 +796,127 @@ class SettingsRoute extends PageRouteInfo<SettingsRouteArgs> {
       final args = data.argsAs<SettingsRouteArgs>(
         orElse: () => const SettingsRouteArgs(),
       );
-      return SettingsScreen(key: args.key, focusSupport: args.focusSupport);
+      return SettingsScreen(
+        key: args.key,
+        focusSupport: args.focusSupport,
+        embedded: args.embedded,
+        onBack: args.onBack,
+      );
     },
   );
 }
 
 class SettingsRouteArgs {
-  const SettingsRouteArgs({this.key, this.focusSupport = false});
+  const SettingsRouteArgs({
+    this.key,
+    this.focusSupport = false,
+    this.embedded = false,
+    this.onBack,
+  });
 
   final Key? key;
 
   final bool focusSupport;
 
+  final bool embedded;
+
+  final VoidCallback? onBack;
+
   @override
   String toString() {
-    return 'SettingsRouteArgs{key: $key, focusSupport: $focusSupport}';
+    return 'SettingsRouteArgs{key: $key, focusSupport: $focusSupport, embedded: $embedded, onBack: $onBack}';
   }
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! SettingsRouteArgs) return false;
-    return key == other.key && focusSupport == other.focusSupport;
+    return key == other.key &&
+        focusSupport == other.focusSupport &&
+        embedded == other.embedded &&
+        onBack == other.onBack;
   }
 
   @override
-  int get hashCode => key.hashCode ^ focusSupport.hashCode;
+  int get hashCode =>
+      key.hashCode ^
+      focusSupport.hashCode ^
+      embedded.hashCode ^
+      onBack.hashCode;
 }
 
 /// generated route for
 /// [SetupGuideScreen]
-class SetupGuideRoute extends PageRouteInfo<void> {
-  const SetupGuideRoute({List<PageRouteInfo>? children})
-    : super(SetupGuideRoute.name, initialChildren: children);
+class SetupGuideRoute extends PageRouteInfo<SetupGuideRouteArgs> {
+  SetupGuideRoute({
+    Key? key,
+    bool embedded = false,
+    VoidCallback? onBack,
+    VoidCallback? onClose,
+    List<PageRouteInfo>? children,
+  }) : super(
+         SetupGuideRoute.name,
+         args: SetupGuideRouteArgs(
+           key: key,
+           embedded: embedded,
+           onBack: onBack,
+           onClose: onClose,
+         ),
+         initialChildren: children,
+       );
 
   static const String name = 'SetupGuideRoute';
 
   static PageInfo page = PageInfo(
     name,
     builder: (data) {
-      return const SetupGuideScreen();
+      final args = data.argsAs<SetupGuideRouteArgs>(
+        orElse: () => const SetupGuideRouteArgs(),
+      );
+      return SetupGuideScreen(
+        key: args.key,
+        embedded: args.embedded,
+        onBack: args.onBack,
+        onClose: args.onClose,
+      );
     },
   );
+}
+
+class SetupGuideRouteArgs {
+  const SetupGuideRouteArgs({
+    this.key,
+    this.embedded = false,
+    this.onBack,
+    this.onClose,
+  });
+
+  final Key? key;
+
+  final bool embedded;
+
+  final VoidCallback? onBack;
+
+  final VoidCallback? onClose;
+
+  @override
+  String toString() {
+    return 'SetupGuideRouteArgs{key: $key, embedded: $embedded, onBack: $onBack, onClose: $onClose}';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! SetupGuideRouteArgs) return false;
+    return key == other.key &&
+        embedded == other.embedded &&
+        onBack == other.onBack &&
+        onClose == other.onClose;
+  }
+
+  @override
+  int get hashCode =>
+      key.hashCode ^ embedded.hashCode ^ onBack.hashCode ^ onClose.hashCode;
 }
 
 /// generated route for
@@ -792,6 +949,8 @@ class WorkspaceClaudeSessionRoute
     String? initialPermissionMode,
     String? initialSandboxMode,
     ValueNotifier<SystemMessage?>? pendingSessionCreated,
+    VoidCallback? onBackToSessions,
+    bool hideSessionBackButton = false,
     List<PageRouteInfo>? children,
   }) : super(
          WorkspaceClaudeSessionRoute.name,
@@ -805,6 +964,8 @@ class WorkspaceClaudeSessionRoute
            initialPermissionMode: initialPermissionMode,
            initialSandboxMode: initialSandboxMode,
            pendingSessionCreated: pendingSessionCreated,
+           onBackToSessions: onBackToSessions,
+           hideSessionBackButton: hideSessionBackButton,
          ),
          initialChildren: children,
        );
@@ -825,6 +986,8 @@ class WorkspaceClaudeSessionRoute
         initialPermissionMode: args.initialPermissionMode,
         initialSandboxMode: args.initialSandboxMode,
         pendingSessionCreated: args.pendingSessionCreated,
+        onBackToSessions: args.onBackToSessions,
+        hideSessionBackButton: args.hideSessionBackButton,
       );
     },
   );
@@ -841,6 +1004,8 @@ class WorkspaceClaudeSessionRouteArgs {
     this.initialPermissionMode,
     this.initialSandboxMode,
     this.pendingSessionCreated,
+    this.onBackToSessions,
+    this.hideSessionBackButton = false,
   });
 
   final Key? key;
@@ -861,9 +1026,13 @@ class WorkspaceClaudeSessionRouteArgs {
 
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  final VoidCallback? onBackToSessions;
+
+  final bool hideSessionBackButton;
+
   @override
   String toString() {
-    return 'WorkspaceClaudeSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialPermissionMode: $initialPermissionMode, initialSandboxMode: $initialSandboxMode, pendingSessionCreated: $pendingSessionCreated}';
+    return 'WorkspaceClaudeSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialPermissionMode: $initialPermissionMode, initialSandboxMode: $initialSandboxMode, pendingSessionCreated: $pendingSessionCreated, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
   }
 
   @override
@@ -878,7 +1047,9 @@ class WorkspaceClaudeSessionRouteArgs {
         isPending == other.isPending &&
         initialPermissionMode == other.initialPermissionMode &&
         initialSandboxMode == other.initialSandboxMode &&
-        pendingSessionCreated == other.pendingSessionCreated;
+        pendingSessionCreated == other.pendingSessionCreated &&
+        onBackToSessions == other.onBackToSessions &&
+        hideSessionBackButton == other.hideSessionBackButton;
   }
 
   @override
@@ -891,7 +1062,9 @@ class WorkspaceClaudeSessionRouteArgs {
       isPending.hashCode ^
       initialPermissionMode.hashCode ^
       initialSandboxMode.hashCode ^
-      pendingSessionCreated.hashCode;
+      pendingSessionCreated.hashCode ^
+      onBackToSessions.hashCode ^
+      hideSessionBackButton.hashCode;
 }
 
 /// generated route for
@@ -909,6 +1082,8 @@ class WorkspaceCodexSessionRoute
     String? initialPermissionMode,
     String? initialApprovalPolicy,
     ValueNotifier<SystemMessage?>? pendingSessionCreated,
+    VoidCallback? onBackToSessions,
+    bool hideSessionBackButton = false,
     List<PageRouteInfo>? children,
   }) : super(
          WorkspaceCodexSessionRoute.name,
@@ -923,6 +1098,8 @@ class WorkspaceCodexSessionRoute
            initialPermissionMode: initialPermissionMode,
            initialApprovalPolicy: initialApprovalPolicy,
            pendingSessionCreated: pendingSessionCreated,
+           onBackToSessions: onBackToSessions,
+           hideSessionBackButton: hideSessionBackButton,
          ),
          initialChildren: children,
        );
@@ -944,6 +1121,8 @@ class WorkspaceCodexSessionRoute
         initialPermissionMode: args.initialPermissionMode,
         initialApprovalPolicy: args.initialApprovalPolicy,
         pendingSessionCreated: args.pendingSessionCreated,
+        onBackToSessions: args.onBackToSessions,
+        hideSessionBackButton: args.hideSessionBackButton,
       );
     },
   );
@@ -961,6 +1140,8 @@ class WorkspaceCodexSessionRouteArgs {
     this.initialPermissionMode,
     this.initialApprovalPolicy,
     this.pendingSessionCreated,
+    this.onBackToSessions,
+    this.hideSessionBackButton = false,
   });
 
   final Key? key;
@@ -983,9 +1164,13 @@ class WorkspaceCodexSessionRouteArgs {
 
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  final VoidCallback? onBackToSessions;
+
+  final bool hideSessionBackButton;
+
   @override
   String toString() {
-    return 'WorkspaceCodexSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialSandboxMode: $initialSandboxMode, initialPermissionMode: $initialPermissionMode, initialApprovalPolicy: $initialApprovalPolicy, pendingSessionCreated: $pendingSessionCreated}';
+    return 'WorkspaceCodexSessionRouteArgs{key: $key, sessionId: $sessionId, projectPath: $projectPath, gitBranch: $gitBranch, worktreePath: $worktreePath, isPending: $isPending, initialSandboxMode: $initialSandboxMode, initialPermissionMode: $initialPermissionMode, initialApprovalPolicy: $initialApprovalPolicy, pendingSessionCreated: $pendingSessionCreated, onBackToSessions: $onBackToSessions, hideSessionBackButton: $hideSessionBackButton}';
   }
 
   @override
@@ -1001,7 +1186,9 @@ class WorkspaceCodexSessionRouteArgs {
         initialSandboxMode == other.initialSandboxMode &&
         initialPermissionMode == other.initialPermissionMode &&
         initialApprovalPolicy == other.initialApprovalPolicy &&
-        pendingSessionCreated == other.pendingSessionCreated;
+        pendingSessionCreated == other.pendingSessionCreated &&
+        onBackToSessions == other.onBackToSessions &&
+        hideSessionBackButton == other.hideSessionBackButton;
   }
 
   @override
@@ -1015,7 +1202,9 @@ class WorkspaceCodexSessionRouteArgs {
       initialSandboxMode.hashCode ^
       initialPermissionMode.hashCode ^
       initialApprovalPolicy.hashCode ^
-      pendingSessionCreated.hashCode;
+      pendingSessionCreated.hashCode ^
+      onBackToSessions.hashCode ^
+      hideSessionBackButton.hashCode;
 }
 
 /// generated route for

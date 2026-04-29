@@ -16,6 +16,7 @@ import '../../providers/bridge_cubits.dart';
 import '../../providers/machine_manager_cubit.dart';
 import '../../router/app_router.dart';
 import '../../services/bridge_service.dart';
+import '../../services/tts_service.dart';
 import '../../services/chat_message_handler.dart';
 import '../../services/draft_service.dart';
 import '../../utils/composer_tokens.dart';
@@ -444,6 +445,7 @@ class _ChatScreenProviders extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bridge = context.read<BridgeService>();
+    final tts = context.read<TtsService>();
     final streamingCubit = StreamingStateCubit();
     return MultiBlocProvider(
       providers: [
@@ -453,6 +455,7 @@ class _ChatScreenProviders extends StatelessWidget {
             provider: Provider.claude,
             bridge: bridge,
             streamingCubit: streamingCubit,
+            tts: tts,
             initialExplorerCurrentPath: explorerCurrentPath,
             initialRecentPeekedFiles: recentPeekedFiles,
             initialPermissionMode: permissionMode,

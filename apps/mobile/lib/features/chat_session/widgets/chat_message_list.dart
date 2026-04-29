@@ -171,7 +171,12 @@ class _ChatMessageListState extends State<ChatMessageList> {
         }
         return false;
       },
-      child: ListView.builder(
+      child: DefaultSelectionStyle(
+        selectionColor: Theme.of(context).colorScheme.primary.withValues(
+          alpha: Theme.of(context).brightness == Brightness.dark ? 0.45 : 0.30,
+        ),
+        child: SelectionArea(
+        child: ListView.builder(
         controller: widget.scrollController,
         reverse: true,
         padding: EdgeInsets.only(top: 36, bottom: widget.bottomPadding),
@@ -261,6 +266,8 @@ class _ChatMessageListState extends State<ChatMessageList> {
           );
           return child;
         },
+      ),
+      ),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../../../core/logger.dart';
 import '../../../models/messages.dart';
 import '../../../services/bridge_service.dart';
 import '../../../services/chat_message_handler.dart';
+import '../../../services/tts_service.dart';
 import 'chat_session_state.dart';
 import 'streaming_state_cubit.dart';
 
@@ -22,6 +23,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
   final Provider? provider;
   final BridgeService _bridge;
   final StreamingStateCubit _streamingCubit;
+  final TtsService? _tts;
   final ChatMessageHandler _handler = ChatMessageHandler();
 
   StreamSubscription<ServerMessage>? _subscription;
@@ -50,6 +52,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     this.provider,
     required BridgeService bridge,
     required StreamingStateCubit streamingCubit,
+    TtsService? tts,
     String initialExplorerCurrentPath = '',
     List<String> initialRecentPeekedFiles = const [],
     PermissionMode? initialPermissionMode,
@@ -57,6 +60,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     CodexApprovalPolicy? initialCodexApprovalPolicy,
   }) : _bridge = bridge,
        _streamingCubit = streamingCubit,
+       _tts = tts,
        super(
          ChatSessionState(
            permissionMode: initialPermissionMode ?? PermissionMode.defaultMode,
@@ -150,11 +154,13 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     if (update.resetStreaming) {
       _handler.currentStreaming = null;
       _streamingCubit.reset();
+      _tts?.flush();
     }
 
     // Handle stream delta → streaming cubit
     if (originalMsg is StreamDeltaMessage) {
       _streamingCubit.appendText(originalMsg.text);
+      _tts?.feedDelta(originalMsg.text);
       return; // No main state update needed for deltas
     }
     if (originalMsg is ThinkingDeltaMessage) {
@@ -170,6 +176,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     if (originalMsg is AssistantServerMessage &&
         _handler.currentStreaming == null) {
       _streamingCubit.reset();
+      _tts?.flush();
     }
 
     // Prepend entries (past history)
