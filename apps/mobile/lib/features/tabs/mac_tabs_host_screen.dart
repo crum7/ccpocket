@@ -6,16 +6,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../claude_session/claude_session_screen.dart';
 import '../codex_session/codex_session_screen.dart';
+import '../session_list/session_list_screen.dart';
 import '../session_list/workspace_shell_screen.dart';
 import 'tabs_cubit.dart';
 import 'tabs_state.dart';
 
 /// Hosts the macOS tab system. On non-macOS platforms this is a thin
-/// pass-through that just renders [AdaptiveHomeScreen].
+/// pass-through that renders [AdaptiveHomeScreen] (the upstream behaviour).
 ///
-/// Tab 0 is always the home (adaptive home / workspace shell). Tabs 1..N are
-/// open sessions kept alive via [IndexedStack] so their state survives tab
-/// switches.
+/// On macOS:
+///   - Tab 0 is the simple session list (no workspace shell / no left pane).
+///   - Tabs 1..N are open sessions kept alive via [IndexedStack] so their
+///     state survives tab switches.
 @RoutePage()
 class MacTabsHostScreen extends StatelessWidget {
   const MacTabsHostScreen({super.key});
@@ -106,7 +108,7 @@ class MacTabsHostScreen extends StatelessWidget {
                       child: IndexedStack(
                         index: state.activeIndex,
                         children: [
-                          const AdaptiveHomeScreen(),
+                          const SessionListScreen(),
                           for (final tab in state.tabs)
                             KeyedSubtree(
                               key: ValueKey(tab.id),
