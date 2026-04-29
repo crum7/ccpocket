@@ -106,6 +106,13 @@ export interface SessionSummary {
 
 const MAX_HISTORY_PER_SESSION = 500;
 
+/// Cap on the number of *idle* (not currently running) sessions kept in
+/// memory. When this is exceeded, the least-recently-active idle session
+/// is evicted entirely so the bridge doesn't accumulate dead conversations
+/// indefinitely. Active sessions (running / waiting_approval) are never
+/// auto-evicted.
+const MAX_IDLE_SESSIONS = 30;
+
 export type GalleryImageCallback = (meta: GalleryImageMeta) => void;
 
 function mergeCodexSettings(
@@ -607,7 +614,30 @@ export class SessionManager {
     console.log(
       `[session] Created ${effectiveProvider} session ${id} for ${effectiveCwd}${wtPath ? ` (worktree of ${projectPath})` : ""}`,
     );
+
+    this.evictStaleIdleSessions();
     return id;
+  }
+
+  /// Drop the least-recently-active idle sessions when the in-memory map
+  /// exceeds [MAX_IDLE_SESSIONS]. Running / waiting_approval / compacting
+  /// sessions are never targeted — only sessions whose process is idle.
+  private evictStaleIdleSessions(): void {
+    const idle = Array.from(this.sessions.values()).filter(
+      (s) => s.status === "idle",
+    );
+    if (idle.length <= MAX_IDLE_SESSIONS) return;
+    idle.sort(
+      (a, b) => a.lastActivityAt.getTime() - b.lastActivityAt.getTime(),
+    );
+    const overflow = idle.length - MAX_IDLE_SESSIONS;
+    for (let i = 0; i < overflow; i++) {
+      const victim = idle[i];
+      console.log(
+        `[session] Evicting idle session ${victim.id} (last active ${victim.lastActivityAt.toISOString()}, ${this.sessions.size - 1} sessions remaining)`,
+      );
+      this.sessions.delete(victim.id);
+    }
   }
 
   get(id: string): SessionInfo | undefined {
