@@ -104,7 +104,7 @@ export interface SessionSummary {
   };
 }
 
-const MAX_HISTORY_PER_SESSION = 100;
+const MAX_HISTORY_PER_SESSION = 500;
 
 export type GalleryImageCallback = (meta: GalleryImageMeta) => void;
 
@@ -458,16 +458,59 @@ export class SessionManager {
             session.history.push(msg);
           }
           if (session.history.length > MAX_HISTORY_PER_SESSION) {
-            // Protect user_input and system messages from eviction so they
-            // remain available when the client requests history after
-            // reconnecting. System messages carry slash commands, permission
-            // modes, and other metadata needed to restore client state.
-            const idx = session.history.findIndex(
-              (m) => m.type !== "user_input" && m.type !== "system",
+            // Eviction priority (oldest first within each tier):
+            //   1. status updates, stream artefacts (cheap to lose)
+            //   2. tool_result entries
+            //   3. duplicate `system` init/supported_commands (keep just the
+            //      most recent so slash-command restoration still works)
+            //   4. fall back to FIFO
+            //
+            // Crucially: `user_input` AND `assistant` messages are NEVER
+            // evicted by this loop — losing assistant text leaves the chat
+            // looking empty after a reopen even though the user sent
+            // messages and got responses.
+            const isProtected = (m: ServerMessage): boolean =>
+              m.type === "user_input" || m.type === "assistant";
+
+            // Tier 1: status / non-assistant streaming-related noise.
+            let idx = session.history.findIndex(
+              (m) =>
+                !isProtected(m) &&
+                (m.type === "status" ||
+                  m.type === "stream_delta" ||
+                  m.type === "thinking_delta"),
             );
+            // Tier 2: tool results (kept around primarily for live display).
+            if (idx < 0) {
+              idx = session.history.findIndex(
+                (m) => !isProtected(m) && m.type === "tool_result",
+              );
+            }
+            // Tier 3: drop an older duplicate init/supported_commands so that
+            // the most recent state-restoration system message survives.
+            if (idx < 0) {
+              const lastSystemIdx = (() => {
+                for (let i = session.history.length - 1; i >= 0; i--) {
+                  if (session.history[i].type === "system") return i;
+                }
+                return -1;
+              })();
+              idx = session.history.findIndex(
+                (m, i) =>
+                  !isProtected(m) &&
+                  m.type === "system" &&
+                  i !== lastSystemIdx,
+              );
+            }
+            // Tier 4: FIFO over anything not protected.
+            if (idx < 0) {
+              idx = session.history.findIndex((m) => !isProtected(m));
+            }
             if (idx >= 0) {
               session.history.splice(idx, 1);
             } else {
+              // Everything left is protected (all user/assistant). Drop oldest
+              // to bound memory.
               session.history.shift();
             }
           }

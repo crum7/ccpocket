@@ -419,9 +419,18 @@ class ChatMessageHandler {
     final asstWithContent = messages
         .where((m) => m.role == 'assistant' && m.content.isNotEmpty)
         .length;
-    logger.info(
+    final asstWithText = messages
+        .where(
+          (m) =>
+              m.role == 'assistant' &&
+              m.content.any((c) => c is TextContent && c.text.isNotEmpty),
+        )
+        .length;
+    // ignore: avoid_print
+    print(
       '[past_history] received ${messages.length} msgs '
-      '(user=$userCount assistant=$asstCount asst_with_content=$asstWithContent) '
+      '(user=$userCount assistant=$asstCount '
+      'asst_with_content=$asstWithContent asst_with_text=$asstWithText) '
       'claudeSessionId=$claudeSessionId',
     );
     final entries = <ChatEntry>[];
@@ -474,13 +483,22 @@ class ChatMessageHandler {
   ChatStateUpdate _handleHistory(List<ServerMessage> messages) {
     // Diagnostic: count assistant messages in the in-memory history snapshot.
     final asstCount = messages.whereType<AssistantServerMessage>().length;
+    final asstWithText = messages
+        .whereType<AssistantServerMessage>()
+        .where(
+          (m) => m.message.content.any(
+            (c) => c is TextContent && c.text.isNotEmpty,
+          ),
+        )
+        .length;
     final initCount = messages
         .whereType<SystemMessage>()
         .where((m) => m.subtype == 'init')
         .length;
-    logger.info(
+    // ignore: avoid_print
+    print(
       '[history] received ${messages.length} msgs '
-      '(assistant=$asstCount init=$initCount)',
+      '(assistant=$asstCount asst_with_text=$asstWithText init=$initCount)',
     );
     final entries = <ChatEntry>[];
     ProcessStatus? lastStatus;
