@@ -4,6 +4,27 @@ CC Pocket lets you start and run Codex and Claude sessions entirely from your ph
 
 [日本語版 README](README.ja.md) | [简体中文版 README](README.zh-CN.md)
 
+## このフォーク独自の追加機能 (crum7)
+
+upstream の [K9i-0/ccpocket](https://github.com/K9i-0/ccpocket) に対して、macOS デスクトップ向けに以下の機能を追加しています。
+
+| 機能 | 内容 |
+|------|------|
+| **UI スケール拡大縮小** | macOS で `Cmd+=` / `Cmd+-` / `Cmd+0` でフォントサイズ拡大縮小・リセット。設定は永続化 |
+| **macOS 音声入力** | macOS でも音声入力ボタンが使えるように `speech_to_text` を有効化（マイク entitlement + Info.plist 設定込み） |
+| **TTS 読み上げ** | アシスタントの返答を音声で読み上げ。ストリーム到着と同時に文単位で逐次再生 |
+| **TTS エンジン切替** | システム TTS（macOS 標準）と [VOICEVOX](https://voicevox.hiroshiba.jp/) を切替可能。VOICEVOX は HTTP API 経由でずんだもん等の高品質日本語音声を再生 |
+| **TTS 速度調整** | 0.5x – 2.0x のスライダー |
+| **数式レンダリング** | `$$ ... $$` の LaTeX 数式を [flutter_math_fork](https://pub.dev/packages/flutter_math_fork) で表示。コードブロックは読み上げから自動除外 |
+| **テキスト選択改善** | チャット全体を `SelectionArea` でラップしてユーザー送信／アシスタント応答ともにドラッグ選択可能。ダークモードでも見えるよう選択ハイライト色をテーマ primary 色ベースに調整 |
+
+すべて macOS のみ有効化（モバイルは upstream の挙動を維持）。
+
+設定画面の「読み上げ (TTS)」セクションから ON/OFF・エンジン選択・音声選択・速度調整ができます。
+
+> **Note**: macOS タブ機能（`Cmd+T`/`Cmd+W` でブラウザ風タブ）も実験的に作成しましたが、upstream の `AdaptiveHomeRoute`（ワークスペース shell）と機能的に重複するため main にはマージしていません。`feat/macos-zoom-tts-tabs-math` ブランチに残してあります。
+
+
 <p align="center">
   <img src="docs/images/screenshots.png" alt="CC Pocket screenshots" width="800">
 </p>
