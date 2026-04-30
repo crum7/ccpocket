@@ -8,6 +8,7 @@ import '../claude_session/claude_session_screen.dart';
 import '../codex_session/codex_session_screen.dart';
 import '../session_list/session_list_screen.dart';
 import '../session_list/workspace_shell_screen.dart';
+import 'tab_active_scope.dart';
 import 'tabs_cubit.dart';
 import 'tabs_state.dart';
 
@@ -108,11 +109,17 @@ class MacTabsHostScreen extends StatelessWidget {
                       child: IndexedStack(
                         index: state.activeIndex,
                         children: [
-                          const SessionListScreen(),
-                          for (final tab in state.tabs)
+                          TabActiveScope(
+                            isActive: state.activeIndex == 0,
+                            child: const SessionListScreen(),
+                          ),
+                          for (var i = 0; i < state.tabs.length; i++)
                             KeyedSubtree(
-                              key: ValueKey(tab.id),
-                              child: _SessionTabContent(tab: tab),
+                              key: ValueKey(state.tabs[i].id),
+                              child: TabActiveScope(
+                                isActive: state.activeIndex == i + 1,
+                                child: _SessionTabContent(tab: state.tabs[i]),
+                              ),
                             ),
                         ],
                       ),

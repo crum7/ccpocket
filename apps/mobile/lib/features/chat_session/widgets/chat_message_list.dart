@@ -9,7 +9,9 @@ import '../../../services/bridge_service.dart';
 import '../../../widgets/message_bubble.dart';
 import '../../file_peek/file_peek_sheet.dart';
 import '../../message_images/message_images_screen.dart';
+import '../../tabs/tab_active_scope.dart';
 import '../state/chat_session_cubit.dart';
+import '../state/chat_session_state.dart';
 import '../state/streaming_state.dart';
 import '../state/streaming_state_cubit.dart';
 
@@ -147,19 +149,46 @@ class _ChatMessageListState extends State<ChatMessageList> {
 
   @override
   Widget build(BuildContext context) {
-    final chatState = context.watch<ChatSessionCubit>().state;
-    final hiddenToolUseIds = chatState.hiddenToolUseIds;
-    final allEntries = chatState.entries;
+    // Skip rebuilds entirely when this tab isn't the visible one — cubits
+    // keep updating in the background, but we don't burn CPU re-laying out
+    // a hidden chat. When the tab becomes active again, TabActiveScope's
+    // InheritedWidget change re-runs this build with the latest state.
+    final isActive = TabActiveScope.of(context);
 
-    // Watch only the isStreaming flag (not the full streaming text) so the
-    // list rebuilds when streaming starts/stops (to adjust itemCount) but NOT
-    // on every text delta. The actual streaming text is rendered inside a
-    // scoped BlocBuilder on the streaming item only.
-    final hasStreaming = context.select<StreamingStateCubit, bool>(
-      (cubit) => cubit.state.isStreaming,
+    return BlocBuilder<ChatSessionCubit, ChatSessionState>(
+      buildWhen: (prev, curr) => isActive,
+      builder: (context, chatState) {
+        final hiddenToolUseIds = chatState.hiddenToolUseIds;
+        final allEntries = chatState.entries;
+
+        return BlocBuilder<StreamingStateCubit, StreamingState>(
+          buildWhen: (prev, curr) =>
+              isActive && prev.isStreaming != curr.isStreaming,
+          builder: (context, streamingTopState) {
+            final hasStreaming = streamingTopState.isStreaming;
+            final totalCount = allEntries.length + (hasStreaming ? 1 : 0);
+            return _buildList(
+              context,
+              allEntries: allEntries,
+              hiddenToolUseIds: hiddenToolUseIds,
+              hasStreaming: hasStreaming,
+              totalCount: totalCount,
+              isActive: isActive,
+            );
+          },
+        );
+      },
     );
-    final totalCount = allEntries.length + (hasStreaming ? 1 : 0);
+  }
 
+  Widget _buildList(
+    BuildContext context, {
+    required List<ChatEntry> allEntries,
+    required Set<String> hiddenToolUseIds,
+    required bool hasStreaming,
+    required int totalCount,
+    required bool isActive,
+  }) {
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         // Only unfocus when user drags the list (not programmatic scroll).
@@ -188,8 +217,12 @@ class _ChatMessageListState extends State<ChatMessageList> {
 
           // Streaming entry is at totalCount - 1 (index 0 in reverse)
           if (hasStreaming && entryIndex == allEntries.length) {
-            // Scoped BlocBuilder: only this widget rebuilds on streaming deltas
+            // Scoped BlocBuilder: only this widget rebuilds on streaming deltas.
+            // Skip rebuilds when this tab isn't visible — the cubit still
+            // accumulates deltas but we don't repaint the bubble until the
+            // user comes back.
             return BlocBuilder<StreamingStateCubit, StreamingState>(
+              buildWhen: (prev, curr) => isActive,
               builder: (context, streamingState) {
                 if (!streamingState.isStreaming) {
                   return const SizedBox.shrink();
