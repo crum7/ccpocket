@@ -17,7 +17,7 @@ import 'streaming_state_cubit.dart';
 /// session. Older entries are dropped from RAM to keep long conversations
 /// snappy; closing & reopening the tab re-fetches them from the bridge via
 /// past_history.
-const int _maxLiveEntries = 10;
+const int _maxLiveEntries = 30;
 
 /// Manages the state of a single chat session.
 ///
