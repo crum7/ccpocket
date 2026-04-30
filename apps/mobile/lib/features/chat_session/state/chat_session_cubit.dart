@@ -13,6 +13,12 @@ import '../../../services/tts_service.dart';
 import 'chat_session_state.dart';
 import 'streaming_state_cubit.dart';
 
+/// Hard cap on how many chat entries are kept in cubit state for a single
+/// session. Older entries are dropped from RAM to keep long conversations
+/// snappy; closing & reopening the tab re-fetches them from the bridge via
+/// past_history.
+const int _maxLiveEntries = 50;
+
 /// Manages the state of a single chat session.
 ///
 /// Subscribes to [BridgeService.messagesForSession] and delegates message
@@ -359,6 +365,38 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     } else if (nonStreamingEntries.isNotEmpty) {
       entries = [...entries, ...nonStreamingEntries];
       didModifyEntries = true;
+    }
+
+    // --- Trim entries to keep memory bounded for long conversations ---
+    //
+    // Long sessions (200+ turns) hold every assistant response, tool result,
+    // image bytes, etc. in memory and recopy the whole list on every cubit
+    // update. Cap to the most recent N entries; older are dropped from RAM.
+    // Re-opening the tab fetches them again from Bridge (past_history) and
+    // they get re-trimmed to the same window.
+    //
+    // Sending user inputs MUST survive trimming so retry/rewind still work.
+    if (didModifyEntries && entries.length > _maxLiveEntries) {
+      final overflow = entries.length - _maxLiveEntries;
+      // Walk from oldest, drop entries that aren't pinned (pinned = sending
+      // user messages we haven't gotten an ack for yet).
+      var dropped = 0;
+      final trimmed = <ChatEntry>[];
+      for (final e in entries) {
+        final isPinned =
+            e is UserChatEntry && e.status == MessageStatus.sending;
+        if (!isPinned && dropped < overflow) {
+          dropped++;
+          continue;
+        }
+        trimmed.add(e);
+      }
+      if (dropped > 0) {
+        entries = trimmed;
+        // _pastEntryCount may now exceed entries.length — clamp so the
+        // replaceEntries logic doesn't slice past entries we no longer have.
+        _pastEntryCount = (_pastEntryCount - dropped).clamp(0, entries.length);
+      }
     }
 
     // --- Cleanup responded tool use IDs ---
