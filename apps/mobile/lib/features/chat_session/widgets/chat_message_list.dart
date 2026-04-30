@@ -152,19 +152,23 @@ class _ChatMessageListState extends State<ChatMessageList> {
     // Skip rebuilds entirely when this tab isn't the visible one — cubits
     // keep updating in the background, but we don't burn CPU re-laying out
     // a hidden chat. When the tab becomes active again, TabActiveScope's
-    // InheritedWidget change re-runs this build with the latest state.
+    // InheritedWidget change re-runs this build, and we read the freshest
+    // cubit state directly via context.read (BlocBuilder's cached `_state`
+    // gets stale while buildWhen has been suppressing it).
     final isActive = TabActiveScope.of(context);
 
     return BlocBuilder<ChatSessionCubit, ChatSessionState>(
       buildWhen: (prev, curr) => isActive,
-      builder: (context, chatState) {
+      builder: (context, _) {
+        final chatState = context.read<ChatSessionCubit>().state;
         final hiddenToolUseIds = chatState.hiddenToolUseIds;
         final allEntries = chatState.entries;
 
         return BlocBuilder<StreamingStateCubit, StreamingState>(
           buildWhen: (prev, curr) =>
               isActive && prev.isStreaming != curr.isStreaming,
-          builder: (context, streamingTopState) {
+          builder: (context, _) {
+            final streamingTopState = context.read<StreamingStateCubit>().state;
             final hasStreaming = streamingTopState.isStreaming;
             final totalCount = allEntries.length + (hasStreaming ? 1 : 0);
             return _buildList(
@@ -220,10 +224,14 @@ class _ChatMessageListState extends State<ChatMessageList> {
             // Scoped BlocBuilder: only this widget rebuilds on streaming deltas.
             // Skip rebuilds when this tab isn't visible — the cubit still
             // accumulates deltas but we don't repaint the bubble until the
-            // user comes back.
+            // user comes back. Read freshest state via context.read so the
+            // bubble shows the latest text on tab activation (BlocBuilder's
+            // own _state is stale after buildWhen-suppressed updates).
             return BlocBuilder<StreamingStateCubit, StreamingState>(
               buildWhen: (prev, curr) => isActive,
-              builder: (context, streamingState) {
+              builder: (context, _) {
+                final streamingState =
+                    context.read<StreamingStateCubit>().state;
                 if (!streamingState.isStreaming) {
                   return const SizedBox.shrink();
                 }
