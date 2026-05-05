@@ -42,7 +42,16 @@ export function isPathWithinAllowedDirectory(
   const resolvedTarget = resolvePlatformPath(targetPath, platform);
   const resolvedAllowedDir = resolvePlatformPath(allowedDir, platform);
 
-  if (resolvedTarget === resolvedAllowedDir) return true;
+  // Windows is case-insensitive at the filesystem level. The app may send
+  // a path with a lower-case drive letter ("c:\Users\...") while the
+  // BRIDGE_ALLOWED_DIRS env var was written with an upper-case one
+  // ("C:\Users\..."), and `win32.relative` returns "" in that case which
+  // the previous early-return treated as "different paths".
+  const sameAsAllowed =
+    platform === "win32"
+      ? resolvedTarget.toLowerCase() === resolvedAllowedDir.toLowerCase()
+      : resolvedTarget === resolvedAllowedDir;
+  if (sameAsAllowed) return true;
 
   const relativePath = pathApi.relative(resolvedAllowedDir, resolvedTarget);
   return (
