@@ -133,13 +133,23 @@ func main() {
 		sessionID = newSessionID()
 	}
 
-	// Resolve project path. If --add-dir was given, pass it to the Bridge
-	// VERBATIM — the value might be a path on a different OS (e.g. Bridge
-	// running on Windows with `c:\Users\...` paths) and feeding it through
-	// `filepath.Abs` on macOS would mangle it. Only run Abs when we have to
-	// fall back to the local cwd.
+	// Resolve project path. Override order:
+	//
+	//   1. CCPOCKET_PROJECT_PATH_OVERRIDE env var — wins unconditionally.
+	//      Use this when the Bridge runs on a different host (typically a
+	//      different OS) and the local workspace path won't match anything
+	//      the Bridge's BRIDGE_ALLOWED_DIRS permits. The override is passed
+	//      to Bridge verbatim, so set it to a path that exists on the
+	//      Bridge's filesystem (e.g. `C:\Users\rikut\Desktop\claude-personal`
+	//      when the Bridge is on a Windows machine).
+	//   2. First `--add-dir` flag — VERBATIM (no Abs normalization, since the
+	//      value may be a cross-OS path).
+	//   3. Local cwd — fall-through, run through Abs for sanity.
 	projectPath := ""
-	if len(args.AddDirs) > 0 {
+	if override := os.Getenv("CCPOCKET_PROJECT_PATH_OVERRIDE"); override != "" {
+		projectPath = override
+		log.Infof("project path overridden via CCPOCKET_PROJECT_PATH_OVERRIDE: %s", override)
+	} else if len(args.AddDirs) > 0 {
 		projectPath = args.AddDirs[0]
 	} else {
 		cwd, err := os.Getwd()
