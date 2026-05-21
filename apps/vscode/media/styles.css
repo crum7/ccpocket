@@ -825,11 +825,14 @@ body {
 .composer-icon-btn:hover {
   background: var(--vscode-button-secondaryHoverBackground, rgba(127, 127, 127, 0.15));
 }
-.composer-icon-btn .iconglyph { line-height: 1; }
+.composer-icon-btn .iconglyph { line-height: 1; display: inline-flex; align-items: center; }
 .composer-icon-btn .iconglyph.mic {
   color: var(--vscode-foreground);
-  opacity: 0.7;
+  opacity: 0.75;
   font-size: 12px;
+}
+.composer-icon-btn .iconglyph.mic svg {
+  display: block;
 }
 .composer-icon-btn.is-recording {
   background: rgba(241, 76, 76, 0.18);
@@ -990,18 +993,86 @@ body {
   word-break: break-word;
 }
 
+/* ---------- Sidebar backdrop (narrow-width drawer) ---------- */
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 90;
+}
+
+/* ---------- Narrow-width topbar toggle (declared first so the
+   media-query override at narrow widths wins). ---------- */
+.topbar-sidebar-toggle {
+  display: none;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1;
+  flex: 0 0 auto;
+  margin-right: 2px;
+}
+.topbar-sidebar-toggle:hover {
+  background: var(--vscode-button-secondaryHoverBackground, rgba(127, 127, 127, 0.15));
+}
+
 /* ---------- Narrow widths ---------- */
 @media (max-width: 640px) {
+  /* Single-column layout — chat takes the full viewport, drawer overlays. */
   .app {
     grid-template-columns: 1fr;
   }
-  .app:not(.sidebar-collapsed) .sidebar {
-    border-right: none;
-    border-bottom: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.18));
-    max-height: 200px;
-  }
   .app.sidebar-collapsed {
-    grid-template-columns: 38px 1fr;
+    grid-template-columns: 1fr;
   }
+
+  /* Sidebar becomes an off-canvas drawer. */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 85vw;
+    z-index: 100;
+    border-right: 1px solid var(--vscode-panel-border, rgba(127, 127, 127, 0.18));
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+    transform: translateX(-100%);
+    transition: transform 180ms ease;
+  }
+  .app.sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+  .app.sidebar-open .sidebar-backdrop {
+    display: block;
+  }
+  /* In narrow mode the collapsed state means "drawer closed" — chat is
+     full width; keep the sidebar contents visible so the drawer renders
+     correctly when reopened. */
+  .app.sidebar-collapsed .sidebar-title,
+  .app.sidebar-collapsed .sidebar-new-btn,
+  .app.sidebar-collapsed .sidebar-scroll {
+    display: revert;
+  }
+  .app.sidebar-collapsed .sidebar-head {
+    justify-content: flex-start;
+    padding: 8px 10px;
+  }
+
+  /* Re-enable the toggle in the topbar area on narrow widths via a
+     dedicated mini-toggle button rendered next to the status dot. */
+  .topbar-sidebar-toggle {
+    display: inline-flex;
+  }
+
   .bridge-url { display: none; }
 }

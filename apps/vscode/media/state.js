@@ -114,6 +114,7 @@ export const state = {
   /** @type {Map<string, string>} */ messageText: new Map(),
   /** @type {SessionStatus | null} */ status: null,
   /** @type {ConnectionState | null} */ connection: null,
+  /** @type {Set<string>} */ activeBannerMessages: new Set(),
   /** @type {Persisted} */ persisted: loadPersisted(),
 };
 

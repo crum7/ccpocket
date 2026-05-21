@@ -13,13 +13,29 @@ const els = {
   app: /** @type {HTMLDivElement} */ ($('app')),
   sidebar: /** @type {HTMLElement} */ ($('sidebar')),
   toggleBtn: /** @type {HTMLButtonElement} */ ($('sidebar-toggle')),
+  topbarToggleBtn: /** @type {HTMLButtonElement | null} */ (document.getElementById('topbar-sidebar-toggle')),
+  backdrop: /** @type {HTMLDivElement | null} */ (document.getElementById('sidebar-backdrop')),
   newBtn: /** @type {HTMLButtonElement} */ ($('new-session-btn')),
   activeCard: /** @type {HTMLDivElement} */ ($('active-card')),
   recentList: /** @type {HTMLUListElement} */ ($('recent-list')),
   projectsList: /** @type {HTMLUListElement} */ ($('projects-list')),
 };
 
-// ---------- Collapsed-rail state ------------------------------------------
+// ---------- Collapsed-rail / drawer state ---------------------------------
+//
+// Wide widths (>640px): "sidebar-collapsed" toggles between the full 240px
+// rail and a 38px icon-only rail. "sidebar-open" is meaningless.
+//
+// Narrow widths (<=640px): the sidebar is an off-canvas drawer. "sidebar-
+// collapsed" is implicit (chat is full width by default); "sidebar-open"
+// slides the drawer over the chat with a backdrop. The same toggle button
+// drives both modes — we look at viewport width on click to decide.
+
+const NARROW_BREAKPOINT = 640;
+
+function isNarrow() {
+  return window.matchMedia(`(max-width: ${NARROW_BREAKPOINT}px)`).matches;
+}
 
 function applyCollapsed() {
   const collapsed = state.persisted.sidebarCollapsed;
@@ -27,10 +43,42 @@ function applyCollapsed() {
   els.toggleBtn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
 }
 
-els.toggleBtn.addEventListener('click', () => {
+function setDrawerOpen(open) {
+  els.app.classList.toggle('sidebar-open', open);
+  els.toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (els.topbarToggleBtn) {
+    els.topbarToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+}
+
+function toggleSidebar() {
+  if (isNarrow()) {
+    setDrawerOpen(!els.app.classList.contains('sidebar-open'));
+    return;
+  }
   state.persisted.sidebarCollapsed = !state.persisted.sidebarCollapsed;
   persist();
   applyCollapsed();
+}
+
+els.toggleBtn.addEventListener('click', toggleSidebar);
+if (els.topbarToggleBtn) {
+  els.topbarToggleBtn.addEventListener('click', toggleSidebar);
+}
+if (els.backdrop) {
+  els.backdrop.addEventListener('click', () => setDrawerOpen(false));
+}
+// Close the drawer with Esc, and close it automatically when crossing the
+// narrow breakpoint upward (so the wide layout doesn't get stuck open).
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && els.app.classList.contains('sidebar-open')) {
+    setDrawerOpen(false);
+  }
+});
+window.addEventListener('resize', () => {
+  if (!isNarrow() && els.app.classList.contains('sidebar-open')) {
+    setDrawerOpen(false);
+  }
 });
 
 // ---------- New session ----------------------------------------------------
@@ -82,16 +130,8 @@ export function renderActiveCard() {
     sid.className = 'active-sid';
     sid.textContent = `#${state.activeSessionId.slice(0, 12)}`;
     card.appendChild(sid);
-
-    const actions = document.createElement('div');
-    actions.className = 'active-actions';
-    const stop = document.createElement('button');
-    stop.type = 'button';
-    stop.className = 'icon-btn';
-    stop.textContent = 'Stop';
-    stop.addEventListener('click', () => send({ type: 'stop-session' }));
-    actions.appendChild(stop);
-    card.appendChild(actions);
+    // Stop action lives in the topbar — keep this card visual-only so we
+    // don't duplicate controls.
   }
 }
 

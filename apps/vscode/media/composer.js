@@ -30,7 +30,7 @@ const MODES = [
   { mode: 'default', label: 'Ask before edits', sub: 'Confirm each tool call' },
   { mode: 'acceptEdits', label: 'Edit automatically', sub: 'Apply file edits without asking' },
   { mode: 'plan', label: 'Plan mode', sub: 'Plan before any changes' },
-  { mode: 'bypassPermissions', label: 'Auto (bypass)', sub: 'Skip all permission prompts' },
+  { mode: 'bypassPermissions', label: 'Auto mode', sub: 'Bypass all permission prompts' },
 ];
 
 // ---------- Mode chip ------------------------------------------------------

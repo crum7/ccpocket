@@ -320,6 +320,8 @@ export function appendResultFooter(info) {
 
 /** @param {string} message */
 export function pushBanner(message) {
+  // Dedup: if the same message is already on screen, don't stack it again.
+  if (state.activeBannerMessages.has(message)) return;
   const banner = document.createElement('div');
   banner.className = 'banner banner-error';
   const text = document.createElement('span');
@@ -330,14 +332,24 @@ export function pushBanner(message) {
   close.className = 'banner-close';
   close.setAttribute('aria-label', 'Dismiss');
   close.textContent = '×';
-  close.addEventListener('click', () => banner.remove());
+  close.addEventListener('click', () => {
+    banner.remove();
+    state.activeBannerMessages.delete(message);
+  });
   banner.appendChild(text);
   banner.appendChild(close);
   els.banners.appendChild(banner);
+  state.activeBannerMessages.add(message);
+}
+
+/** Whether a banner is currently surfacing the given message text. */
+export function isBannerActive(message) {
+  return state.activeBannerMessages.has(message);
 }
 
 export function clearBanners() {
   while (els.banners.firstChild) els.banners.removeChild(els.banners.firstChild);
+  state.activeBannerMessages.clear();
 }
 
 // ---------- Connection + topbar -------------------------------------------

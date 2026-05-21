@@ -31,10 +31,14 @@
         </div>
       </aside>
 
+      <!-- Backdrop for the narrow-width drawer (click-to-close). -->
+      <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
       <!-- Main column. -->
       <main class="main-col">
         <!-- Compact top bar: connection + bridge URL. -->
         <header class="topbar">
+          <button id="topbar-sidebar-toggle" class="topbar-sidebar-toggle" type="button" title="Show sessions" aria-label="Show sessions">≡</button>
           <span id="status-dot" class="status-dot status-idle" aria-hidden="true"></span>
           <span id="status-label" class="status-label">Idle</span>
           <span id="bridge-url" class="bridge-url" title=""></span>
@@ -68,7 +72,7 @@
           <div class="composer-row">
             <div class="composer-row-left">
               <button id="plus-btn" class="composer-icon-btn" type="button" title="Attach" aria-label="Attach"><span class="iconglyph">+</span></button>
-              <button id="mic-btn" class="composer-icon-btn" type="button" title="Voice input" aria-label="Voice input"><span class="iconglyph mic">●</span></button>
+              <button id="mic-btn" class="composer-icon-btn" type="button" title="Voice input" aria-label="Voice input"><span class="iconglyph mic" aria-hidden="true"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="4" height="7.5" rx="2"/><path d="M4 8.25a4 4 0 0 0 8 0"/><path d="M8 12.25v2"/><path d="M6 14.25h4"/></svg></span></button>
             </div>
             <div class="composer-row-right">
               <button id="mode-btn" class="mode-chip" type="button" aria-haspopup="true" aria-expanded="false">
@@ -123,8 +127,8 @@
             <button class="popover-item" data-mode="bypassPermissions" type="button" role="menuitemradio">
               <span class="popover-check" aria-hidden="true">✓</span>
               <span class="popover-body">
-                <span class="popover-title">Auto (bypass)</span>
-                <span class="popover-sub">Skip all permission prompts</span>
+                <span class="popover-title">Auto mode</span>
+                <span class="popover-sub">Bypass all permission prompts</span>
               </span>
             </button>
           </div>

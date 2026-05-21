@@ -25,6 +25,7 @@ import {
   resolveApproval,
   appendResultFooter,
   pushBanner,
+  isBannerActive,
   setConnection,
   setBridgeUrl,
   setActiveMini,
@@ -90,12 +91,27 @@ function handleMessage(event) {
     case 'file-attached':
       addAttachment(msg.attachment);
       break;
-    case 'error':
-      pushBanner(msg.message);
-      // Also fire a transient toast so it's seen even when the banner stack
-      // is scrolled off; the banner stays for explicit dismissal.
-      showToast(msg.message);
+    case 'error': {
+      // Errors arrive via two surfaces:
+      //   * banner — persistent, stacks until dismissed (good for connection
+      //     errors and other state-bound issues)
+      //   * toast  — transient, one-shot (good for ephemeral failures like
+      //     picker cancellation, attachment rejected, etc.)
+      // We previously fired both unconditionally, which double-rendered the
+      // same text. Now: connection-state errors are banner-only, and other
+      // errors fall back to a toast only if no banner is already showing the
+      // exact same message.
+      const text = msg.message || '';
+      const isConnectionError = /bridge|websocket|reconnect|disconnected|unreachable/i.test(text);
+      if (isConnectionError) {
+        pushBanner(text);
+      } else if (isBannerActive(text)) {
+        // Banner is already surfacing this — don't duplicate as a toast.
+      } else {
+        showToast(text);
+      }
       break;
+    }
     default:
       // Unknown — older webviews shouldn't break on new host messages.
       break;

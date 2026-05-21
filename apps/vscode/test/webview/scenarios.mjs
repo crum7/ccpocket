@@ -278,6 +278,104 @@ export const scenarios = [
 
   // ---------------------------------------------------------------------
   {
+    name: 'drawer-open-narrow',
+    description: 'Narrow viewport — click the sidebar toggle to open the off-canvas drawer over the chat.',
+    setup: async (page) => {
+      await page.setViewportSize({ width: 480, height: 800 });
+      await deliverAll(page, [
+        CONFIG_DEFAULT,
+        CONNECTED,
+        {
+          type: 'session-list',
+          sessions: [
+            {
+              sessionId: 's-active-001',
+              projectPath: '/Users/dev/myproj',
+              firstPrompt: 'Refactor the bridge client to share session state',
+              lastModified: '2026-05-21T11:30:00Z',
+            },
+          ],
+          recent: [
+            {
+              sessionId: 's-recent-001',
+              projectPath: '/Users/dev/another',
+              firstPrompt: 'Fix the iOS build script on Apple Silicon',
+              lastModified: '2026-05-20T18:00:00Z',
+            },
+            {
+              sessionId: 's-recent-002',
+              projectPath: '/Users/dev/myproj',
+              firstPrompt: 'Investigate why the websocket reconnects in a tight loop',
+              lastModified: '2026-05-20T09:42:00Z',
+            },
+          ],
+          projects: ['/Users/dev/myproj', '/Users/dev/another'],
+        },
+        {
+          type: 'session-active',
+          sessionId: 's-active-001',
+          projectPath: '/Users/dev/myproj',
+          status: 'idle',
+        },
+      ]);
+      // Click the topbar toggle to open the drawer over the chat.
+      const clicked = await clickFirst(page, [
+        '#topbar-sidebar-toggle',
+        '#sidebar-toggle',
+      ]);
+      if (!clicked) {
+        throw new Error('SKIP: no sidebar toggle button found on narrow width');
+      }
+    },
+  },
+
+  // ---------------------------------------------------------------------
+  {
+    name: 'chat-with-streaming-wide',
+    description: 'Wide viewport — same chat-with-streaming events. Confirms the layout / Stop button are correct without the narrow drawer logic.',
+    setup: async (page) => {
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await deliverAll(page, [
+        CONFIG_DEFAULT,
+        CONNECTED,
+        {
+          type: 'session-active',
+          sessionId: 'sess-1234abcd',
+          projectPath: '/Users/dev/myproj',
+          status: 'running',
+        },
+        {
+          type: 'chat-append',
+          message: {
+            id: 'u1',
+            role: 'user',
+            text: 'How does `apps/vscode/src/messages.ts:1` define ExtensionToWebview?',
+          },
+        },
+        {
+          type: 'chat-append',
+          message: { id: 'a1', role: 'assistant', text: '' },
+        },
+        { type: 'stream-delta', messageId: 'a1', delta: 'It defines ' },
+        { type: 'stream-delta', messageId: 'a1', delta: 'a discriminated union with ' },
+        { type: 'stream-delta', messageId: 'a1', delta: '`type` as the tag.\n\n' },
+        {
+          type: 'stream-delta',
+          messageId: 'a1',
+          delta: '```ts\nexport type ExtensionToWebview = { type: "config"; ... };\n```\n',
+        },
+        {
+          type: 'result',
+          sessionId: 'sess-1234abcd',
+          cost: 0.0123,
+          duration: 2400,
+        },
+      ]);
+    },
+  },
+
+  // ---------------------------------------------------------------------
+  {
     name: 'long-history',
     description: 'Many messages — used to eyeball list scrolling and density.',
     setup: async (page) => {
