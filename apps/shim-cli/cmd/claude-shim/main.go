@@ -442,14 +442,24 @@ func main() {
 
 // state is shared between the stdin and bridge goroutines.
 type state struct {
+	// sessionID is what we put in every envelope's `session_id` field.
+	// It MUST stay stable for the lifetime of this shim spawn — the
+	// extension's webview clears the chat transcript when it sees the
+	// session_id change between envelopes, so flipping it mid-stream
+	// causes the visible chat to reset and (in multi-chat scenarios)
+	// makes one tab's response appear to bleed into another's empty
+	// bubble. We bind it once to externalSessionID and never overwrite.
 	sessionID string
 	// externalSessionID is the id we advertise in `system/init` — the
 	// extension stores it and passes it back via `--resume` on every
-	// subsequent spawn for the same chat. We use it as the key in `store`
-	// to look up the real Bridge sessionId. Stays stable across the run
-	// even after `sessionID` is overwritten by the Bridge's session_created.
+	// subsequent spawn for the same chat. Used as the key in `store`
+	// to look up the real Bridge claude session UUID.
 	externalSessionID string
-	store             *sessionstore.Store
+	// bridgeSessionID is the Bridge's *internal* session record id (the
+	// short hash like `0183acbb`) — what we pass to `bridge.Input` and
+	// other Bridge requests. NEVER surfaces in stdout envelopes.
+	bridgeSessionID string
+	store           *sessionstore.Store
 	projectPath       string
 	permissionMode    string
 	continueMode      bool
@@ -615,15 +625,14 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 		return fmt.Errorf("decode user message: %w", err)
 	}
 
-	// NOTE: system/init is intentionally NOT emitted here. We defer it to
-	// dispatchBridge's session_created handler so the SessionID field
-	// carries the Bridge's canonical session id (e.g. "6cb12528"), NOT a
-	// shim-generated UUID. The extension stores whatever id we emit and
-	// passes it back via --resume on the next spawn; if we emit a UUID,
-	// the Bridge has no record of it and resume requires a translation
-	// table. Emitting the Bridge id makes --resume a direct identity
-	// mapping — no store lookup needed for new chats, and multiple chat
-	// tabs cleanly resolve to distinct Bridge sessions.
+	// Emit system/init lazily on first user input with the STABLE
+	// externalSessionID — NOT the Bridge's internal session id. The
+	// extension's webview clears the chat transcript whenever the
+	// session_id changes between envelopes, so we must keep this value
+	// constant for the lifetime of the spawn. Bridge's internal id is
+	// tracked separately in `bridgeSessionID` for routing Input/Approve
+	// requests.
+	s.emitSystemInit()
 
 	// Walk content blocks: collect text, forward tool_result responses.
 	var textParts []string
@@ -730,7 +739,7 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	}
 	s.startedMu.Unlock()
 
-	return s.client.Input(s.sessionID, combined)
+	return s.client.Input(s.bridgeSessionID, combined)
 }
 
 // runBridgeLoop reads Bridge messages and translates them into SDK envelopes
@@ -766,8 +775,8 @@ func (s *state) flushPendingFirstInput() {
 	if pending == "" {
 		return
 	}
-	s.log.Infof("bridge: flushing buffered first input to session %s (%d chars)", s.sessionID, len(pending))
-	if err := s.client.Input(s.sessionID, pending); err != nil {
+	s.log.Infof("bridge: flushing buffered first input to bridge session %s (%d chars)", s.bridgeSessionID, len(pending))
+	if err := s.client.Input(s.bridgeSessionID, pending); err != nil {
 		s.log.Errorf("bridge input (first turn): %v", err)
 	}
 }
@@ -899,29 +908,35 @@ func (s *state) emitSystemInit() {
 func (s *state) dispatchBridge(m *bridge.Message) error {
 	switch m.Type {
 	case "system":
-		// session_created updates the session id we report and triggers the
-		// (deferred) system/init emission with the Bridge's canonical id.
+		// session_created carries the Bridge's internal session id. We
+		// track it in bridgeSessionID for downstream bridge.Input/Approve
+		// calls but DO NOT touch s.sessionID — that field stays bound to
+		// externalSessionID for the lifetime of the spawn so the
+		// extension's webview doesn't reset the chat transcript.
 		subtype := m.StringField("subtype")
 		if subtype == "session_created" {
-			if sid := m.StringField("sessionId"); sid != "" && sid != s.sessionID {
-				s.log.Infof("bridge: session id %s -> %s", s.sessionID, sid)
-				s.sessionID = sid
+			if sid := m.StringField("sessionId"); sid != "" && sid != s.bridgeSessionID {
+				s.log.Infof("bridge: bridge session id -> %s (external=%s)", sid, s.externalSessionID)
+				s.bridgeSessionID = sid
 			}
-			s.emitSystemInit()
-			// Don't persist a mapping here — claudeSessionId isn't known
-			// yet. indexSessionList(), driven by inbound session_list
-			// events, will populate the (bridge_id -> claudeSessionId)
-			// store as soon as Bridge captures the UUID.
 			s.flushPendingFirstInput()
+			// Ask the bridge to re-broadcast session_list. The connect-time
+			// session_list pre-dated our session; this nudges the bridge to
+			// push an updated one once claudeSessionId is populated, which
+			// we need for the (externalSessionID -> claudeSessionId) store
+			// mapping that future resumes depend on.
+			_ = s.client.ListSessions()
 		}
 		return nil
 
-	case "session_created":
-		if sid := m.StringField("sessionId"); sid != "" {
-			s.sessionID = sid
-		}
-		s.emitSystemInit()
-		s.flushPendingFirstInput()
+	case "session_list":
+		// Bridge pushes session_list whenever a session changes. Each entry
+		// includes its bridge id AND the underlying claude session UUID once
+		// the claude SDK has emitted it. Cache the mapping so a future
+		// spawn can resume the exact session by passing claudeSessionId as
+		// start.sessionId (which bridge forwards to claude as --resume).
+		s.indexSessionList(m)
+		s.sessionListSeenOnce.Do(func() { close(s.sessionListSeen) })
 		return nil
 
 	case "assistant":
@@ -962,7 +977,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		if toolUseID == "" {
 			return nil
 		}
-		return s.client.Approve(s.sessionID, toolUseID)
+		return s.client.Approve(s.bridgeSessionID, toolUseID)
 
 	case "status":
 		s.log.Debugf("bridge status=%s", m.StringField("status"))
@@ -1032,25 +1047,24 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			UUID:             newEventUUID(),
 		})
 
-	case "session_list":
-		// Bridge pushes session_list whenever a session changes. Each entry
-		// includes its bridge id AND the underlying claude session UUID once
-		// the claude SDK has emitted it. Cache the mapping so a future
-		// spawn can resume the exact session by passing claudeSessionId as
-		// start.sessionId (which bridge forwards to claude as --resume).
-		s.indexSessionList(m)
-		s.sessionListSeenOnce.Do(func() { close(s.sessionListSeen) })
-		return nil
-
 	default:
 		s.log.Debugf("bridge: unhandled message type %q", m.Type)
 		return nil
 	}
 }
 
-// indexSessionList walks the Bridge's session_list and persists
-// (bridge_id → claudeSessionId) pairs to the sessionstore so a later
-// --resume can be translated to a real claude UUID.
+// indexSessionList walks the Bridge's session_list. Two things happen:
+//
+//   1. For every session entry that has a populated `claudeSessionId`, we
+//      record (bridge_id → claudeSessionId) so legacy chats whose extension
+//      resume id IS a Bridge id can still resolve to a real claude UUID.
+//
+//   2. When we encounter the entry for OUR OWN current spawn (matching by
+//      bridge_id), we ALSO save (externalSessionID → claudeSessionId). That
+//      is the mapping the next spawn for this chat will look up: the
+//      extension will pass back our system/init's session_id (=
+//      externalSessionID), and we need to translate it to claudeSessionId
+//      for the next start.sessionId.
 func (s *state) indexSessionList(m *bridge.Message) {
 	if s.store == nil {
 		return
@@ -1074,6 +1088,16 @@ func (s *state) indexSessionList(m *bridge.Message) {
 		}
 		if err := s.store.Put(sess.ID, sess.ClaudeSessionID, sess.ProjectPath); err != nil {
 			s.log.Debugf("sessionstore.Put(%s -> %s) failed: %v", sess.ID, sess.ClaudeSessionID, err)
+		}
+		// Pair the resolved claudeSessionId with OUR externalSessionID so
+		// the next spawn (which arrives with --resume <externalSessionID>)
+		// can translate it.
+		if sess.ID == s.bridgeSessionID && s.externalSessionID != "" && s.externalSessionID != sess.ID {
+			if err := s.store.Put(s.externalSessionID, sess.ClaudeSessionID, sess.ProjectPath); err != nil {
+				s.log.Debugf("sessionstore.Put(%s -> %s) failed: %v", s.externalSessionID, sess.ClaudeSessionID, err)
+			} else {
+				s.log.Debugf("sessionstore: %s -> %s (ours, external)", s.externalSessionID, sess.ClaudeSessionID)
+			}
 		}
 	}
 }

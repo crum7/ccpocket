@@ -123,6 +123,14 @@ func (c *Client) Interrupt(sessionID string) error {
 	return c.send(msg)
 }
 
+// ListSessions asks the Bridge to push an up-to-date session_list. The shim
+// needs this to learn the claudeSessionId that gets paired with a Bridge
+// session id only after Claude emits its first system event — the
+// connection-time session_list is stale for sessions just created.
+func (c *Client) ListSessions() error {
+	return c.send(map[string]any{"type": "list_sessions"})
+}
+
 // StopSession asks the Bridge to terminate the session.
 func (c *Client) StopSession(sessionID string) error {
 	msg := map[string]any{
