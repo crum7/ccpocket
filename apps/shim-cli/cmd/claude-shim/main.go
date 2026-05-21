@@ -318,7 +318,7 @@ func main() {
 				TotalCostUSD:     0,
 				DurationMS:       time.Since(st.startTime).Milliseconds(),
 				IsError:          false,
-				Usage:            map[string]any{},
+				Usage:            defaultUsage(),
 				ModelUsage:       map[string]any{},
 				PermissionDenies: []any{},
 			})
@@ -539,10 +539,18 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	s.startedMu.Lock()
 	if !s.started {
 		s.pendingFirstInput = combined
+		// IMPORTANT: do NOT pass the extension's --resume value as the
+		// Bridge sessionId. The extension's resume id lives in its own
+		// session-store namespace; the Bridge has no record of it and
+		// responds with "No conversation found with session ID: …". When
+		// the extension asks to resume, we instead set Continue=true so
+		// the Bridge picks the most recent session for the same project.
+		// (TODO phase 2: map extension session ids -> bridge session ids
+		// via a persistent index so true resume works.)
+		continueMode := s.continueMode || s.resumeID != ""
 		opts := bridge.StartOpts{
 			ProjectPath:    s.projectPath,
-			SessionID:      s.resumeID,
-			Continue:       s.continueMode,
+			Continue:       continueMode,
 			PermissionMode: s.permissionMode,
 			Model:          s.model,
 		}
@@ -651,6 +659,32 @@ func (s *state) endStreamingTurn(stopReason string) error {
 	return nil
 }
 
+// defaultUsage returns the full nested usage shape the real claude binary
+// emits. The extension's renderer reaches into nested fields like
+// `usage.cache_creation.foo` and calls `.something()` on them — missing
+// fields blow up with "Cannot read properties of undefined". We populate
+// every key real claude does (all zeroed) so renderer code paths are safe.
+func defaultUsage() map[string]any {
+	return map[string]any{
+		"input_tokens":                0,
+		"output_tokens":               0,
+		"cache_creation_input_tokens": 0,
+		"cache_read_input_tokens":     0,
+		"server_tool_use": map[string]any{
+			"web_search_requests": 0,
+			"web_fetch_requests":  0,
+		},
+		"service_tier": nil,
+		"cache_creation": map[string]any{
+			"ephemeral_1h_input_tokens": 0,
+			"ephemeral_5m_input_tokens": 0,
+		},
+		"inference_geo": nil,
+		"iterations":    []any{},
+		"speed":         "standard",
+	}
+}
+
 // generateMessageID mints a random `msg_…` style id similar to what the
 // Anthropic API emits. We just need something unique per streaming turn.
 func generateMessageID() string {
@@ -747,7 +781,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			TotalCostUSD:     cost,
 			DurationMS:       dur,
 			IsError:          isError,
-			Usage:            map[string]any{},
+			Usage:            defaultUsage(),
 			ModelUsage:       map[string]any{},
 			PermissionDenies: []any{},
 		}
@@ -774,7 +808,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			SessionID:        s.sessionID,
 			IsError:          true,
 			Result:           errMsg,
-			Usage:            map[string]any{},
+			Usage:            defaultUsage(),
 			ModelUsage:       map[string]any{},
 			PermissionDenies: []any{},
 		})
@@ -875,7 +909,7 @@ func emitError(w *sdk.Writer, sessionID, msg string) {
 		SessionID:        sessionID,
 		IsError:          true,
 		Result:           msg,
-		Usage:            map[string]any{},
+		Usage:            defaultUsage(),
 		ModelUsage:       map[string]any{},
 		PermissionDenies: []any{},
 	})
