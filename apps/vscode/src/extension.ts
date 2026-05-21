@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { BridgeClient, type BridgeClientEvent } from './bridgeClient.js';
 import { buildHtml } from './buildHtml.js';
 import type {
+  AttachmentRef,
   BridgeMessage,
   BridgeRequest,
   BridgeSession,
@@ -227,6 +228,37 @@ function historyItemToChat(item: unknown, sessionId: string, index: number): Cha
   return { id, role, text };
 }
 
+// ---- Attachment / prompt helpers -----------------------------------------
+
+/**
+ * Fold attachments into the user's typed prompt as a small `<context>` block
+ * listing path references. File contents are intentionally NOT inlined — the
+ * bridge's Claude Code / Codex session has a Read tool and will read on demand.
+ *
+ * Falls back to the raw text untouched when there are no attachments.
+ */
+function buildPromptWithAttachments(text: string, attachments?: AttachmentRef[]): string {
+  if (!attachments || attachments.length === 0) return text;
+  const lines: string[] = ['<context>'];
+  for (const a of attachments) {
+    if (typeof a.path !== 'string' || a.path.length === 0) continue;
+    const hasRange =
+      typeof a.startLine === 'number' &&
+      typeof a.endLine === 'number' &&
+      a.startLine > 0 &&
+      a.endLine >= a.startLine;
+    if (hasRange) {
+      lines.push(`- ${a.path}:${a.startLine}-${a.endLine} (selection)`);
+    } else {
+      lines.push(`- ${a.path}`);
+    }
+  }
+  lines.push('</context>');
+  lines.push('');
+  lines.push(text);
+  return lines.join('\n');
+}
+
 // ---- Extension entry point -----------------------------------------------
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -353,7 +385,10 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       case 'user-input': {
-        // Optimistic local echo to the originating panel only.
+        const promptText = buildPromptWithAttachments(msg.text, msg.attachments);
+        // Optimistic local echo to the originating panel only. The webview owns
+        // its own chip state; we echo the raw user-typed text, not the folded
+        // <context> block.
         const echoId =
           (state.activeSessionId ?? state.id) + '-user-' + Date.now().toString(36);
         registry.postToState(state, {
@@ -363,17 +398,31 @@ export function activate(context: vscode.ExtensionContext): void {
 
         try {
           if (state.activeSessionId === null && state.activeProjectPath !== null) {
+            // No active session yet — fold any per-send permissionMode into the
+            // implicit `start` request.
             pendingStartQueue.push(state.id);
-            bridgeClient.send({
+            const startReq: Extract<BridgeRequest, { type: 'start' }> = {
               type: 'start',
               projectPath: state.activeProjectPath,
               continue: false,
-            });
-            bridgeClient.send({ type: 'input', text: msg.text });
+            };
+            if (msg.permissionMode !== undefined) {
+              startReq.permissionMode = msg.permissionMode;
+            }
+            bridgeClient.send(startReq);
+            bridgeClient.send({ type: 'input', text: promptText });
           } else if (state.activeSessionId !== null) {
+            if (msg.permissionMode !== undefined) {
+              // Bridge `input` doesn't accept a per-send mode today — log and
+              // keep the chip as a "default for next session" hint only.
+              log(
+                `[permission-mode] ignored per-send mode "${msg.permissionMode}" — ` +
+                  `session ${state.activeSessionId} already active`,
+              );
+            }
             bridgeClient.send({
               type: 'input',
-              text: msg.text,
+              text: promptText,
               sessionId: state.activeSessionId,
             });
           } else {
@@ -520,7 +569,153 @@ export function activate(context: vscode.ExtensionContext): void {
         bridgeClient.connect();
         break;
       }
+
+      case 'pick-workspace-file': {
+        void pickWorkspaceFile(state);
+        break;
+      }
+
+      case 'pick-open-editor': {
+        void pickOpenEditor(state);
+        break;
+      }
+
+      case 'pick-system-file': {
+        void pickSystemFile(state);
+        break;
+      }
+
+      case 'add-active-selection': {
+        addActiveSelection(state);
+        break;
+      }
+
+      case 'remove-attachment': {
+        // Webview owns the chip list; nothing to track server-side for now.
+        log(`[picker] remove-attachment ${msg.path}`);
+        break;
+      }
     }
+  }
+
+  // ---- File picker implementations ---------------------------------------
+
+  function postFileAttached(state: PanelState, attachment: AttachmentRef): void {
+    registry.postToState(state, { type: 'file-attached', attachment });
+  }
+
+  async function pickWorkspaceFile(state: PanelState): Promise<void> {
+    const folders = vscode.workspace.workspaceFolders ?? [];
+    if (folders.length === 0) {
+      registry.postToState(state, { type: 'error', message: 'No workspace folder is open.' });
+      return;
+    }
+    let uris: vscode.Uri[];
+    try {
+      uris = await vscode.workspace.findFiles('**/*', '**/node_modules/**', 500);
+    } catch (err) {
+      registry.postToState(state, {
+        type: 'error',
+        message: err instanceof Error ? err.message : String(err),
+      });
+      return;
+    }
+    if (uris.length === 0) {
+      registry.postToState(state, { type: 'error', message: 'No files found in workspace.' });
+      return;
+    }
+    const items: Array<vscode.QuickPickItem & { fsPath: string }> = uris.map((u) => ({
+      label: vscode.workspace.asRelativePath(u, false),
+      description: '',
+      detail: '',
+      fsPath: u.fsPath,
+    }));
+    const picked = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Select a workspace file to attach',
+      matchOnDescription: false,
+      matchOnDetail: false,
+    });
+    if (!picked) return;
+    log(`[picker] pick-workspace-file → ${picked.fsPath}`);
+    postFileAttached(state, { path: picked.fsPath });
+  }
+
+  async function pickOpenEditor(state: PanelState): Promise<void> {
+    const tabs = vscode.window.tabGroups.all.flatMap((g) => g.tabs);
+    const items: Array<vscode.QuickPickItem & { fsPath: string }> = [];
+    const seen = new Set<string>();
+    for (const tab of tabs) {
+      const input: unknown = tab.input;
+      if (
+        input &&
+        typeof input === 'object' &&
+        'uri' in input &&
+        (input as { uri?: unknown }).uri instanceof vscode.Uri
+      ) {
+        const uri = (input as { uri: vscode.Uri }).uri;
+        if (uri.scheme !== 'file') continue;
+        const fsPath = uri.fsPath;
+        if (seen.has(fsPath)) continue;
+        seen.add(fsPath);
+        items.push({
+          label: path.basename(fsPath),
+          description: vscode.workspace.asRelativePath(uri, false),
+          detail: '',
+          fsPath,
+        });
+      }
+    }
+    if (items.length === 0) {
+      registry.postToState(state, { type: 'error', message: 'No open editors with files.' });
+      return;
+    }
+    const picked = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Select an open editor to attach',
+      matchOnDescription: false,
+      matchOnDetail: false,
+    });
+    if (!picked) return;
+    log(`[picker] pick-open-editor → ${picked.fsPath}`);
+    postFileAttached(state, { path: picked.fsPath });
+  }
+
+  async function pickSystemFile(state: PanelState): Promise<void> {
+    const uris = await vscode.window.showOpenDialog({
+      canSelectMany: true,
+      canSelectFiles: true,
+      canSelectFolders: false,
+    });
+    if (!uris || uris.length === 0) return;
+    for (const uri of uris) {
+      log(`[picker] pick-system-file → ${uri.fsPath}`);
+      postFileAttached(state, { path: uri.fsPath });
+    }
+  }
+
+  function addActiveSelection(state: PanelState): void {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      registry.postToState(state, { type: 'error', message: 'No active editor.' });
+      return;
+    }
+    const fsPath = editor.document.uri.fsPath;
+    const sel = editor.selection;
+    if (sel && !sel.isEmpty) {
+      // VSCode positions are 0-based; the protocol uses 1-based line numbers.
+      // For a selection that ends at the very start of a line, treat the
+      // previous line as the last "real" line of the selection.
+      const startLine = sel.start.line + 1;
+      const rawEndLine = sel.end.line + 1;
+      const endLine =
+        sel.end.character === 0 && rawEndLine > startLine ? rawEndLine - 1 : rawEndLine;
+      const base = path.basename(fsPath);
+      const label = `${base}:${startLine}-${endLine}`;
+      log(`[picker] add-active-selection → ${fsPath}:${startLine}-${endLine}`);
+      postFileAttached(state, { path: fsPath, startLine, endLine, label });
+      return;
+    }
+    log(`[picker] add-active-selection → ${fsPath} (whole file)`);
+    postFileAttached(state, { path: fsPath });
   }
 
   // ---- Bridge message router (decides which panel(s) receive) -------------
