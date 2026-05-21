@@ -31,6 +31,7 @@ import (
 	"github.com/K9i-0/ccpocket/apps/shim-cli/internal/bridge"
 	"github.com/K9i-0/ccpocket/apps/shim-cli/internal/logger"
 	"github.com/K9i-0/ccpocket/apps/shim-cli/internal/sdk"
+	"github.com/K9i-0/ccpocket/apps/shim-cli/internal/sessionstore"
 	"github.com/K9i-0/ccpocket/apps/shim-cli/internal/wire"
 )
 
@@ -354,17 +355,26 @@ func main() {
 		cancel()
 	}()
 
+	// The extension stores whatever id we put into system/init and passes it
+	// back via --resume on subsequent spawns. We use it as the key for the
+	// ext-id → bridge-session-id store so each chat tab resolves to the
+	// right Bridge conversation even when multiple chats are open in parallel.
+	externalSessionID := sessionID
+	store := sessionstore.Open(sessionstore.DefaultPath())
+
 	st := &state{
-		sessionID:      sessionID,
-		projectPath:    projectPath,
-		permissionMode: permissionMode,
-		continueMode:   args.Continue,
-		resumeID:       args.Resume,
-		model:          args.Model,
-		client:         client,
-		log:            log,
-		stdout:         stdout,
-		startTime:      time.Now(),
+		sessionID:         sessionID,
+		externalSessionID: externalSessionID,
+		store:             store,
+		projectPath:       projectPath,
+		permissionMode:    permissionMode,
+		continueMode:      args.Continue,
+		resumeID:          args.Resume,
+		model:             args.Model,
+		client:            client,
+		log:               log,
+		stdout:            stdout,
+		startTime:         time.Now(),
 	}
 
 	// Three goroutines: stdin reader, bridge reader, signal/ctx watcher.
@@ -430,16 +440,23 @@ func main() {
 
 // state is shared between the stdin and bridge goroutines.
 type state struct {
-	sessionID      string
-	projectPath    string
-	permissionMode string
-	continueMode   bool
-	resumeID       string
-	model          string
-	client         *bridge.Client
-	log            *logger.Logger
-	stdout         *sdk.Writer
-	startTime      time.Time
+	sessionID string
+	// externalSessionID is the id we advertise in `system/init` — the
+	// extension stores it and passes it back via `--resume` on every
+	// subsequent spawn for the same chat. We use it as the key in `store`
+	// to look up the real Bridge sessionId. Stays stable across the run
+	// even after `sessionID` is overwritten by the Bridge's session_created.
+	externalSessionID string
+	store             *sessionstore.Store
+	projectPath       string
+	permissionMode    string
+	continueMode      bool
+	resumeID          string
+	model             string
+	client            *bridge.Client
+	log               *logger.Logger
+	stdout            *sdk.Writer
+	startTime         time.Time
 
 	startedMu sync.Mutex
 	started   bool
@@ -638,20 +655,34 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	s.startedMu.Lock()
 	if !s.started {
 		s.pendingFirstInput = combined
-		// IMPORTANT: do NOT pass the extension's --resume value as the
-		// Bridge sessionId. The extension's resume id lives in its own
-		// session-store namespace; the Bridge has no record of it and
-		// responds with "No conversation found with session ID: …". When
-		// the extension asks to resume, we instead set Continue=true so
-		// the Bridge picks the most recent session for the same project.
-		// (TODO phase 2: map extension session ids -> bridge session ids
-		// via a persistent index so true resume works.)
-		continueMode := s.continueMode || s.resumeID != ""
+		// Resolve the Bridge sessionId we want to resume.
+		//
+		// Priority:
+		//   1. sessionstore lookup of externalSessionID — the canonical
+		//      mapping. Each chat tab gets its own externalSessionID via
+		//      system/init, so this routes resumes precisely to the
+		//      matching Bridge session and prevents multi-chat crossover.
+		//   2. Continue=true fallback — only when we have *some* resume
+		//      intent (--continue or --resume) but no stored mapping.
+		//      Bridge will then pick the most recent session for the
+		//      projectPath; this is the legacy behavior that confuses
+		//      parallel chats but is acceptable on a brand-new install
+		//      that hasn't built up a mapping yet.
+		//   3. Otherwise: fresh session.
 		opts := bridge.StartOpts{
 			ProjectPath:    s.projectPath,
-			Continue:       continueMode,
 			PermissionMode: s.permissionMode,
 			Model:          s.model,
+		}
+		if s.store != nil && s.externalSessionID != "" {
+			if m, ok := s.store.Get(s.externalSessionID); ok && m.BridgeSessionID != "" {
+				opts.SessionID = m.BridgeSessionID
+				s.log.Infof("bridge: resuming session %s (mapped from ext id %s)", m.BridgeSessionID, s.externalSessionID)
+			}
+		}
+		if opts.SessionID == "" && (s.continueMode || s.resumeID != "") {
+			opts.Continue = true
+			s.log.Infof("bridge: no stored mapping for ext id %s — falling back to continue:true", s.externalSessionID)
 		}
 		if err := s.client.Start(opts); err != nil {
 			s.pendingFirstInput = ""
@@ -792,6 +823,22 @@ func generateMessageID() string {
 	return "msg_" + hex.EncodeToString(b[:])
 }
 
+// persistSessionMapping writes the externalSessionID → bridge sessionID
+// pair to the sessionstore. Called from the session_created handler so the
+// next spawn for this chat (which will arrive with --resume <externalSessionID>)
+// can resume the exact Bridge session instead of falling back to
+// continue:true and risking cross-chat contamination.
+func (s *state) persistSessionMapping() {
+	if s.store == nil || s.externalSessionID == "" || s.sessionID == "" {
+		return
+	}
+	if err := s.store.Put(s.externalSessionID, s.sessionID, s.projectPath); err != nil {
+		s.log.Warnf("sessionstore.Put failed: %v", err)
+		return
+	}
+	s.log.Debugf("sessionstore: %s -> %s (project=%s)", s.externalSessionID, s.sessionID, s.projectPath)
+}
+
 // dispatchBridge translates a single Bridge message into stdout envelopes.
 func (s *state) dispatchBridge(m *bridge.Message) error {
 	switch m.Type {
@@ -803,6 +850,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 				s.log.Infof("bridge: session id %s -> %s", s.sessionID, sid)
 				s.sessionID = sid
 			}
+			s.persistSessionMapping()
 			s.flushPendingFirstInput()
 		}
 		return nil
@@ -811,6 +859,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		if sid := m.StringField("sessionId"); sid != "" {
 			s.sessionID = sid
 		}
+		s.persistSessionMapping()
 		s.flushPendingFirstInput()
 		return nil
 
