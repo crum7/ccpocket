@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CC Pocket</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Toast banner for transient errors. Hidden until populated by main.js. -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <!-- Top header: connection state + session controls. -->
+    <header class="header">
+      <div class="status-row">
+        <span id="status-dot" class="status-dot status-idle" aria-hidden="true"></span>
+        <span id="status-label" class="status-label">Idle</span>
+        <button
+          id="reconnect-btn"
+          class="link-btn"
+          type="button"
+          hidden
+        >Reconnect</button>
+      </div>
+      <div class="session-row">
+        <label class="session-label" for="project-select">Project</label>
+        <select id="project-select" class="select" aria-label="Project"></select>
+        <button id="stop-btn" class="icon-btn" type="button" title="Stop session" hidden>
+          Stop
+        </button>
+      </div>
+      <div class="session-row session-row-secondary" id="session-picker-row" hidden>
+        <label class="session-label" for="session-select">Session</label>
+        <select id="session-select" class="select" aria-label="Session"></select>
+      </div>
+      <div class="meta-row" id="meta-row" hidden>
+        <span id="meta-project" class="meta-project" title=""></span>
+        <span id="meta-session" class="meta-session"></span>
+      </div>
+    </header>
+
+    <!-- Main message list (flex-grow, scrollable). -->
+    <main id="messages" class="messages" aria-live="polite" aria-label="Chat messages"></main>
+
+    <!-- Bottom composer. -->
+    <footer class="composer">
+      <textarea
+        id="input"
+        class="input"
+        rows="1"
+        placeholder="Type a message… (⌘↵ to send)"
+        aria-label="Message"
+      ></textarea>
+      <div class="composer-row">
+        <span id="hint" class="hint"></span>
+        <button id="send-btn" class="primary-btn" type="button">Send</button>
+      </div>
+    </footer>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
