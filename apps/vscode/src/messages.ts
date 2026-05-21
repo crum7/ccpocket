@@ -98,12 +98,31 @@ export type ExtensionToWebview =
   | { type: 'approval-request'; approval: PendingApproval }
   | { type: 'approval-resolved'; sessionId: string; id: string }
   | { type: 'result'; sessionId: string; cost?: number; duration?: number }
+  | { type: 'file-attached'; attachment: AttachmentRef }
   | { type: 'error'; message: string };
+
+/** A file (or file-range) attached to a user message. */
+export interface AttachmentRef {
+  /** Absolute filesystem path, or workspace-relative if the extension prefers. */
+  path: string;
+  /** Optional 1-based selection range when only a slice of the file is attached. */
+  startLine?: number;
+  endLine?: number;
+  /** Compact label for the chip; falls back to basename(path) when absent. */
+  label?: string;
+}
 
 /** Messages from webview → extension host. */
 export type WebviewToExtension =
   | { type: 'ready' }
-  | { type: 'user-input'; text: string }
+  | {
+      type: 'user-input';
+      text: string;
+      /** Optional override of the current default permission mode for this send. */
+      permissionMode?: PermissionMode;
+      /** Attachments to inline (as file references) into the prompt. */
+      attachments?: AttachmentRef[];
+    }
   | { type: 'start-session'; projectPath: string; permissionMode?: PermissionMode }
   | { type: 'switch-session'; sessionId: string }
   | { type: 'stop-session' }
@@ -111,7 +130,14 @@ export type WebviewToExtension =
   | { type: 'reject'; id: string; message?: string }
   | { type: 'answer'; toolUseId: string; result: string }
   | { type: 'open-file'; path: string; line?: number }
-  | { type: 'reconnect' };
+  | { type: 'reconnect' }
+  // + menu: each variant triggers a native VSCode picker; on selection the
+  // extension replies with `file-attached` (one per file).
+  | { type: 'pick-workspace-file' }
+  | { type: 'pick-open-editor' }
+  | { type: 'pick-system-file' }
+  | { type: 'add-active-selection' }
+  | { type: 'remove-attachment'; path: string };
 
 // Legacy types kept for back-compat with the Flutter-webview implementation —
 // safe to delete once the native UI is the only consumer.
