@@ -133,7 +133,11 @@ func main() {
 		sessionID = newSessionID()
 	}
 
-	// Resolve project path (first --add-dir, fallback to cwd).
+	// Resolve project path. If --add-dir was given, pass it to the Bridge
+	// VERBATIM — the value might be a path on a different OS (e.g. Bridge
+	// running on Windows with `c:\Users\...` paths) and feeding it through
+	// `filepath.Abs` on macOS would mangle it. Only run Abs when we have to
+	// fall back to the local cwd.
 	projectPath := ""
 	if len(args.AddDirs) > 0 {
 		projectPath = args.AddDirs[0]
@@ -143,10 +147,10 @@ func main() {
 			log.Errorf("cwd lookup failed: %v", err)
 			cwd = "."
 		}
+		if abs, err := filepath.Abs(cwd); err == nil {
+			cwd = abs
+		}
 		projectPath = cwd
-	}
-	if abs, err := filepath.Abs(projectPath); err == nil {
-		projectPath = abs
 	}
 
 	permissionMode := args.PermissionMode
@@ -271,6 +275,9 @@ type state struct {
 
 	startedMu sync.Mutex
 	started   bool
+	// pendingFirstInput holds the first user prompt while we wait for the
+	// Bridge's `session_created` reply (which carries the canonical sessionId).
+	pendingFirstInput string
 
 	initOnce sync.Once // gates the lazy system/init emission on first user input
 
@@ -444,9 +451,15 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 		return nil
 	}
 
-	// First user input triggers Bridge `start`.
+	// First user input triggers Bridge `start`. The Bridge replies with
+	// `session_created` carrying the canonical sessionId; only after that
+	// arrives can subsequent `input` messages be routed correctly. We buffer
+	// the very first prompt and let dispatchBridge flush it from the
+	// `session_created` handler. Subsequent prompts in the same session can
+	// be sent immediately since we already have a valid sessionId.
 	s.startedMu.Lock()
 	if !s.started {
+		s.pendingFirstInput = combined
 		opts := bridge.StartOpts{
 			ProjectPath:    s.projectPath,
 			SessionID:      s.resumeID,
@@ -455,11 +468,14 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 			Model:          s.model,
 		}
 		if err := s.client.Start(opts); err != nil {
+			s.pendingFirstInput = ""
 			s.startedMu.Unlock()
 			return fmt.Errorf("bridge start: %w", err)
 		}
 		s.started = true
-		s.log.Infof("bridge: started session for %s (mode=%s)", s.projectPath, s.permissionMode)
+		s.log.Infof("bridge: started session for %s (mode=%s) — buffering first input until session_created", s.projectPath, s.permissionMode)
+		s.startedMu.Unlock()
+		return nil
 	}
 	s.startedMu.Unlock()
 
@@ -488,6 +504,22 @@ func (s *state) runBridgeLoop(ctx context.Context) error {
 	}
 }
 
+// flushPendingFirstInput sends the buffered first prompt once the Bridge has
+// confirmed a session_created (which carries the canonical sessionId we must
+// now use). No-op when nothing is buffered.
+func (s *state) flushPendingFirstInput() {
+	s.startedMu.Lock()
+	pending := s.pendingFirstInput
+	s.pendingFirstInput = ""
+	s.startedMu.Unlock()
+	if pending == "" {
+		return
+	}
+	if err := s.client.Input(s.sessionID, pending); err != nil {
+		s.log.Errorf("bridge input (first turn): %v", err)
+	}
+}
+
 // dispatchBridge translates a single Bridge message into stdout envelopes.
 func (s *state) dispatchBridge(m *bridge.Message) error {
 	switch m.Type {
@@ -499,6 +531,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 				s.log.Infof("bridge: session id %s -> %s", s.sessionID, sid)
 				s.sessionID = sid
 			}
+			s.flushPendingFirstInput()
 		}
 		return nil
 
@@ -506,6 +539,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		if sid := m.StringField("sessionId"); sid != "" {
 			s.sessionID = sid
 		}
+		s.flushPendingFirstInput()
 		return nil
 
 	case "assistant":
