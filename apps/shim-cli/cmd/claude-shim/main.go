@@ -375,6 +375,7 @@ func main() {
 		log:               log,
 		stdout:            stdout,
 		startTime:         time.Now(),
+		sessionListSeen:   make(chan struct{}),
 	}
 
 	// Three goroutines: stdin reader, bridge reader, signal/ctx watcher.
@@ -465,6 +466,14 @@ type state struct {
 	pendingFirstInput string
 
 	initOnce sync.Once // gates the lazy system/init emission on first user input
+
+	// sessionListSeen is closed once we receive the first session_list from
+	// bridge. handleUserInput blocks briefly on this (with a timeout) before
+	// looking up --resume in the store — bridge pushes session_list
+	// automatically on connect with the full bridge_id -> claudeSessionId
+	// map we need to resolve resumes correctly.
+	sessionListSeen     chan struct{}
+	sessionListSeenOnce sync.Once
 
 	// Streaming-turn state. The extension's stream parser requires the full
 	// SSE sequence `message_start` → `content_block_start` → multiple
@@ -660,32 +669,40 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 		//   3. Otherwise: fresh session.
 		// Resolve the Bridge sessionId we want to resume.
 		//
-		// New design (post system/init-defer): the extension's --resume value
-		// IS the Bridge session id (we put it there via the deferred
-		// system/init). So we pass it through verbatim. The sessionstore is
-		// kept as a translation layer for legacy chats that have UUIDs
-		// stored (created before the system/init defer). If the bridge
-		// rejects the id we sent, the user sees a "session not found" error
-		// — preferable to silently picking the most recent session
-		// (continue:true) and cross-contaminating multiple chats.
+		// The extension's --resume value is the *bridge* session id (because
+		// we emit bridge_id in system/init). But Bridge.start.sessionId is
+		// forwarded directly to `claude --resume` and that requires the
+		// underlying *claude UUID*. We bridge the gap via the sessionstore,
+		// which we populate from inbound `session_list` events (every entry
+		// has both ids). Lookup table key = bridge_id, value = claudeSessionId.
+		//
+		// If no mapping is found, fall back to continue:true so Bridge picks
+		// the most-recent session for the project. That's imprecise for
+		// multi-chat but at least avoids the "not a UUID" error from claude.
 		opts := bridge.StartOpts{
 			ProjectPath:    s.projectPath,
 			PermissionMode: s.permissionMode,
 			Model:          s.model,
 		}
 		if s.resumeID != "" {
-			// Legacy translation: if a stored mapping exists (chat from
-			// before this code path was deployed), use the mapped bridge id.
+			// Race avoidance: bridge pushes session_list on connect with
+			// the bridge_id -> claudeSessionId mapping we need. The user
+			// envelope may arrive on stdin before that push lands. Block
+			// briefly to give it a chance.
+			select {
+			case <-s.sessionListSeen:
+			case <-time.After(1500 * time.Millisecond):
+				s.log.Debugf("bridge: session_list not seen within 1500ms — proceeding with possibly stale store")
+			}
 			if s.store != nil {
 				if m, ok := s.store.Get(s.resumeID); ok && m.BridgeSessionID != "" {
 					opts.SessionID = m.BridgeSessionID
-					s.log.Infof("bridge: resuming session %s (legacy ext-id mapping %s)", m.BridgeSessionID, s.resumeID)
+					s.log.Infof("bridge: resuming claude session %s (bridge id %s)", m.BridgeSessionID, s.resumeID)
 				}
 			}
-			// New direct path: --resume value IS the bridge id.
 			if opts.SessionID == "" {
-				opts.SessionID = s.resumeID
-				s.log.Infof("bridge: resuming session %s (direct from --resume)", s.resumeID)
+				opts.Continue = true
+				s.log.Infof("bridge: no claude UUID mapped for bridge id %s — falling back to continue:true", s.resumeID)
 			}
 		} else if s.continueMode {
 			opts.Continue = true
@@ -853,22 +870,6 @@ func (s *state) emitSystemInit() {
 	})
 }
 
-// persistSessionMapping writes the externalSessionID → bridge sessionID
-// pair to the sessionstore. Called from the session_created handler so the
-// next spawn for this chat (which will arrive with --resume <externalSessionID>)
-// can resume the exact Bridge session instead of falling back to
-// continue:true and risking cross-chat contamination.
-func (s *state) persistSessionMapping() {
-	if s.store == nil || s.externalSessionID == "" || s.sessionID == "" {
-		return
-	}
-	if err := s.store.Put(s.externalSessionID, s.sessionID, s.projectPath); err != nil {
-		s.log.Warnf("sessionstore.Put failed: %v", err)
-		return
-	}
-	s.log.Debugf("sessionstore: %s -> %s (project=%s)", s.externalSessionID, s.sessionID, s.projectPath)
-}
-
 // dispatchBridge translates a single Bridge message into stdout envelopes.
 func (s *state) dispatchBridge(m *bridge.Message) error {
 	switch m.Type {
@@ -882,7 +883,10 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 				s.sessionID = sid
 			}
 			s.emitSystemInit()
-			s.persistSessionMapping()
+			// Don't persist a mapping here — claudeSessionId isn't known
+			// yet. indexSessionList(), driven by inbound session_list
+			// events, will populate the (bridge_id -> claudeSessionId)
+			// store as soon as Bridge captures the UUID.
 			s.flushPendingFirstInput()
 		}
 		return nil
@@ -892,7 +896,6 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			s.sessionID = sid
 		}
 		s.emitSystemInit()
-		s.persistSessionMapping()
 		s.flushPendingFirstInput()
 		return nil
 
@@ -1002,9 +1005,49 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			PermissionDenies: []any{},
 		})
 
+	case "session_list":
+		// Bridge pushes session_list whenever a session changes. Each entry
+		// includes its bridge id AND the underlying claude session UUID once
+		// the claude SDK has emitted it. Cache the mapping so a future
+		// spawn can resume the exact session by passing claudeSessionId as
+		// start.sessionId (which bridge forwards to claude as --resume).
+		s.indexSessionList(m)
+		s.sessionListSeenOnce.Do(func() { close(s.sessionListSeen) })
+		return nil
+
 	default:
 		s.log.Debugf("bridge: unhandled message type %q", m.Type)
 		return nil
+	}
+}
+
+// indexSessionList walks the Bridge's session_list and persists
+// (bridge_id → claudeSessionId) pairs to the sessionstore so a later
+// --resume can be translated to a real claude UUID.
+func (s *state) indexSessionList(m *bridge.Message) {
+	if s.store == nil {
+		return
+	}
+	raw, ok := m.Decoded["sessions"]
+	if !ok {
+		return
+	}
+	var sessions []struct {
+		ID              string `json:"id"`
+		ClaudeSessionID string `json:"claudeSessionId"`
+		ProjectPath     string `json:"projectPath"`
+	}
+	if err := json.Unmarshal(raw, &sessions); err != nil {
+		s.log.Debugf("session_list: decode failed: %v", err)
+		return
+	}
+	for _, sess := range sessions {
+		if sess.ID == "" || sess.ClaudeSessionID == "" {
+			continue
+		}
+		if err := s.store.Put(sess.ID, sess.ClaudeSessionID, sess.ProjectPath); err != nil {
+			s.log.Debugf("sessionstore.Put(%s -> %s) failed: %v", sess.ID, sess.ClaudeSessionID, err)
+		}
 	}
 }
 

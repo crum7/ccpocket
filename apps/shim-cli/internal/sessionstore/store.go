@@ -29,7 +29,15 @@ import (
 	"time"
 )
 
-// Mapping captures a single ext-id -> bridge-id record.
+// Mapping captures a single bridge-id -> claude-session-id record.
+//
+// Field names are retained for on-disk compatibility:
+//   - `ExtID` stores the *bridge* session id (the value the extension passes
+//     back via --resume on the next spawn, because that's what we now emit
+//     in system/init.session_id).
+//   - `BridgeSessionID` stores the *claude* session UUID (the value the
+//     bridge forwards to the claude CLI as --resume). This is what bridge
+//     actually needs in `start.sessionId` for a real resume.
 type Mapping struct {
 	ExtID           string    `json:"ext_id"`
 	BridgeSessionID string    `json:"bridge_session_id"`
