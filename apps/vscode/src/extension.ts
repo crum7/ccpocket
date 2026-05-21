@@ -15,8 +15,7 @@ import type {
   WebviewToExtension,
 } from './messages.js';
 
-const SIDEBAR_VIEW_ID = 'ccpocket.placeholder';
-const VIEWS_CONTAINER_ID = 'ccpocket';
+const PANEL_VIEW_TYPE = 'ccpocket.panel';
 
 interface Settings {
   bridgeUrl: string;
@@ -39,54 +38,105 @@ function defaultProjectPath(): string | null {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
 }
 
-/**
- * Sidebar provider. Owns the webview lifecycle but NOT the BridgeClient — the
- * client is created once by `activate()` and persists across view dispose/
- * re-resolve cycles so that a sidebar collapse doesn't drop the connection.
- */
-class CCPocketViewProvider implements vscode.WebviewViewProvider {
-  /** The current live webview, if the view is visible. `undefined` when hidden. */
-  private view: vscode.WebviewView | undefined;
+// ---- Per-panel state ------------------------------------------------------
 
-  constructor(
-    private readonly extensionUri: vscode.Uri,
-    private readonly onWebviewMessage: (msg: WebviewToExtension) => void,
-  ) {}
-
-  resolveWebviewView(view: vscode.WebviewView): void {
-    this.view = view;
-    view.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')],
-    };
-    view.webview.html = buildHtml(view.webview, this.extensionUri);
-
-    view.webview.onDidReceiveMessage((raw: unknown) => {
-      if (!raw || typeof raw !== 'object' || !('type' in raw)) return;
-      this.onWebviewMessage(raw as WebviewToExtension);
-    });
-
-    view.onDidDispose(() => {
-      if (this.view === view) {
-        this.view = undefined;
-      }
-    });
-  }
-
-  /** True if the view is resolved and (probably) visible. */
-  isLive(): boolean {
-    return this.view !== undefined;
-  }
-
-  post(message: ExtensionToWebview): void {
-    void this.view?.webview.postMessage(message);
-  }
+interface PanelState {
+  id: string;
+  panel: vscode.WebviewPanel;
+  activeSessionId: string | null;
+  activeProjectPath: string | null;
+  activeStatus: SessionStatus;
+  pendingSwitches: Set<string>;
 }
 
 /**
- * Resolve a (possibly relative) path to an absolute filesystem path using the
- * workspace folders, preferring the folder containing the active editor.
+ * Registry of open chat panels. Each panel keeps its own active session, so
+ * multiple tabs can hold independent conversations against the same bridge.
  */
+class PanelRegistry {
+  private panels = new Map<string, PanelState>();
+  private nextId = 1;
+
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly onMessage: (panelId: string, msg: WebviewToExtension) => void,
+  ) {}
+
+  openNew(): PanelState {
+    const id = `p${this.nextId++}`;
+    const panel = vscode.window.createWebviewPanel(
+      PANEL_VIEW_TYPE,
+      'CC Pocket',
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'media')],
+      },
+    );
+    panel.webview.html = buildHtml(panel.webview, this.extensionUri);
+
+    const state: PanelState = {
+      id,
+      panel,
+      activeSessionId: null,
+      activeProjectPath: null,
+      activeStatus: 'idle',
+      pendingSwitches: new Set(),
+    };
+    this.panels.set(id, state);
+
+    panel.webview.onDidReceiveMessage((raw: unknown) => {
+      if (!raw || typeof raw !== 'object' || !('type' in raw)) return;
+      this.onMessage(id, raw as WebviewToExtension);
+    });
+
+    panel.onDidDispose(() => {
+      this.panels.delete(id);
+    });
+
+    return state;
+  }
+
+  get(panelId: string): PanelState | undefined {
+    return this.panels.get(panelId);
+  }
+
+  forEach(fn: (state: PanelState) => void): void {
+    this.panels.forEach(fn);
+  }
+
+  postTo(panelId: string, msg: ExtensionToWebview): void {
+    const state = this.panels.get(panelId);
+    if (state) void state.panel.webview.postMessage(msg);
+  }
+
+  postToState(state: PanelState, msg: ExtensionToWebview): void {
+    void state.panel.webview.postMessage(msg);
+  }
+
+  broadcast(msg: ExtensionToWebview): void {
+    this.panels.forEach((state) => {
+      void state.panel.webview.postMessage(msg);
+    });
+  }
+
+  /** Find panels currently watching the given sessionId. */
+  findBySession(sessionId: string): PanelState[] {
+    const out: PanelState[] = [];
+    this.panels.forEach((s) => {
+      if (s.activeSessionId === sessionId) out.push(s);
+    });
+    return out;
+  }
+
+  isEmpty(): boolean {
+    return this.panels.size === 0;
+  }
+}
+
+// ---- File link handling ---------------------------------------------------
+
 function resolveFilePath(rawPath: string): string | undefined {
   if (path.isAbsolute(rawPath)) return rawPath;
 
@@ -105,8 +155,6 @@ function resolveFilePath(rawPath: string): string | undefined {
     const candidate = path.join(folder.uri.fsPath, rawPath);
     if (fs.existsSync(candidate)) return candidate;
   }
-  // Best-effort fallback so the user gets a clear "not found" error instead
-  // of silent dismissal.
   return path.join(ordered[0].uri.fsPath, rawPath);
 }
 
@@ -120,7 +168,6 @@ async function openFileInEditor(p: { path: string; line?: number }): Promise<voi
   }
   try {
     const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(resolved));
-    // Webview passes 1-based lines; vscode.Position is 0-based.
     const line = typeof p.line === 'number' && p.line > 0 ? p.line - 1 : 0;
     const position = new vscode.Position(line, 0);
     await vscode.window.showTextDocument(doc, {
@@ -136,11 +183,8 @@ async function openFileInEditor(p: { path: string; line?: number }): Promise<voi
   }
 }
 
-/**
- * Convert a `BridgeSession.firstPrompt` (or arbitrary unknown) to a chat-
- * message text string. The bridge sometimes ships richer payloads we can't
- * fully render here; we fall back to `JSON.stringify` for those.
- */
+// ---- Bridge content helpers ----------------------------------------------
+
 function bridgeContentToText(value: unknown): string {
   if (typeof value === 'string') return value;
   if (value === null || value === undefined) return '';
@@ -168,10 +212,6 @@ function bridgeContentToText(value: unknown): string {
   }
 }
 
-/**
- * Map a `history` message item to a `ChatMessage`. We accept the bridge's
- * loose shape and do a best-effort projection.
- */
 function historyItemToChat(item: unknown, sessionId: string, index: number): ChatMessage | null {
   if (!item || typeof item !== 'object') return null;
   const m = item as { type?: unknown; role?: unknown; text?: unknown; content?: unknown; id?: unknown };
@@ -187,6 +227,8 @@ function historyItemToChat(item: unknown, sessionId: string, index: number): Cha
   return { id, role, text };
 }
 
+// ---- Extension entry point -----------------------------------------------
+
 export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('CC Pocket');
   context.subscriptions.push(output);
@@ -194,7 +236,7 @@ export function activate(context: vscode.ExtensionContext): void {
     output.appendLine(`[${new Date().toISOString()}] ${msg}`);
   };
 
-  // ---- Single BridgeClient instance, owned by activate() ------------------
+  // One BridgeClient serves all panels.
   const { bridgeUrl, bridgeToken } = readSettings();
   const bridgeClient = new BridgeClient({
     url: bridgeUrl,
@@ -203,48 +245,37 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   context.subscriptions.push(bridgeClient);
 
-  // ---- Active session state machine ---------------------------------------
-  let activeSessionId: string | null = null;
-  let activeProjectPath: string | null = null;
-  let activeStatus: SessionStatus = 'idle';
-
-  // ---- Coalesced session-list snapshot ------------------------------------
-  // The bridge emits three separate messages — `session_list`,
-  // `recent_sessions`, and `project_history` — and the webview wants them
-  // glued into a single `session-list` event. We hold the latest of each,
-  // then fire as soon as ALL THREE have been observed once. After that point
-  // every subsequent arrival triggers another aggregated emission so the UI
-  // stays current.
+  // Coalesced session-list snapshot — broadcast to all panels.
   let lastSessions: BridgeSession[] | undefined;
   let lastRecent: BridgeSession[] | undefined;
   let lastProjects: string[] | undefined;
   let lastSessionListEvent: Extract<ExtensionToWebview, { type: 'session-list' }> | null = null;
 
-  // ---- Connection state cache so we can re-send to a fresh webview --------
+  // Last connection state — broadcast to all panels and replayed to new ones.
   let lastConnectionState: ConnectionState = { state: 'idle' };
 
-  // ---- Pending get_history requests, keyed by sessionId -------------------
-  // When the webview asks to switch sessions we send `get_history` and want
-  // to convert the next matching `history` reply into `chat-replace` and
-  // then update activeSessionId.
-  const pendingSwitches = new Set<string>();
+  // FIFO queue of panels that have sent `start` and are awaiting `session_created`.
+  const pendingStartQueue: string[] = [];
 
-  // ---- Sidebar view --------------------------------------------------------
-  const provider = new CCPocketViewProvider(context.extensionUri, handleWebviewMessage);
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(SIDEBAR_VIEW_ID, provider, {
-      webviewOptions: { retainContextWhenHidden: true },
-    }),
-  );
+  const registry = new PanelRegistry(context.extensionUri, handleWebviewMessage);
 
-  // ---- Command: focus the sidebar -----------------------------------------
+  // ---- Command: open a NEW panel each time --------------------------------
   context.subscriptions.push(
     vscode.commands.registerCommand('ccpocket.open', () => {
-      void vscode.commands.executeCommand(
-        `workbench.view.extension.${VIEWS_CONTAINER_ID}`,
-      );
+      registry.openNew();
     }),
   );
+
+  // ---- Status bar shortcut ------------------------------------------------
+  const statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    100,
+  );
+  statusBarItem.text = '$(comment-discussion) CC Pocket';
+  statusBarItem.tooltip = 'Open a new CC Pocket panel';
+  statusBarItem.command = 'ccpocket.open';
+  statusBarItem.show();
+  context.subscriptions.push(statusBarItem);
 
   // ---- React to setting changes -------------------------------------------
   context.subscriptions.push(
@@ -255,9 +286,7 @@ export function activate(context: vscode.ExtensionContext): void {
         url: next.bridgeUrl,
         token: tokenOrNull(next.bridgeToken),
       });
-      // Push fresh config to the webview so it can update UI affordances
-      // (e.g. "configured token" indicator) without needing a reload.
-      provider.post({
+      registry.broadcast({
         type: 'config',
         bridgeUrl: next.bridgeUrl,
         hasToken: tokenOrNull(next.bridgeToken) !== null,
@@ -267,7 +296,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // ---- Bridge → webview translation ---------------------------------------
+  // ---- Bridge → webview routing -------------------------------------------
   context.subscriptions.push(
     bridgeClient.onEvent((event: BridgeClientEvent) => {
       switch (event.type) {
@@ -279,14 +308,13 @@ export function activate(context: vscode.ExtensionContext): void {
                 ? { state: 'connected' }
                 : { state: 'disconnected', reason: event.reason };
           lastConnectionState = next;
-          provider.post({ type: 'connection-state', state: next });
+          registry.broadcast({ type: 'connection-state', state: next });
           break;
         }
         case 'error': {
-          // Treat hard transport errors as a connection-error state surface.
           lastConnectionState = { state: 'error', message: event.error.message };
-          provider.post({ type: 'connection-state', state: lastConnectionState });
-          provider.post({ type: 'error', message: event.error.message });
+          registry.broadcast({ type: 'connection-state', state: lastConnectionState });
+          registry.broadcast({ type: 'error', message: event.error.message });
           log(`bridge error: ${event.error.message}`);
           break;
         }
@@ -298,20 +326,23 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
 
-  // ---- Webview → extension message router ---------------------------------
-  function handleWebviewMessage(msg: WebviewToExtension): void {
+  // ---- Webview → extension router (per panel) -----------------------------
+  function handleWebviewMessage(panelId: string, msg: WebviewToExtension): void {
+    const state = registry.get(panelId);
+    if (!state) return;
+
     switch (msg.type) {
       case 'ready': {
         const { bridgeUrl: u, bridgeToken: t } = readSettings();
-        provider.post({
+        registry.postToState(state, {
           type: 'config',
           bridgeUrl: u,
           hasToken: tokenOrNull(t) !== null,
           allowedDirs: [],
           defaultProjectPath: defaultProjectPath(),
         });
-        provider.post({ type: 'connection-state', state: lastConnectionState });
-        if (lastSessionListEvent) provider.post(lastSessionListEvent);
+        registry.postToState(state, { type: 'connection-state', state: lastConnectionState });
+        if (lastSessionListEvent) registry.postToState(state, lastSessionListEvent);
         if (
           bridgeClient.state === 'idle' ||
           bridgeClient.state === 'disconnected'
@@ -322,44 +353,38 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       case 'user-input': {
-        // Optimistic local echo — the webview shows the user message
-        // immediately without waiting for a bridge round-trip.
+        // Optimistic local echo to the originating panel only.
         const echoId =
-          (activeSessionId ?? 'pending') + '-user-' + Date.now().toString(36);
-        provider.post({
+          (state.activeSessionId ?? state.id) + '-user-' + Date.now().toString(36);
+        registry.postToState(state, {
           type: 'chat-append',
           message: { id: echoId, role: 'user', text: msg.text },
         });
 
         try {
-          if (activeSessionId === null && activeProjectPath !== null) {
-            const req: BridgeRequest = {
+          if (state.activeSessionId === null && state.activeProjectPath !== null) {
+            pendingStartQueue.push(state.id);
+            bridgeClient.send({
               type: 'start',
-              projectPath: activeProjectPath,
+              projectPath: state.activeProjectPath,
               continue: false,
-            };
-            bridgeClient.send(req);
-            // First user prompt is buffered; once `session_created` arrives
-            // we will be able to send subsequent `input` events. The bridge
-            // currently expects the first prompt to go via `input` after
-            // session creation, so we relay the text immediately after start
-            // and let the bridge buffer/queue as designed.
+            });
             bridgeClient.send({ type: 'input', text: msg.text });
-          } else if (activeSessionId !== null) {
+          } else if (state.activeSessionId !== null) {
             bridgeClient.send({
               type: 'input',
               text: msg.text,
-              sessionId: activeSessionId,
+              sessionId: state.activeSessionId,
             });
           } else {
-            provider.post({
+            registry.postToState(state, {
               type: 'error',
               message:
                 'No active session and no project path is set. Select a project or session first.',
             });
           }
         } catch (err) {
-          provider.post({
+          registry.postToState(state, {
             type: 'error',
             message: err instanceof Error ? err.message : String(err),
           });
@@ -368,23 +393,24 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       case 'start-session': {
-        activeProjectPath = msg.projectPath;
-        activeSessionId = null;
-        activeStatus = 'idle';
-        provider.post({
+        state.activeProjectPath = msg.projectPath;
+        state.activeSessionId = null;
+        state.activeStatus = 'idle';
+        registry.postToState(state, {
           type: 'session-active',
           sessionId: null,
-          projectPath: activeProjectPath,
-          status: activeStatus,
+          projectPath: state.activeProjectPath,
+          status: state.activeStatus,
         });
         try {
+          pendingStartQueue.push(state.id);
           bridgeClient.send({
             type: 'start',
             projectPath: msg.projectPath,
             permissionMode: msg.permissionMode,
           });
         } catch (err) {
-          provider.post({
+          registry.postToState(state, {
             type: 'error',
             message: err instanceof Error ? err.message : String(err),
           });
@@ -393,12 +419,12 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       case 'switch-session': {
-        pendingSwitches.add(msg.sessionId);
+        state.pendingSwitches.add(msg.sessionId);
         try {
           bridgeClient.send({ type: 'get_history', sessionId: msg.sessionId });
         } catch (err) {
-          pendingSwitches.delete(msg.sessionId);
-          provider.post({
+          state.pendingSwitches.delete(msg.sessionId);
+          registry.postToState(state, {
             type: 'error',
             message: err instanceof Error ? err.message : String(err),
           });
@@ -407,11 +433,11 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       case 'stop-session': {
-        if (activeSessionId !== null) {
+        if (state.activeSessionId !== null) {
           try {
-            bridgeClient.send({ type: 'stop_session', sessionId: activeSessionId });
+            bridgeClient.send({ type: 'stop_session', sessionId: state.activeSessionId });
           } catch (err) {
-            provider.post({
+            registry.postToState(state, {
               type: 'error',
               message: err instanceof Error ? err.message : String(err),
             });
@@ -421,20 +447,20 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       case 'approve': {
-        if (activeSessionId !== null) {
+        if (state.activeSessionId !== null) {
           try {
             bridgeClient.send({
               type: 'approve',
               id: msg.id,
-              sessionId: activeSessionId,
+              sessionId: state.activeSessionId,
             });
-            provider.post({
+            registry.postToState(state, {
               type: 'approval-resolved',
-              sessionId: activeSessionId,
+              sessionId: state.activeSessionId,
               id: msg.id,
             });
           } catch (err) {
-            provider.post({
+            registry.postToState(state, {
               type: 'error',
               message: err instanceof Error ? err.message : String(err),
             });
@@ -444,21 +470,21 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       case 'reject': {
-        if (activeSessionId !== null) {
+        if (state.activeSessionId !== null) {
           try {
             bridgeClient.send({
               type: 'reject',
               id: msg.id,
               message: msg.message,
-              sessionId: activeSessionId,
+              sessionId: state.activeSessionId,
             });
-            provider.post({
+            registry.postToState(state, {
               type: 'approval-resolved',
-              sessionId: activeSessionId,
+              sessionId: state.activeSessionId,
               id: msg.id,
             });
           } catch (err) {
-            provider.post({
+            registry.postToState(state, {
               type: 'error',
               message: err instanceof Error ? err.message : String(err),
             });
@@ -473,10 +499,10 @@ export function activate(context: vscode.ExtensionContext): void {
             type: 'answer',
             toolUseId: msg.toolUseId,
             result: msg.result,
-            sessionId: activeSessionId ?? undefined,
+            sessionId: state.activeSessionId ?? undefined,
           });
         } catch (err) {
-          provider.post({
+          registry.postToState(state, {
             type: 'error',
             message: err instanceof Error ? err.message : String(err),
           });
@@ -497,35 +523,39 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   }
 
-  // ---- Bridge message router ----------------------------------------------
+  // ---- Bridge message router (decides which panel(s) receive) -------------
   function handleBridgeMessage(message: BridgeMessage): void {
     switch (message.type) {
       case 'session_created': {
         const sid = (message as Extract<BridgeMessage, { type: 'session_created' }>).sessionId;
-        if (typeof sid === 'string') {
-          activeSessionId = sid;
-          activeStatus = 'idle';
-          provider.post({
-            type: 'session-active',
-            sessionId: activeSessionId,
-            projectPath: activeProjectPath,
-            status: activeStatus,
-          });
-        }
+        if (typeof sid !== 'string') break;
+        const panelId = pendingStartQueue.shift();
+        if (!panelId) break;
+        const state = registry.get(panelId);
+        if (!state) break;
+        state.activeSessionId = sid;
+        state.activeStatus = 'idle';
+        registry.postToState(state, {
+          type: 'session-active',
+          sessionId: sid,
+          projectPath: state.activeProjectPath,
+          status: state.activeStatus,
+        });
         break;
       }
 
       case 'status': {
         const m = message as Extract<BridgeMessage, { type: 'status' }>;
-        if (m.sessionId === activeSessionId || activeSessionId === null) {
-          activeStatus = m.status;
-          provider.post({
+        const targets = registry.findBySession(m.sessionId);
+        targets.forEach((s) => {
+          s.activeStatus = m.status;
+          registry.postToState(s, {
             type: 'session-active',
-            sessionId: activeSessionId,
-            projectPath: activeProjectPath,
-            status: activeStatus,
+            sessionId: s.activeSessionId,
+            projectPath: s.activeProjectPath,
+            status: s.activeStatus,
           });
-        }
+        });
         break;
       }
 
@@ -538,20 +568,21 @@ export function activate(context: vscode.ExtensionContext): void {
             ? ((m as { id?: string }).id as string)
             : `${m.sessionId}-${Date.now()}`;
         const chat: ChatMessage = { id, role: 'assistant', text };
-        provider.post({ type: 'chat-append', message: chat });
+        registry.findBySession(m.sessionId).forEach((s) =>
+          registry.postToState(s, { type: 'chat-append', message: chat }),
+        );
         break;
       }
 
       case 'stream_delta': {
         const m = message as Extract<BridgeMessage, { type: 'stream_delta' }>;
-        // The webview is responsible for grouping deltas into the in-progress
-        // assistant message; we use sessionId as the implicit messageId so
-        // multiple concurrent sessions don't collide.
-        provider.post({
-          type: 'stream-delta',
-          messageId: m.sessionId,
-          delta: m.delta,
-        });
+        registry.findBySession(m.sessionId).forEach((s) =>
+          registry.postToState(s, {
+            type: 'stream-delta',
+            messageId: m.sessionId,
+            delta: m.delta,
+          }),
+        );
         break;
       }
 
@@ -563,48 +594,60 @@ export function activate(context: vscode.ExtensionContext): void {
           tool: m.tool,
           input: m.input,
         };
-        provider.post({ type: 'approval-request', approval });
+        registry.findBySession(m.sessionId).forEach((s) =>
+          registry.postToState(s, { type: 'approval-request', approval }),
+        );
         break;
       }
 
       case 'error': {
         const m = message as Extract<BridgeMessage, { type: 'error' }>;
-        provider.post({ type: 'error', message: m.message });
+        if (typeof m.sessionId === 'string') {
+          const targets = registry.findBySession(m.sessionId);
+          if (targets.length > 0) {
+            targets.forEach((s) => registry.postToState(s, { type: 'error', message: m.message }));
+            break;
+          }
+        }
+        registry.broadcast({ type: 'error', message: m.message });
         break;
       }
 
       case 'result': {
         const m = message as Extract<BridgeMessage, { type: 'result' }>;
-        provider.post({
-          type: 'result',
-          sessionId: m.sessionId,
-          cost: m.cost,
-          duration: m.duration,
-        });
+        registry.findBySession(m.sessionId).forEach((s) =>
+          registry.postToState(s, {
+            type: 'result',
+            sessionId: m.sessionId,
+            cost: m.cost,
+            duration: m.duration,
+          }),
+        );
         break;
       }
 
       case 'history': {
         const m = message as Extract<BridgeMessage, { type: 'history' }>;
-        if (pendingSwitches.has(m.sessionId)) {
-          pendingSwitches.delete(m.sessionId);
-          activeSessionId = m.sessionId;
-          // We don't know the project path for a switched-to session unless
-          // it appears in the session_list; leave activeProjectPath as-is.
-          activeStatus = 'idle';
-          const chats: ChatMessage[] = [];
-          m.messages.forEach((item, idx) => {
-            const c = historyItemToChat(item, m.sessionId, idx);
-            if (c) chats.push(c);
-          });
-          provider.post({ type: 'chat-replace', messages: chats });
-          provider.post({
-            type: 'session-active',
-            sessionId: activeSessionId,
-            projectPath: activeProjectPath,
-            status: activeStatus,
-          });
-        }
+        // Find any panel that asked to switch to this session.
+        registry.forEach((s) => {
+          if (s.pendingSwitches.has(m.sessionId)) {
+            s.pendingSwitches.delete(m.sessionId);
+            s.activeSessionId = m.sessionId;
+            s.activeStatus = 'idle';
+            const chats: ChatMessage[] = [];
+            m.messages.forEach((item, idx) => {
+              const c = historyItemToChat(item, m.sessionId, idx);
+              if (c) chats.push(c);
+            });
+            registry.postToState(s, { type: 'chat-replace', messages: chats });
+            registry.postToState(s, {
+              type: 'session-active',
+              sessionId: s.activeSessionId,
+              projectPath: s.activeProjectPath,
+              status: s.activeStatus,
+            });
+          }
+        });
         break;
       }
 
@@ -630,7 +673,6 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       default:
-        // System events, tool_result, and anything else: nothing to do here.
         break;
     }
   }
@@ -646,10 +688,10 @@ export function activate(context: vscode.ExtensionContext): void {
       projects: lastProjects,
     };
     lastSessionListEvent = out;
-    provider.post(out);
+    registry.broadcast(out);
   }
 }
 
 export function deactivate(): void {
-  // BridgeClient is disposed via context.subscriptions; nothing extra here.
+  // BridgeClient is disposed via context.subscriptions.
 }

@@ -1,7 +1,7 @@
 {
   "name": "@ccpocket/vscode",
   "displayName": "CC Pocket",
-  "description": "VSCode sidebar chat for the CC Pocket bridge — Claude Code/Codex sessions in a sidebar",
+  "description": "VSCode panel for the CC Pocket bridge — Claude Code/Codex sessions inside an editor tab",
   "version": "0.1.0",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
@@ -21,35 +21,16 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:ccpocket.placeholder",
-    "onCommand:ccpocket.open"
+    "onStartupFinished"
   ],
   "contributes": {
     "commands": [
       {
         "command": "ccpocket.open",
-        "title": "CC Pocket: Focus Sidebar",
+        "title": "CC Pocket: Open Panel",
         "category": "CC Pocket"
       }
     ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "ccpocket",
-          "title": "CC Pocket",
-          "icon": "$(comment-discussion)"
-        }
-      ]
-    },
-    "views": {
-      "ccpocket": [
-        {
-          "id": "ccpocket.placeholder",
-          "name": "CC Pocket",
-          "type": "webview"
-        }
-      ]
-    },
     "configuration": {
       "title": "CC Pocket",
       "properties": {
@@ -70,6 +51,7 @@
     "build": "esbuild src/extension.ts --bundle --platform=node --target=node22 --external:vscode --format=cjs --outfile=dist/extension.js",
     "watch": "npm run build -- --watch --sourcemap",
     "typecheck": "tsc --noEmit",
+    "dev": "npm run build && code --extensionDevelopmentPath=\"$PWD\" --new-window",
     "vscode:prepublish": "npm run build -- --minify"
   },
   "devDependencies": {
