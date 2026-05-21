@@ -605,26 +605,15 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 		return fmt.Errorf("decode user message: %w", err)
 	}
 
-	// Lazily emit system/init on the first user turn, mirroring the real
-	// claude binary's behavior (the binary stays silent until stdin delivers
-	// a user envelope, then prints `system/init` immediately before the
-	// assistant response). Emitting it eagerly at startup confused the
-	// extension's init handshake.
-	s.initOnce.Do(func() {
-		if err := s.stdout.Write(wire.SystemInit{
-			Type:        "system",
-			Subtype:     "init",
-			SessionID:   s.sessionID,
-			Model:       s.model,
-			CWD:         s.projectPath,
-			Tools:       []string{},
-			MCPServers:  []string{},
-			APIKeySrc:   "none",
-			Permissions: s.permissionMode,
-		}); err != nil {
-			s.log.Errorf("write system/init: %v", err)
-		}
-	})
+	// NOTE: system/init is intentionally NOT emitted here. We defer it to
+	// dispatchBridge's session_created handler so the SessionID field
+	// carries the Bridge's canonical session id (e.g. "6cb12528"), NOT a
+	// shim-generated UUID. The extension stores whatever id we emit and
+	// passes it back via --resume on the next spawn; if we emit a UUID,
+	// the Bridge has no record of it and resume requires a translation
+	// table. Emitting the Bridge id makes --resume a direct identity
+	// mapping — no store lookup needed for new chats, and multiple chat
+	// tabs cleanly resolve to distinct Bridge sessions.
 
 	// Walk content blocks: collect text, forward tool_result responses.
 	var textParts []string
@@ -669,20 +658,37 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 		//      parallel chats but is acceptable on a brand-new install
 		//      that hasn't built up a mapping yet.
 		//   3. Otherwise: fresh session.
+		// Resolve the Bridge sessionId we want to resume.
+		//
+		// New design (post system/init-defer): the extension's --resume value
+		// IS the Bridge session id (we put it there via the deferred
+		// system/init). So we pass it through verbatim. The sessionstore is
+		// kept as a translation layer for legacy chats that have UUIDs
+		// stored (created before the system/init defer). If the bridge
+		// rejects the id we sent, the user sees a "session not found" error
+		// — preferable to silently picking the most recent session
+		// (continue:true) and cross-contaminating multiple chats.
 		opts := bridge.StartOpts{
 			ProjectPath:    s.projectPath,
 			PermissionMode: s.permissionMode,
 			Model:          s.model,
 		}
-		if s.store != nil && s.externalSessionID != "" {
-			if m, ok := s.store.Get(s.externalSessionID); ok && m.BridgeSessionID != "" {
-				opts.SessionID = m.BridgeSessionID
-				s.log.Infof("bridge: resuming session %s (mapped from ext id %s)", m.BridgeSessionID, s.externalSessionID)
+		if s.resumeID != "" {
+			// Legacy translation: if a stored mapping exists (chat from
+			// before this code path was deployed), use the mapped bridge id.
+			if s.store != nil {
+				if m, ok := s.store.Get(s.resumeID); ok && m.BridgeSessionID != "" {
+					opts.SessionID = m.BridgeSessionID
+					s.log.Infof("bridge: resuming session %s (legacy ext-id mapping %s)", m.BridgeSessionID, s.resumeID)
+				}
 			}
-		}
-		if opts.SessionID == "" && (s.continueMode || s.resumeID != "") {
+			// New direct path: --resume value IS the bridge id.
+			if opts.SessionID == "" {
+				opts.SessionID = s.resumeID
+				s.log.Infof("bridge: resuming session %s (direct from --resume)", s.resumeID)
+			}
+		} else if s.continueMode {
 			opts.Continue = true
-			s.log.Infof("bridge: no stored mapping for ext id %s — falling back to continue:true", s.externalSessionID)
 		}
 		if err := s.client.Start(opts); err != nil {
 			s.pendingFirstInput = ""
@@ -823,6 +829,30 @@ func generateMessageID() string {
 	return "msg_" + hex.EncodeToString(b[:])
 }
 
+// emitSystemInit writes the deferred `system/init` envelope. Idempotent via
+// initOnce. We delay this call until after the Bridge confirms
+// `session_created` so the `session_id` field carries the Bridge's canonical
+// id — the extension stores that id and passes it back verbatim via --resume
+// on the next spawn, giving us a direct identity mapping (no UUID
+// translation table needed).
+func (s *state) emitSystemInit() {
+	s.initOnce.Do(func() {
+		if err := s.stdout.Write(wire.SystemInit{
+			Type:        "system",
+			Subtype:     "init",
+			SessionID:   s.sessionID,
+			Model:       s.model,
+			CWD:         s.projectPath,
+			Tools:       []string{},
+			MCPServers:  []string{},
+			APIKeySrc:   "none",
+			Permissions: s.permissionMode,
+		}); err != nil {
+			s.log.Errorf("write system/init: %v", err)
+		}
+	})
+}
+
 // persistSessionMapping writes the externalSessionID → bridge sessionID
 // pair to the sessionstore. Called from the session_created handler so the
 // next spawn for this chat (which will arrive with --resume <externalSessionID>)
@@ -843,13 +873,15 @@ func (s *state) persistSessionMapping() {
 func (s *state) dispatchBridge(m *bridge.Message) error {
 	switch m.Type {
 	case "system":
-		// session_created updates the session id we report.
+		// session_created updates the session id we report and triggers the
+		// (deferred) system/init emission with the Bridge's canonical id.
 		subtype := m.StringField("subtype")
 		if subtype == "session_created" {
 			if sid := m.StringField("sessionId"); sid != "" && sid != s.sessionID {
 				s.log.Infof("bridge: session id %s -> %s", s.sessionID, sid)
 				s.sessionID = sid
 			}
+			s.emitSystemInit()
 			s.persistSessionMapping()
 			s.flushPendingFirstInput()
 		}
@@ -859,6 +891,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		if sid := m.StringField("sessionId"); sid != "" {
 			s.sessionID = sid
 		}
+		s.emitSystemInit()
 		s.persistSessionMapping()
 		s.flushPendingFirstInput()
 		return nil
@@ -946,6 +979,10 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		errMsg := m.StringField("message")
 		errCode := m.StringField("errorCode")
 		s.log.Errorf("bridge error: %s (%s)", errMsg, errCode)
+		// Make sure a system/init has been emitted — otherwise an early
+		// Bridge error (e.g. path_not_allowed) leaves the extension with
+		// zero envelopes and the result envelope alone confuses its parser.
+		s.emitSystemInit()
 		// Close any open streaming turn before emitting the terminal result.
 		if err := s.endStreamingTurn("error"); err != nil {
 			s.log.Errorf("close streaming turn (on error): %v", err)
