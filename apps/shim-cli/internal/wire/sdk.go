@@ -11,10 +11,23 @@ import "encoding/json"
 
 // StdinEnvelope is the lowest-common-denominator shape of stdin envelopes.
 // The shim peeks at `Type` first, then re-decodes into the matching struct.
+//
+// `RequestID` and `Request` are populated when the envelope is a
+// `type:"control_request"` from the extension's control channel (e.g. the
+// `subtype:"initialize"` handshake the extension issues immediately after
+// spawning the CLI and blocks on for up to 60 s).
 type StdinEnvelope struct {
 	Type      string          `json:"type"`
 	SessionID string          `json:"session_id,omitempty"`
 	Message   json.RawMessage `json:"message,omitempty"`
+	RequestID string          `json:"request_id,omitempty"`
+	Request   json.RawMessage `json:"request,omitempty"`
+}
+
+// ControlRequest is the inner payload of a `type:"control_request"` envelope.
+// We only inspect `Subtype` to dispatch; everything else is opaque.
+type ControlRequest struct {
+	Subtype string `json:"subtype"`
 }
 
 // UserMessage is the inner `message` of a `type:"user"` envelope.
@@ -103,6 +116,24 @@ type Result struct {
 	NumTurns     int           `json:"num_turns,omitempty"`
 	Result       string        `json:"result,omitempty"`
 	Usage        map[string]any `json:"usage,omitempty"`
+}
+
+// ControlResponse is the envelope the shim writes back on stdout when the
+// extension issues a `control_request`. The extension's `await this.request(V)`
+// resolves once a matching `request_id` arrives with `subtype:"success"`.
+type ControlResponse struct {
+	Type     string             `json:"type"`     // "control_response"
+	Response ControlResponseEnv `json:"response"`
+}
+
+// ControlResponseEnv is the nested `.response` field that carries the actual
+// result data. The inner `.response` (any) is what the extension's getter
+// methods (supportedCommands/Models/Agents) consume.
+type ControlResponseEnv struct {
+	Subtype   string         `json:"subtype"`              // "success" | "error"
+	RequestID string         `json:"request_id"`
+	Response  map[string]any `json:"response,omitempty"`
+	Error     string         `json:"error,omitempty"`
 }
 
 // ContentBlockDelta builds a stream_event for a text delta.

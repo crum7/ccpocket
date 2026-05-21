@@ -157,22 +157,12 @@ func main() {
 	stdout := sdk.NewWriter(os.Stdout)
 	// stdinReader is initialized in init(); avoid double-construction.
 
-	// Emit the one-shot system/init right away so the extension's transcript
-	// can render before we even reach the Bridge.
-	if err := stdout.Write(wire.SystemInit{
-		Type:        "system",
-		Subtype:     "init",
-		SessionID:   sessionID,
-		Model:       args.Model,
-		CWD:         projectPath,
-		Tools:       []string{},
-		MCPServers:  []string{},
-		APIKeySrc:   "none",
-		Permissions: permissionMode,
-	}); err != nil {
-		log.Errorf("failed to write system/init: %v", err)
-		os.Exit(1)
-	}
+	// IMPORTANT: do NOT emit system/init here. The real `claude` binary only
+	// emits its `system/init` AFTER receiving the first user-input envelope on
+	// stdin. Emitting it eagerly here used to confuse the VSCode extension's
+	// init handshake — it expects a `control_response` to its `initialize`
+	// control_request before any transcript events appear. The init envelope is
+	// emitted lazily from handleUserInput() on the first turn instead.
 
 	bridgeURL := envOr("CCPOCKET_BRIDGE_URL", "ws://localhost:8765")
 	bridgeToken := os.Getenv("CCPOCKET_BRIDGE_TOKEN")
@@ -282,6 +272,8 @@ type state struct {
 	startedMu sync.Mutex
 	started   bool
 
+	initOnce sync.Once // gates the lazy system/init emission on first user input
+
 	finished     atomicBool
 	finishedExit atomic.Int32 // suggested exit code when finished is set
 }
@@ -314,8 +306,18 @@ func (s *state) runStdinLoop(ctx context.Context) error {
 			if err := s.handleUserInput(env); err != nil {
 				s.log.Errorf("user input: %v", err)
 			}
-		case "control_request", "control_response", "result":
-			// The extension sometimes echoes control envelopes; ignore.
+		case "control_request":
+			// The extension blocks on `subtype:"initialize"` (and uses the
+			// same channel for set_permission_mode, interrupt, get_settings,
+			// can_use_tool, etc.). Failure to respond within 60 s causes the
+			// extension to bail with "Subprocess initialization did not
+			// complete". For MVP we acknowledge every control request with a
+			// success+empty response so the extension can proceed.
+			if err := s.handleControlRequest(env); err != nil {
+				s.log.Errorf("control_request: %v", err)
+			}
+		case "control_response", "control_cancel_request", "keep_alive", "result":
+			// Echoes / things we don't originate; ignore.
 			s.log.Debugf("stdin: ignoring %q envelope", env.Type)
 		default:
 			s.log.Debugf("stdin: unhandled envelope type %q", env.Type)
@@ -354,6 +356,43 @@ func init() {
 	stdinReader = sdk.NewReader(os.Stdin)
 }
 
+// handleControlRequest acknowledges control_request envelopes the extension
+// sends on stdin. The critical one is `subtype:"initialize"` — the extension
+// blocks on `await (await this.request({subtype:"initialize",...})).response`
+// for up to 60 s. For MVP we always respond with `subtype:"success"` and an
+// empty inner response so the extension's `supportedCommands` / models /
+// agents getters resolve to empty arrays without crashing.
+func (s *state) handleControlRequest(env wire.StdinEnvelope) error {
+	subtype := ""
+	if len(env.Request) > 0 {
+		var req wire.ControlRequest
+		if err := json.Unmarshal(env.Request, &req); err == nil {
+			subtype = req.Subtype
+		}
+	}
+	s.log.Debugf("stdin: control_request request_id=%s subtype=%s", env.RequestID, subtype)
+
+	resp := map[string]any{}
+	// `initialize` is the handshake; the extension reads `.commands`, `.models`,
+	// `.agents` off the response later via lazy getters. Empty arrays are
+	// safe — the UI just shows no slash-commands / model picker entries until
+	// we wire them up properly.
+	if subtype == "initialize" {
+		resp["commands"] = []any{}
+		resp["models"] = []any{}
+		resp["agents"] = []any{}
+	}
+
+	return s.stdout.Write(wire.ControlResponse{
+		Type: "control_response",
+		Response: wire.ControlResponseEnv{
+			Subtype:   "success",
+			RequestID: env.RequestID,
+			Response:  resp,
+		},
+	})
+}
+
 func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	if env.SessionID != "" && env.SessionID != s.sessionID {
 		s.log.Debugf("stdin: session id changed %s -> %s", s.sessionID, env.SessionID)
@@ -363,6 +402,27 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	if err := json.Unmarshal(env.Message, &msg); err != nil {
 		return fmt.Errorf("decode user message: %w", err)
 	}
+
+	// Lazily emit system/init on the first user turn, mirroring the real
+	// claude binary's behavior (the binary stays silent until stdin delivers
+	// a user envelope, then prints `system/init` immediately before the
+	// assistant response). Emitting it eagerly at startup confused the
+	// extension's init handshake.
+	s.initOnce.Do(func() {
+		if err := s.stdout.Write(wire.SystemInit{
+			Type:        "system",
+			Subtype:     "init",
+			SessionID:   s.sessionID,
+			Model:       s.model,
+			CWD:         s.projectPath,
+			Tools:       []string{},
+			MCPServers:  []string{},
+			APIKeySrc:   "none",
+			Permissions: s.permissionMode,
+		}); err != nil {
+			s.log.Errorf("write system/init: %v", err)
+		}
+	})
 
 	// Walk content blocks: collect text, forward tool_result responses.
 	var textParts []string
