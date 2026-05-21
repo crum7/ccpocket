@@ -106,16 +106,28 @@ type StreamEvent struct {
 }
 
 // Result is the terminal envelope emitted before exit.
+//
+// Field set is wider than what we actually populate because the VSCode
+// extension reaches into `permission_denials` / `model_usage` / `usage` with
+// `.join()` / property lookups; missing fields trigger
+// `TypeError: Cannot read properties of undefined` in the extension's
+// renderer. We always emit empty defaults to keep the extension happy.
 type Result struct {
-	Type         string        `json:"type"`            // "result"
-	Subtype      string        `json:"subtype"`         // "success" | "error"
-	SessionID    string        `json:"session_id,omitempty"`
-	TotalCostUSD float64       `json:"total_cost_usd"`
-	DurationMS   int64         `json:"duration_ms"`
-	IsError      bool          `json:"is_error"`
-	NumTurns     int           `json:"num_turns,omitempty"`
-	Result       string        `json:"result,omitempty"`
-	Usage        map[string]any `json:"usage,omitempty"`
+	Type             string         `json:"type"`             // "result"
+	Subtype          string         `json:"subtype"`          // "success" | "error"
+	SessionID        string         `json:"session_id,omitempty"`
+	TotalCostUSD     float64        `json:"total_cost_usd"`
+	DurationMS       int64          `json:"duration_ms"`
+	DurationAPIMS    int64          `json:"duration_api_ms"`
+	IsError          bool           `json:"is_error"`
+	NumTurns         int            `json:"num_turns"`
+	Result           string         `json:"result,omitempty"`
+	StopReason       string         `json:"stop_reason,omitempty"`
+	Usage            map[string]any `json:"usage"`
+	ModelUsage       map[string]any `json:"modelUsage"`
+	PermissionDenies []any          `json:"permission_denials"`
+	TerminalReason   string         `json:"terminal_reason,omitempty"`
+	UUID             string         `json:"uuid,omitempty"`
 }
 
 // ControlResponse is the envelope the shim writes back on stdout when the

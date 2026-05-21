@@ -246,12 +246,15 @@ func main() {
 			emitError(stdout, st.sessionID, "interrupted")
 		} else {
 			_ = stdout.Write(wire.Result{
-				Type:         "result",
-				Subtype:      "success",
-				SessionID:    st.sessionID,
-				TotalCostUSD: 0,
-				DurationMS:   time.Since(st.startTime).Milliseconds(),
-				IsError:      false,
+				Type:             "result",
+				Subtype:          "success",
+				SessionID:        st.sessionID,
+				TotalCostUSD:     0,
+				DurationMS:       time.Since(st.startTime).Milliseconds(),
+				IsError:          false,
+				Usage:            map[string]any{},
+				ModelUsage:       map[string]any{},
+				PermissionDenies: []any{},
 			})
 		}
 	} else if c := st.finishedExit.Load(); c != 0 {
@@ -582,12 +585,15 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		}
 		isError := subtype != "success"
 		out := wire.Result{
-			Type:         "result",
-			Subtype:      subtype,
-			SessionID:    s.sessionID,
-			TotalCostUSD: cost,
-			DurationMS:   dur,
-			IsError:      isError,
+			Type:             "result",
+			Subtype:          subtype,
+			SessionID:        s.sessionID,
+			TotalCostUSD:     cost,
+			DurationMS:       dur,
+			IsError:          isError,
+			Usage:            map[string]any{},
+			ModelUsage:       map[string]any{},
+			PermissionDenies: []any{},
 		}
 		if isError {
 			out.Result = m.StringField("error")
@@ -603,11 +609,14 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		s.finished.Store(true)
 		s.finishedExit.Store(1)
 		return s.stdout.Write(wire.Result{
-			Type:      "result",
-			Subtype:   "error",
-			SessionID: s.sessionID,
-			IsError:   true,
-			Result:    errMsg,
+			Type:             "result",
+			Subtype:          "error",
+			SessionID:        s.sessionID,
+			IsError:          true,
+			Result:           errMsg,
+			Usage:            map[string]any{},
+			ModelUsage:       map[string]any{},
+			PermissionDenies: []any{},
 		})
 
 	default:
@@ -696,14 +705,19 @@ func (s *state) handleToolResult(m *bridge.Message) error {
 	})
 }
 
-// emitError writes a terminal result/error envelope.
+// emitError writes a terminal result/error envelope. Empty defaults are
+// supplied for permission_denials / usage / modelUsage so the extension's
+// renderer doesn't choke on .join() / property access of undefined arrays.
 func emitError(w *sdk.Writer, sessionID, msg string) {
 	_ = w.Write(wire.Result{
-		Type:      "result",
-		Subtype:   "error",
-		SessionID: sessionID,
-		IsError:   true,
-		Result:    msg,
+		Type:             "result",
+		Subtype:          "error",
+		SessionID:        sessionID,
+		IsError:          true,
+		Result:           msg,
+		Usage:            map[string]any{},
+		ModelUsage:       map[string]any{},
+		PermissionDenies: []any{},
 	})
 }
 
