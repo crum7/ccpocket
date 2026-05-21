@@ -1,0 +1,14 @@
+{
+  "name": "@ccpocket/vscode-tests",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Standalone Playwright harness for the CC Pocket VSCode webview. Lives outside the extension's own package.json so installing browsers here doesn't bloat the production extension bundle.",
+  "type": "module",
+  "scripts": {
+    "test:webview": "node webview/run.mjs",
+    "postinstall": "playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
+}
