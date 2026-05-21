@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CC Pocket</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- App shell: sidebar (sessions) + main column (banners, status, chat, composer). -->
+    <div id="app" class="app">
+      <!-- Left rail: sessions / projects. -->
+      <aside id="sidebar" class="sidebar" aria-label="Sessions">
+        <div class="sidebar-head">
+          <button id="sidebar-toggle" class="sidebar-toggle icon-btn" type="button" title="Toggle sidebar" aria-label="Toggle sidebar"></button>
+          <span class="sidebar-title">CC Pocket</span>
+          <button id="new-session-btn" class="sidebar-new-btn icon-btn" type="button" title="New session" aria-label="New session">+ New</button>
+        </div>
+        <div id="sidebar-scroll" class="sidebar-scroll">
+          <section class="sidebar-section" id="active-section">
+            <header class="sidebar-section-head">Active session</header>
+            <div id="active-card" class="active-card empty">No active session.</div>
+          </section>
+          <section class="sidebar-section" id="recent-section">
+            <header class="sidebar-section-head">Recent sessions</header>
+            <ul id="recent-list" class="sidebar-list"></ul>
+          </section>
+          <section class="sidebar-section" id="projects-section">
+            <header class="sidebar-section-head">Projects</header>
+            <ul id="projects-list" class="sidebar-list"></ul>
+          </section>
+        </div>
+      </aside>
+
+      <!-- Main column. -->
+      <main class="main-col">
+        <!-- Compact top bar: connection + bridge URL. -->
+        <header class="topbar">
+          <span id="status-dot" class="status-dot status-idle" aria-hidden="true"></span>
+          <span id="status-label" class="status-label">Idle</span>
+          <span id="bridge-url" class="bridge-url" title=""></span>
+          <span class="topbar-spacer"></span>
+          <span id="active-mini" class="active-mini" title=""></span>
+          <button id="stop-btn" class="icon-btn topbar-stop" type="button" hidden>Stop</button>
+          <button id="reconnect-btn" class="icon-btn topbar-reconnect" type="button" hidden>Reconnect</button>
+        </header>
+
+        <!-- Stacked dismissible amber banners for errors. -->
+        <div id="banners" class="banners" aria-live="polite"></div>
+
+        <!-- Chat scroll area. -->
+        <section id="messages" class="messages" aria-live="polite" aria-label="Chat messages"></section>
+
+        <!-- Composer. -->
+        <footer class="composer" id="composer">
+          <!-- File chips row (hidden when empty). -->
+          <div id="chips" class="chips" hidden></div>
+
+          <!-- The textarea sits on its own row. -->
+          <textarea
+            id="input"
+            class="input"
+            rows="1"
+            placeholder="Type a message… (⌘↵ to send)"
+            aria-label="Message"
+          ></textarea>
+
+          <!-- Controls row: + menu, mic | mode chip, send. -->
+          <div class="composer-row">
+            <div class="composer-row-left">
+              <button id="plus-btn" class="composer-icon-btn" type="button" title="Attach" aria-label="Attach"><span class="iconglyph">+</span></button>
+              <button id="mic-btn" class="composer-icon-btn" type="button" title="Voice input" aria-label="Voice input"><span class="iconglyph mic">●</span></button>
+            </div>
+            <div class="composer-row-right">
+              <button id="mode-btn" class="mode-chip" type="button" aria-haspopup="true" aria-expanded="false">
+                <span class="mode-icon" aria-hidden="true"></span>
+                <span id="mode-label" class="mode-label">Edit automatically</span>
+                <span class="mode-caret" aria-hidden="true">▾</span>
+              </button>
+              <button id="send-btn" class="send-btn" type="button" disabled aria-label="Send">
+                <span class="iconglyph send" aria-hidden="true">➤</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Popovers (rendered in composer so they anchor near the controls). -->
+          <div id="plus-menu" class="popover" role="menu" hidden>
+            <button class="popover-item" data-action="pick-workspace-file" type="button" role="menuitem">
+              <span class="popover-glyph">📄</span><span>Add workspace file</span>
+            </button>
+            <button class="popover-item" data-action="pick-open-editor" type="button" role="menuitem">
+              <span class="popover-glyph">🗂</span><span>Open editor file</span>
+            </button>
+            <button class="popover-item" data-action="pick-system-file" type="button" role="menuitem">
+              <span class="popover-glyph">⬆</span><span>Upload from computer</span>
+            </button>
+            <button class="popover-item" data-action="add-active-selection" type="button" role="menuitem">
+              <span class="popover-glyph">▢</span><span>Add active selection</span>
+            </button>
+          </div>
+
+          <div id="mode-menu" class="popover popover-right" role="menu" hidden>
+            <button class="popover-item" data-mode="default" type="button" role="menuitemradio">
+              <span class="popover-check" aria-hidden="true">✓</span>
+              <span class="popover-body">
+                <span class="popover-title">Ask before edits</span>
+                <span class="popover-sub">Confirm each tool call</span>
+              </span>
+            </button>
+            <button class="popover-item" data-mode="acceptEdits" type="button" role="menuitemradio">
+              <span class="popover-check" aria-hidden="true">✓</span>
+              <span class="popover-body">
+                <span class="popover-title">Edit automatically</span>
+                <span class="popover-sub">Apply file edits without asking</span>
+              </span>
+            </button>
+            <button class="popover-item" data-mode="plan" type="button" role="menuitemradio">
+              <span class="popover-check" aria-hidden="true">✓</span>
+              <span class="popover-body">
+                <span class="popover-title">Plan mode</span>
+                <span class="popover-sub">Plan before any changes</span>
+              </span>
+            </button>
+            <button class="popover-item" data-mode="bypassPermissions" type="button" role="menuitemradio">
+              <span class="popover-check" aria-hidden="true">✓</span>
+              <span class="popover-body">
+                <span class="popover-title">Auto (bypass)</span>
+                <span class="popover-sub">Skip all permission prompts</span>
+              </span>
+            </button>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <!-- Toast (transient). -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script type="module" src="main.js"></script>
+  </body>
+</html>
