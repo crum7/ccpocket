@@ -115,11 +115,66 @@ func envOr(key, fallback string) string {
 	return v
 }
 
+// handleOneShotSubcommand intercepts positional subcommands the Claude Code
+// VSCode extension occasionally spawns out-of-band (e.g. `claude auth status
+// --json`). These spawn invocations expect a single JSON document on stdout
+// followed by EOF — falling through to the conversational lifecycle would
+// emit a result envelope at exit time, which the extension's `JSON.parse`
+// rejects with "Unexpected non-whitespace character after JSON".
+//
+// Returns true when an out-of-band command was matched and serviced; the
+// caller MUST exit immediately afterwards.
+func handleOneShotSubcommand(positional []string, log *logger.Logger) bool {
+	// Skip leading short/long flags; only look at the bare-word verbs.
+	verbs := make([]string, 0, len(positional))
+	for _, tok := range positional {
+		if strings.HasPrefix(tok, "-") {
+			continue
+		}
+		verbs = append(verbs, tok)
+	}
+	if len(verbs) < 2 {
+		return false
+	}
+
+	switch {
+	case verbs[0] == "auth" && verbs[1] == "status":
+		// Pretend we're logged in via a CC Pocket Bridge route. The extension
+		// only acts on .loggedIn; the rest is cosmetic.
+		stdout := sdk.NewWriter(os.Stdout)
+		_ = stdout.Write(map[string]any{
+			"loggedIn":         true,
+			"authMethod":       "ccpocket-bridge",
+			"apiProvider":      "firstParty",
+			"email":            "",
+			"orgId":            "",
+			"orgName":          "",
+			"subscriptionType": "",
+		})
+		log.Debugf("oneshot: served `auth status` stub")
+		return true
+	}
+	return false
+}
+
 func main() {
 	log := logger.New()
 	args := parseArgs(os.Args[1:])
 	if len(args.Unknown) > 0 {
 		log.Warnf("ignoring unknown flags: %s", strings.Join(args.Unknown, " "))
+	}
+
+	// Intercept one-shot subcommands the Claude Code VSCode extension spawns
+	// out-of-band — these expect a single JSON object on stdout and EOF, NOT
+	// the stream-json conversational protocol. If we proceed into the normal
+	// lifecycle the extension's `JSON.parse(stdout)` chokes on subsequent
+	// envelopes (e.g. our exit-time result/success) — see "claude auth status
+	// parse failed: SyntaxError" in the extension log.
+	//
+	// Currently handled: `auth status [--json]`. Extend the list as new
+	// invocations surface in extension logs.
+	if handleOneShotSubcommand(args.Unknown, log) {
+		return
 	}
 
 	// Resolve session id we'll advertise on stdout. The extension may have
@@ -528,6 +583,7 @@ func (s *state) flushPendingFirstInput() {
 	if pending == "" {
 		return
 	}
+	s.log.Infof("bridge: flushing buffered first input to session %s (%d chars)", s.sessionID, len(pending))
 	if err := s.client.Input(s.sessionID, pending); err != nil {
 		s.log.Errorf("bridge input (first turn): %v", err)
 	}
