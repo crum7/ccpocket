@@ -1,0 +1,85 @@
+{
+  "name": "@ccpocket/vscode",
+  "displayName": "CC Pocket",
+  "description": "VSCode panel that hosts the CC Pocket Flutter web client",
+  "version": "0.0.1",
+  "private": true,
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "K9i",
+  "publisher": "ccpocket",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/K9i-0/ccpocket.git",
+    "directory": "apps/vscode"
+  },
+  "main": "dist/extension.js",
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=22"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:ccpocket.open"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "ccpocket.open",
+        "title": "CC Pocket: Open Panel",
+        "category": "CC Pocket"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ccpocket",
+          "title": "CC Pocket",
+          "icon": "$(comment-discussion)"
+        }
+      ]
+    },
+    "views": {
+      "ccpocket": [
+        {
+          "id": "ccpocket.placeholder",
+          "name": "CC Pocket",
+          "type": "webview"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CC Pocket",
+      "properties": {
+        "ccpocket.bridgeUrl": {
+          "type": "string",
+          "default": "ws://localhost:8765",
+          "description": "WebSocket URL of the local CC Pocket bridge server"
+        },
+        "ccpocket.bridgeToken": {
+          "type": "string",
+          "default": "",
+          "description": "Optional API key if the bridge was started with BRIDGE_API_KEY"
+        },
+        "ccpocket.flutterBuildPath": {
+          "type": "string",
+          "default": "../mobile/build/web",
+          "description": "Path to the Flutter web build output to load in the webview (relative to the extension directory or absolute)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --platform=node --target=node22 --external:vscode --format=cjs --outfile=dist/extension.js",
+    "watch": "npm run build -- --watch --sourcemap",
+    "typecheck": "tsc --noEmit",
+    "vscode:prepublish": "npm run build -- --minify"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.0"
+  }
+}

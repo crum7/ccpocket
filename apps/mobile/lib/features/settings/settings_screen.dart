@@ -22,6 +22,7 @@ import '../../services/bridge_service.dart';
 import '../../services/database_service.dart';
 import '../../services/revenuecat_service.dart';
 import '../../services/tts_service.dart';
+import '../../services/webview_config.dart';
 import 'widgets/tts_voice_bottom_sheet.dart';
 import 'widgets/voicevox_speaker_bottom_sheet.dart';
 import '../../widgets/workspace_pane_chrome.dart';
@@ -111,6 +112,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
+  /// Renders a small indicator row when the bridge connection is being
+  /// driven by an injected `window.ccpocketConfig` (e.g. when running as
+  /// Flutter web inside the CCPocket VSCode extension).
+  ///
+  /// Returns [SizedBox.shrink] on native platforms and on web pages that
+  /// did not inject any config.
+  Widget _buildWebviewConfigIndicator(BuildContext context, ColorScheme cs) {
+    WebviewConfig? config;
+    try {
+      config = RepositoryProvider.of<WebviewConfig>(context, listen: false);
+    } catch (_) {
+      // No WebviewConfig provided — running natively or no host injection.
+      return const SizedBox.shrink();
+    }
+    final source = config.source ?? 'webview';
+    return ListTile(
+      dense: true,
+      leading: Icon(Icons.extension_outlined, color: cs.primary, size: 20),
+      title: Text(
+        'Connection driven by $source',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: cs.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -178,6 +206,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               (bridge.lastUrl ?? 'Not connected'),
                         ),
                       ),
+                      _buildWebviewConfigIndicator(context, cs),
                     ],
                   ),
                 ),

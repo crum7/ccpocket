@@ -19,6 +19,20 @@ class MainFlutterWindow: NSWindow, NSToolbarDelegate {
     windowToolbar.showsBaselineSeparator = false
     toolbar = windowToolbar
 
+    // Hide the (empty) unified toolbar while fullscreen — otherwise macOS
+    // composites a translucent toolbar strip over the top of the Flutter
+    // content and our custom tab bar disappears underneath it.
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleWillEnterFullScreen),
+      name: NSWindow.willEnterFullScreenNotification,
+      object: self)
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleWillExitFullScreen),
+      name: NSWindow.willExitFullScreenNotification,
+      object: self)
+
     let flutterViewController = FlutterViewController()
     let chromeChannel = FlutterMethodChannel(
       name: "ccpocket/window_chrome",
@@ -56,5 +70,17 @@ class MainFlutterWindow: NSWindow, NSToolbarDelegate {
 
   func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
     []
+  }
+
+  @objc private func handleWillEnterFullScreen(_ notification: Notification) {
+    toolbar?.isVisible = false
+  }
+
+  @objc private func handleWillExitFullScreen(_ notification: Notification) {
+    toolbar?.isVisible = true
+  }
+
+  deinit {
+    NotificationCenter.default.removeObserver(self)
   }
 }

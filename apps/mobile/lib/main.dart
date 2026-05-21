@@ -54,6 +54,7 @@ import 'services/revenuecat_service.dart';
 import 'services/ssh_startup_service.dart';
 import 'services/support_banner_service.dart';
 import 'services/tts_service.dart';
+import 'services/webview_config.dart';
 import 'theme/app_theme.dart';
 import 'services/store_screenshot_extension.dart';
 import 'theme/markdown_style.dart';
@@ -67,6 +68,50 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // No-op: FCM notification messages are automatically displayed by the OS.
   // This handler is registered to prevent the "no onBackgroundMessage handler"
   // warning on Android.
+}
+
+/// Persists [WebviewConfig] into the regular bridge-connection storage so the
+/// existing auto-connect flow picks it up unchanged.
+///
+/// Returns the config (for use by the UI, e.g. visual indicator) or `null`
+/// when no config is injected / not running on web.
+Future<WebviewConfig?> _applyWebviewConfig({
+  required SharedPreferences prefs,
+  required MachineManagerService machineManager,
+}) async {
+  final config = readWebviewConfig();
+  if (config == null) return null;
+
+  // 1. Persist the bridge URL via the same key BridgeService.autoConnect reads.
+  //    Idempotent: only writes when the value actually changes.
+  const prefKeyUrl = 'bridge_url';
+  final existing = prefs.getString(prefKeyUrl);
+  if (existing != config.bridgeUrl) {
+    await prefs.setString(prefKeyUrl, config.bridgeUrl);
+  }
+
+  // 2. Persist the optional token via MachineManagerService (SecureStorage),
+  //    mirroring how session_list_screen.dart records a successful connection.
+  final token = config.token;
+  try {
+    final uri = Uri.tryParse(config.bridgeUrl);
+    if (uri != null && uri.host.isNotEmpty) {
+      await machineManager.recordConnection(
+        host: uri.host,
+        port: uri.hasPort ? uri.port : 8765,
+        apiKey: (token != null && token.isNotEmpty) ? token : null,
+        useSsl: uri.scheme == 'wss' || uri.scheme == 'https',
+      );
+    }
+  } catch (e) {
+    logger.warning('[webview_config] recordConnection failed: $e');
+  }
+
+  logger.info(
+    '[webview_config] applied bridgeUrl=${config.bridgeUrl} '
+    'source=${config.source ?? "<none>"} hasToken=${token != null}',
+  );
+  return config;
 }
 
 /// Checks for Shorebird patches using the user-selected update track.
@@ -121,6 +166,16 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   const secureStorage = FlutterSecureStorage();
   final machineManagerService = MachineManagerService(prefs, secureStorage);
+
+  // When running as Flutter web inside an embedding webview (e.g. the
+  // CCPocket VSCode extension), the host page injects `window.ccpocketConfig`
+  // before main.dart.js loads. Persist that config into the same storage the
+  // regular auto-connect flow reads from, so we don't need a parallel code
+  // path. This is idempotent: subsequent boots with the same config are no-ops.
+  final webviewConfig = await _applyWebviewConfig(
+    prefs: prefs,
+    machineManager: machineManagerService,
+  );
   // SSH is only supported on native platforms (not web)
   final sshStartupService = kIsWeb
       ? null
@@ -173,6 +228,8 @@ void main() async {
         ),
         if (sshStartupService != null)
           RepositoryProvider<SshStartupService>.value(value: sshStartupService),
+        if (webviewConfig != null)
+          RepositoryProvider<WebviewConfig>.value(value: webviewConfig),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -219,16 +276,28 @@ void main() async {
             ),
           ),
         ],
-        child: CcpocketApp(fcmService: fcmService),
+        child: CcpocketApp(
+          fcmService: fcmService,
+          webviewConfig: webviewConfig,
+        ),
       ),
     ),
   );
 }
 
 class CcpocketApp extends StatefulWidget {
-  const CcpocketApp({required this.fcmService, super.key});
+  const CcpocketApp({
+    required this.fcmService,
+    this.webviewConfig,
+    super.key,
+  });
 
   final FcmService fcmService;
+
+  /// Configuration injected by the embedding webview (e.g. VSCode extension),
+  /// when running as Flutter web. `null` on native platforms or when the host
+  /// page did not inject `window.ccpocketConfig`.
+  final WebviewConfig? webviewConfig;
 
   @override
   State<CcpocketApp> createState() => _CcpocketAppState();
