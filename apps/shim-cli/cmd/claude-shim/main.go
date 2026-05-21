@@ -171,8 +171,94 @@ func handleOneShotSubcommand(positional []string, log *logger.Logger) bool {
 	return false
 }
 
+// shimDisabled reports whether the shim should bypass itself and exec the
+// real claude binary. Triggered by either CCPOCKET_SHIM_DISABLE=1 or the
+// presence of ~/.ccpocket-shim-disabled.
+func shimDisabled() bool {
+	if v := os.Getenv("CCPOCKET_SHIM_DISABLE"); v != "" && v != "0" && v != "false" {
+		return true
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+	if _, err := os.Stat(filepath.Join(home, ".ccpocket-shim-disabled")); err == nil {
+		return true
+	}
+	return false
+}
+
+// findRealClaude scans argv for the original claude binary path that the
+// extension prepends when a claudeProcessWrapper is configured. The marker
+// we look for: a token that contains `claude-code-` AND ends in `/claude`
+// (the typical bundled native-binary layout). Falls back to the first
+// non-flag token if no obvious match is found.
+func findRealClaude(args []string) string {
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		if strings.Contains(a, "claude-code-") && strings.HasSuffix(a, "/claude") {
+			return a
+		}
+	}
+	// Fallback: first non-flag token whose basename is exactly "claude".
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		if filepath.Base(a) == "claude" {
+			return a
+		}
+	}
+	return ""
+}
+
+// stripRealClaudePathFromArgs returns args with the first occurrence of the
+// real-claude path removed (so we don't pass the binary's own path to it
+// again — the OS does that via syscall.Exec's argv[0]).
+func stripRealClaudePathFromArgs(args []string, realBin string) []string {
+	out := make([]string, 0, len(args))
+	removed := false
+	for _, a := range args {
+		if !removed && a == realBin {
+			removed = true
+			continue
+		}
+		out = append(out, a)
+	}
+	return out
+}
+
 func main() {
 	log := logger.New()
+
+	// Bypass switch — short-circuits the shim and exec's the real `claude`
+	// binary directly so the extension behaves as if no wrapper were
+	// configured. Two equivalent triggers (whichever is set wins):
+	//
+	//   1. Env var `CCPOCKET_SHIM_DISABLE=1` (set in
+	//      claudeCode.environmentVariables; requires window reload)
+	//   2. Sentinel file `~/.ccpocket-shim-disabled` (checked at every
+	//      shim spawn — toggle with `touch` / `rm`, no reload needed)
+	//
+	// The extension prefixes our argv with the original `claude` binary
+	// path when a wrapper is in effect, so we can recover the real binary
+	// from os.Args itself.
+	if shimDisabled() {
+		realBin := findRealClaude(os.Args[1:])
+		if realBin == "" {
+			log.Errorf("shim bypass requested but real claude binary path not found in argv")
+			os.Exit(1)
+		}
+		passthroughArgs := stripRealClaudePathFromArgs(os.Args[1:], realBin)
+		log.Infof("shim bypass active — exec %s", realBin)
+		err := syscall.Exec(realBin, append([]string{realBin}, passthroughArgs...), os.Environ())
+		// Exec only returns on failure.
+		log.Errorf("exec failed: %v", err)
+		os.Exit(1)
+	}
+
 	args := parseArgs(os.Args[1:])
 	if len(args.Unknown) > 0 {
 		log.Warnf("ignoring unknown flags: %s", strings.Join(args.Unknown, " "))
