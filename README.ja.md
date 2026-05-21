@@ -97,6 +97,86 @@ macOS ネイティブアプリもあります。モバイル版の UI/UX を気�
 
 まだベータ版ですが、十分に実用可能です。最新の `.dmg` は [GitHub Releases](https://github.com/K9i-0/ccpocket/releases?q=macos) からダウンロードできます（`macos/v*` タグのリリースが対象です）。
 
+### VSCode 連携（claude-shim 経由・実験的）
+
+Anthropic 公式の **Claude Code VSCode 拡張をそのまま使いつつ、接続先だけ CC Pocket Bridge に差し替える** モードがあります。`apps/shim-cli/` に置いてある Go 製の薄いラッパー (`claude-shim`) が、拡張から見れば普通の `claude` CLI のフリをして、内部で stream-json ↔ Bridge WebSocket を変換します。
+
+```
+[VSCode Claude Code 拡張] ──stdin/stdout(stream-json)── [claude-shim] ──WebSocket── [CC Pocket Bridge]
+```
+
+UI は公式拡張のまま、セッション本体は Bridge ホスト上で走ります。
+
+#### セットアップ
+
+1. ビルド & インストール:
+   ```bash
+   cd apps/shim-cli
+   go build -o claude-shim ./cmd/claude-shim
+   mkdir -p ~/bin && cp claude-shim ~/bin/claude-shim
+   ```
+
+2. VSCode の `settings.json` (`Cmd+Shift+P` → "Preferences: Open User Settings (JSON)") に追記:
+   ```json
+   {
+     "claudeCode.claudeProcessWrapper": "/Users/you/bin/claude-shim",
+     "claudeCode.environmentVariables": [
+       { "name": "CCPOCKET_BRIDGE_URL", "value": "ws://<bridge-host>:8765" },
+       { "name": "CCPOCKET_PROJECT_PATH_OVERRIDE", "value": "<bridge側のプロジェクトパス>" },
+       { "name": "CCPOCKET_SHIM_LOG", "value": "info" }
+     ],
+     "claudeCode.disableLoginPrompt": true
+   }
+   ```
+
+3. ウィンドウを再読込（`Developer: Reload Window`）。以降、Claude Code 拡張からのチャットは Bridge 経由で動きます。
+
+#### 環境変数
+
+| 変数 | 役割 |
+|------|------|
+| `CCPOCKET_BRIDGE_URL` | Bridge の WebSocket エンドポイント（例: `ws://100.73.72.49:8765`） |
+| `CCPOCKET_BRIDGE_TOKEN` | Bridge が `BRIDGE_API_KEY` 設定済みの場合のみ |
+| `CCPOCKET_PROJECT_PATH_OVERRIDE` | VSCode が渡してくる workspace パスを上書きして、Bridge ホストに実在するパスにすり替える。**Bridge が別マシン（特に別 OS）で動く構成では必須** |
+| `CCPOCKET_SHIM_LOG` | `debug` / `info` / `warn` / `error`。ログは extension の出力パネル `Claude Code` に `[info] From claude: …` として流れる |
+
+#### Bridge が別ホストにある場合の注意
+
+`CCPOCKET_PROJECT_PATH_OVERRIDE` を設定したとき、Claude が読み書きするファイルは **Bridge ホスト側のパス**（例: Windows の `C:\Users\rikut\Desktop\claude-personal`）です。手元の Mac で開いている workspace のファイルは見えません。
+
+「手元のファイルを Claude に直接操作させたい」場合は、Bridge を編集マシンと同じ場所で動かしてください。
+
+#### shim の ON / OFF 切り替え
+
+`settings.json` をいじらずに、ターミナルから一発で素の Claude バイナリに戻せます。
+
+```bash
+# OFF: 素の claude へフォールバック（Anthropic API 経由）
+touch ~/.ccpocket-shim-disabled
+
+# ON: Bridge 経由に戻す
+rm ~/.ccpocket-shim-disabled
+```
+
+新しいセッションごとに毎回チェックするので、VSCode の再起動は不要です（既に開いている会話はそのモードのまま）。便利なら `~/.zshrc` 等に:
+
+```bash
+alias bridge-off='touch ~/.ccpocket-shim-disabled && echo "shim OFF (素 claude)"'
+alias bridge-on='rm -f ~/.ccpocket-shim-disabled && echo "shim ON (Bridge 経由)"'
+```
+
+環境変数派なら `CCPOCKET_SHIM_DISABLE=1` を `claudeCode.environmentVariables` に追加する形でも同じ効果になります（こちらは VSCode 再読込が必要）。
+
+#### 既知の制限
+
+- 承認プロンプトは自動承認（Bridge 側で `approve` を返す MVP 実装）
+- `--mcp-config` 等のフラグは無視
+- 画像添付は未対応
+- 拡張側の `--resume <id>` は Bridge の `continue: true` に変換（最新セッションの再開）。拡張のセッション ID をそのまま Bridge セッションにマッピングする機能は未実装
+- WebSocket 切断時の再接続なし
+
+詳細は [`apps/shim-cli/README.md`](apps/shim-cli/README.md) を参照してください。
+
 ### 3. 接続してコーディング開始
 
 | 接続方法 | 向いているケース |
