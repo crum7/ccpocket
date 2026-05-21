@@ -701,8 +701,18 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 				}
 			}
 			if opts.SessionID == "" {
-				opts.Continue = true
-				s.log.Infof("bridge: no claude UUID mapped for bridge id %s — falling back to continue:true", s.resumeID)
+				// NOTE: deliberately NO continue:true fallback. If we don't
+				// have a mapping, the --resume value is from a chat we
+				// can't safely resolve (typically a legacy chat whose
+				// resume id pre-dates the bridge_id -> claudeSessionId
+				// store). continue:true would resume "the most recent
+				// session for this project" — which is ANY session and
+				// causes cross-chat contamination ('chat A asked about
+				// blue but Claude answers based on chat B's red context').
+				// A fresh session loses the bridge-side conversation
+				// memory for legacy chats, but at least keeps each chat
+				// independent. Logged loudly so it's visible.
+				s.log.Warnf("bridge: no claude UUID mapped for resume id %s — starting a FRESH session to avoid cross-chat contamination (legacy chat context lost)", s.resumeID)
 			}
 		} else if s.continueMode {
 			opts.Continue = true
