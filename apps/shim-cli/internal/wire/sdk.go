@@ -50,24 +50,28 @@ type UserContentItem struct {
 
 // SystemInit is the one-shot init message the shim writes on startup.
 type SystemInit struct {
-	Type        string   `json:"type"`              // "system"
-	Subtype     string   `json:"subtype"`           // "init"
-	SessionID   string   `json:"session_id"`
-	Model       string   `json:"model,omitempty"`
-	CWD         string   `json:"cwd,omitempty"`
-	Tools       []string `json:"tools"`
-	MCPServers  []string `json:"mcp_servers"`
-	APIKeySrc   string   `json:"apiKeySource,omitempty"`
-	Permissions string   `json:"permissionMode,omitempty"`
+	Type            string   `json:"type"`    // "system"
+	Subtype         string   `json:"subtype"` // "init"
+	SessionID       string   `json:"session_id"`
+	Model           string   `json:"model,omitempty"`
+	CWD             string   `json:"cwd,omitempty"`
+	Tools           []string `json:"tools"`
+	MCPServers      []string `json:"mcp_servers"`
+	APIKeySrc       string   `json:"apiKeySource,omitempty"`
+	Permissions     string   `json:"permissionMode,omitempty"`
+	UUID            string   `json:"uuid"`
+	ParentToolUseID *string  `json:"parent_tool_use_id"`
 }
 
 // AssistantOut wraps an assistant message emitted on stdout.
+// `UUID` and `ParentToolUseID` are always emitted (even as empty/null)
+// because the extension's webview keys message tracking by uuid.
 type AssistantOut struct {
-	Type      string         `json:"type"`              // "assistant"
-	Message   AssistantInner `json:"message"`
-	SessionID string         `json:"session_id"`
-	UUID      string         `json:"uuid,omitempty"`
-	ParentToolUseID string   `json:"parent_tool_use_id,omitempty"`
+	Type            string         `json:"type"` // "assistant"
+	Message         AssistantInner `json:"message"`
+	SessionID       string         `json:"session_id"`
+	UUID            string         `json:"uuid"`
+	ParentToolUseID *string        `json:"parent_tool_use_id"`
 }
 
 // AssistantInner is the Anthropic-style assistant message envelope.
@@ -98,11 +102,18 @@ type UserOut struct {
 
 // StreamEvent represents a `type:"stream_event"` envelope on stdout.
 // We use it to deliver `content_block_delta` text deltas in real time.
+//
+// The extension's webview tracks messages by their `uuid` and uses
+// `parent_tool_use_id` for nesting. Always emit both — even if our
+// values are placeholders — so the webview doesn't drop or misroute
+// events. Missing uuid was suspected of causing mid-stream tab
+// switches to render events into the wrong chat tab.
 type StreamEvent struct {
-	Type      string         `json:"type"`              // "stream_event"
-	Event     map[string]any `json:"event"`
-	SessionID string         `json:"session_id,omitempty"`
-	UUID      string         `json:"uuid,omitempty"`
+	Type            string         `json:"type"` // "stream_event"
+	Event           map[string]any `json:"event"`
+	SessionID       string         `json:"session_id,omitempty"`
+	UUID            string         `json:"uuid"`
+	ParentToolUseID *string        `json:"parent_tool_use_id"`
 }
 
 // Result is the terminal envelope emitted before exit.
@@ -127,7 +138,8 @@ type Result struct {
 	ModelUsage       map[string]any `json:"modelUsage"`
 	PermissionDenies []any          `json:"permission_denials"`
 	TerminalReason   string         `json:"terminal_reason,omitempty"`
-	UUID             string         `json:"uuid,omitempty"`
+	UUID             string         `json:"uuid"`
+	ParentToolUseID  *string        `json:"parent_tool_use_id"`
 }
 
 // ControlResponse is the envelope the shim writes back on stdout when the
@@ -152,7 +164,7 @@ type ControlResponseEnv struct {
 // required by the extension's stream parser (it uses it to locate the matching
 // content block created by content_block_start). For text-only MVP we always
 // emit index 0.
-func ContentBlockDelta(text string, sessionID string, index int) StreamEvent {
+func ContentBlockDelta(text string, sessionID, eventUUID string, index int) StreamEvent {
 	return StreamEvent{
 		Type: "stream_event",
 		Event: map[string]any{
@@ -161,6 +173,7 @@ func ContentBlockDelta(text string, sessionID string, index int) StreamEvent {
 			"delta": map[string]any{"type": "text_delta", "text": text},
 		},
 		SessionID: sessionID,
+		UUID:      eventUUID,
 	}
 }
 
@@ -168,7 +181,7 @@ func ContentBlockDelta(text string, sessionID string, index int) StreamEvent {
 // expects BEFORE any content_block_* events. Without this, the extension's
 // renderer crashes on the first content_block_delta with
 // `V.content.at(-1).type` of undefined.
-func MessageStart(messageID, sessionID, model string) StreamEvent {
+func MessageStart(messageID, sessionID, model, eventUUID string) StreamEvent {
 	return StreamEvent{
 		Type: "stream_event",
 		Event: map[string]any{
@@ -185,12 +198,13 @@ func MessageStart(messageID, sessionID, model string) StreamEvent {
 			},
 		},
 		SessionID: sessionID,
+		UUID:      eventUUID,
 	}
 }
 
 // ContentBlockStart opens a content block (typically a text block). Always
 // emitted once per block before any content_block_delta for that index.
-func ContentBlockStart(sessionID string, index int) StreamEvent {
+func ContentBlockStart(sessionID, eventUUID string, index int) StreamEvent {
 	return StreamEvent{
 		Type: "stream_event",
 		Event: map[string]any{
@@ -199,11 +213,12 @@ func ContentBlockStart(sessionID string, index int) StreamEvent {
 			"content_block": map[string]any{"type": "text", "text": ""},
 		},
 		SessionID: sessionID,
+		UUID:      eventUUID,
 	}
 }
 
 // ContentBlockStop closes a content block.
-func ContentBlockStop(sessionID string, index int) StreamEvent {
+func ContentBlockStop(sessionID, eventUUID string, index int) StreamEvent {
 	return StreamEvent{
 		Type: "stream_event",
 		Event: map[string]any{
@@ -211,11 +226,12 @@ func ContentBlockStop(sessionID string, index int) StreamEvent {
 			"index": index,
 		},
 		SessionID: sessionID,
+		UUID:      eventUUID,
 	}
 }
 
 // MessageDelta + MessageStop close the streaming turn.
-func MessageDelta(sessionID, stopReason string) StreamEvent {
+func MessageDelta(sessionID, stopReason, eventUUID string) StreamEvent {
 	return StreamEvent{
 		Type: "stream_event",
 		Event: map[string]any{
@@ -224,13 +240,15 @@ func MessageDelta(sessionID, stopReason string) StreamEvent {
 			"usage": map[string]any{},
 		},
 		SessionID: sessionID,
+		UUID:      eventUUID,
 	}
 }
 
-func MessageStop(sessionID string) StreamEvent {
+func MessageStop(sessionID, eventUUID string) StreamEvent {
 	return StreamEvent{
 		Type:      "stream_event",
 		Event:     map[string]any{"type": "message_stop"},
 		SessionID: sessionID,
+		UUID:      eventUUID,
 	}
 }

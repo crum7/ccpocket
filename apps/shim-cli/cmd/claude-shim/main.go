@@ -431,6 +431,7 @@ func main() {
 				Usage:            defaultUsage(),
 				ModelUsage:       map[string]any{},
 				PermissionDenies: []any{},
+			UUID:             newEventUUID(),
 			})
 		}
 	} else if c := st.finishedExit.Load(); c != 0 {
@@ -786,10 +787,10 @@ func (s *state) ensureStreamingTurn(model string) error {
 	if model == "" {
 		model = "claude"
 	}
-	if err := s.stdout.Write(wire.MessageStart(id, s.sessionID, model)); err != nil {
+	if err := s.stdout.Write(wire.MessageStart(id, s.sessionID, model, newEventUUID())); err != nil {
 		return err
 	}
-	if err := s.stdout.Write(wire.ContentBlockStart(s.sessionID, 0)); err != nil {
+	if err := s.stdout.Write(wire.ContentBlockStart(s.sessionID, newEventUUID(), 0)); err != nil {
 		return err
 	}
 	s.streamMessageID = id
@@ -809,13 +810,13 @@ func (s *state) endStreamingTurn(stopReason string) error {
 	if stopReason == "" {
 		stopReason = "end_turn"
 	}
-	if err := s.stdout.Write(wire.ContentBlockStop(s.sessionID, 0)); err != nil {
+	if err := s.stdout.Write(wire.ContentBlockStop(s.sessionID, newEventUUID(), 0)); err != nil {
 		return err
 	}
-	if err := s.stdout.Write(wire.MessageDelta(s.sessionID, stopReason)); err != nil {
+	if err := s.stdout.Write(wire.MessageDelta(s.sessionID, stopReason, newEventUUID())); err != nil {
 		return err
 	}
-	if err := s.stdout.Write(wire.MessageStop(s.sessionID)); err != nil {
+	if err := s.stdout.Write(wire.MessageStop(s.sessionID, newEventUUID())); err != nil {
 		return err
 	}
 	s.streamingTurn = false
@@ -856,6 +857,19 @@ func generateMessageID() string {
 	return "msg_" + hex.EncodeToString(b[:])
 }
 
+// newEventUUID mints a UUID-format string used for the top-level `uuid` field
+// on each emitted envelope. The extension's webview keys per-message
+// tracking off this value; emitting it (rather than leaving it empty) keeps
+// stream events correctly bucketed when the user switches tabs mid-response.
+func newEventUUID() string {
+	var b [16]byte
+	_, _ = cryptoRand.Read(b[:])
+	// Set the variant + version bits to make it a valid UUIDv4.
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
 // emitSystemInit writes the deferred `system/init` envelope. Idempotent via
 // initOnce. We delay this call until after the Bridge confirms
 // `session_created` so the `session_id` field carries the Bridge's canonical
@@ -874,6 +888,7 @@ func (s *state) emitSystemInit() {
 			MCPServers:  []string{},
 			APIKeySrc:   "none",
 			Permissions: s.permissionMode,
+			UUID:        newEventUUID(),
 		}); err != nil {
 			s.log.Errorf("write system/init: %v", err)
 		}
@@ -931,7 +946,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		if err := s.ensureStreamingTurn(""); err != nil {
 			return err
 		}
-		return s.stdout.Write(wire.ContentBlockDelta(text, s.sessionID, 0))
+		return s.stdout.Write(wire.ContentBlockDelta(text, s.sessionID, newEventUUID(), 0))
 
 	case "tool_result":
 		return s.handleToolResult(m)
@@ -982,6 +997,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			Usage:            defaultUsage(),
 			ModelUsage:       map[string]any{},
 			PermissionDenies: []any{},
+			UUID:             newEventUUID(),
 		}
 		if isError {
 			out.Result = m.StringField("error")
@@ -1013,6 +1029,7 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			Usage:            defaultUsage(),
 			ModelUsage:       map[string]any{},
 			PermissionDenies: []any{},
+			UUID:             newEventUUID(),
 		})
 
 	case "session_list":
@@ -1118,11 +1135,13 @@ func (s *state) handleAssistant(m *bridge.Message) error {
 	useUUID := m.StringField("messageUuid")
 	if s.streamMessageID != "" {
 		useID = s.streamMessageID
-		if useUUID == "" {
-			useUUID = s.streamMessageID
-		}
 	}
 	s.streamMu.Unlock()
+	// Every emitted envelope MUST have a uuid (the webview keys per-event
+	// tracking off it). Generate one if the bridge didn't supply one.
+	if useUUID == "" {
+		useUUID = newEventUUID()
+	}
 
 	out := wire.AssistantOut{
 		Type: "assistant",
@@ -1172,6 +1191,7 @@ func emitError(w *sdk.Writer, sessionID, msg string) {
 		Usage:            defaultUsage(),
 		ModelUsage:       map[string]any{},
 		PermissionDenies: []any{},
+			UUID:             newEventUUID(),
 	})
 }
 
