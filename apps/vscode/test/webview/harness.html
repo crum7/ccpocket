@@ -1,35 +1,16 @@
 <!DOCTYPE html>
 <!--
-  CC Pocket webview test harness.
-
-  Mirrors apps/vscode/media/index.html but loads from `file://` or `http://`
-  outside of a VSCode webview. Before main.js runs we:
-
-    * Stub `acquireVsCodeApi()` so the UI thinks it's inside VSCode.
-    * Expose `window.__pwMessages` to inspect outbound traffic.
-    * Expose `window.__deliver(msg)` for scenarios to push synthetic
-      ExtensionToWebview messages onto the `message` event channel.
-    * Define `--vscode-*` CSS variables with sensible defaults so the dark/
-      light theme doesn't degrade to an unstyled blob in Chromium.
-
-  Keep this file in lockstep with media/index.html — if a new element id is
-  added there, mirror it here, otherwise main.js's strict `$(id)` lookup will
-  throw on boot.
+  CC Pocket webview test harness — mirrors apps/vscode/media/index.html.
+  Keep the body in lockstep with media/index.html so main.js's $(id) lookups
+  succeed during boot. Updated for the new sidebar + composer + popover UI.
 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>CC Pocket — harness</title>
-    <!-- Permissive CSP equivalent: don't set a meta CSP at all, the harness
-         is for testing only and we want module loading + inline scripts to
-         "just work". -->
     <style>
-      /* Provide minimal --vscode-* fallbacks so the UI renders something
-         visible in vanilla Chromium. The real extension overrides these via
-         VSCode-injected theme variables. */
       :root {
-        --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-          sans-serif;
+        --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         --vscode-font-size: 13px;
         --vscode-foreground: #d4d4d4;
         --vscode-editor-background: #1e1e1e;
@@ -46,106 +27,112 @@
         --vscode-inputValidation-errorBorder: rgba(180, 60, 60, 0.4);
         --vscode-descriptionForeground: #8a8a8a;
         --vscode-textLink-foreground: #3794ff;
+        --vscode-textCodeBlock-background: rgba(127, 127, 127, 0.1);
+        --vscode-editor-font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        --vscode-editor-font-size: 12px;
+        --vscode-diffEditor-insertedLineBackground: rgba(64, 160, 96, 0.18);
+        --vscode-diffEditor-removedLineBackground: rgba(200, 70, 70, 0.18);
       }
-      html,
-      body {
-        background: var(--vscode-editor-background);
-        color: var(--vscode-foreground);
-      }
+      html, body { background: var(--vscode-editor-background); color: var(--vscode-foreground); margin: 0; height: 100%; }
     </style>
     <link rel="stylesheet" href="../../media/styles.css" />
     <script>
-      // ----- VSCode API stub --------------------------------------------------
       window.__pwMessages = [];
       window.acquireVsCodeApi = function () {
         return {
-          postMessage: function (m) {
-            window.__pwMessages.push(m);
-          },
+          postMessage: function (m) { window.__pwMessages.push(m); },
           getState: function () {
-            try {
-              return JSON.parse(localStorage.getItem("cc.state") || "null");
-            } catch (e) {
-              return null;
-            }
+            try { return JSON.parse(localStorage.getItem("cc.state") || "null"); } catch (e) { return null; }
           },
-          setState: function (s) {
-            localStorage.setItem("cc.state", JSON.stringify(s));
-          },
+          setState: function (s) { localStorage.setItem("cc.state", JSON.stringify(s)); },
         };
       };
-
-      // ----- Synthetic ExtensionToWebview dispatch ---------------------------
-      // Scenarios call this to push messages onto the same channel VSCode
-      // would post to. Using MessageEvent matches the real shape (event.data).
       window.__deliver = function (message) {
         window.dispatchEvent(new MessageEvent("message", { data: message }));
       };
-
-      // ----- Diagnostics for tests ------------------------------------------
-      // Surface uncaught errors so Playwright's page.on('pageerror') sees them
-      // even if main.js swallows something synchronously during boot.
       window.__pwErrors = [];
       window.addEventListener("error", function (ev) {
-        window.__pwErrors.push({
-          message: ev.message,
-          filename: ev.filename,
-          lineno: ev.lineno,
-          colno: ev.colno,
-        });
+        window.__pwErrors.push({ message: ev.message, filename: ev.filename, lineno: ev.lineno, colno: ev.colno });
       });
       window.addEventListener("unhandledrejection", function (ev) {
-        window.__pwErrors.push({
-          message: "unhandledrejection: " + String(ev.reason),
-        });
+        window.__pwErrors.push({ message: "unhandledrejection: " + String(ev.reason) });
       });
     </script>
   </head>
   <body>
-    <!-- Toast banner for transient errors. Hidden until populated by main.js. -->
+    <div id="app" class="app">
+      <aside id="sidebar" class="sidebar" aria-label="Sessions">
+        <div class="sidebar-head">
+          <button id="sidebar-toggle" class="sidebar-toggle icon-btn" type="button" title="Toggle sidebar" aria-label="Toggle sidebar"></button>
+          <span class="sidebar-title">CC Pocket</span>
+          <button id="new-session-btn" class="sidebar-new-btn icon-btn" type="button" title="New session" aria-label="New session">+ New</button>
+        </div>
+        <div id="sidebar-scroll" class="sidebar-scroll">
+          <section class="sidebar-section" id="active-section">
+            <header class="sidebar-section-head">Active session</header>
+            <div id="active-card" class="active-card empty">No active session.</div>
+          </section>
+          <section class="sidebar-section" id="recent-section">
+            <header class="sidebar-section-head">Recent sessions</header>
+            <ul id="recent-list" class="sidebar-list"></ul>
+          </section>
+          <section class="sidebar-section" id="projects-section">
+            <header class="sidebar-section-head">Projects</header>
+            <ul id="projects-list" class="sidebar-list"></ul>
+          </section>
+        </div>
+      </aside>
+
+      <main class="main-col">
+        <header class="topbar">
+          <span id="status-dot" class="status-dot status-idle" aria-hidden="true"></span>
+          <span id="status-label" class="status-label">Idle</span>
+          <span id="bridge-url" class="bridge-url" title=""></span>
+          <span class="topbar-spacer"></span>
+          <span id="active-mini" class="active-mini" title=""></span>
+          <button id="stop-btn" class="icon-btn topbar-stop" type="button" hidden>Stop</button>
+          <button id="reconnect-btn" class="icon-btn topbar-reconnect" type="button" hidden>Reconnect</button>
+        </header>
+
+        <div id="banners" class="banners" aria-live="polite"></div>
+        <section id="messages" class="messages" aria-live="polite" aria-label="Chat messages"></section>
+
+        <footer class="composer" id="composer">
+          <div id="chips" class="chips" hidden></div>
+          <textarea id="input" class="input" rows="1" placeholder="Type a message… (⌘↵ to send)" aria-label="Message"></textarea>
+          <div class="composer-row">
+            <div class="composer-row-left">
+              <button id="plus-btn" class="composer-icon-btn" type="button" title="Attach" aria-label="Attach"><span class="iconglyph">+</span></button>
+              <button id="mic-btn" class="composer-icon-btn" type="button" title="Voice input" aria-label="Voice input"><span class="iconglyph mic">●</span></button>
+            </div>
+            <div class="composer-row-right">
+              <button id="mode-btn" class="mode-chip" type="button" aria-haspopup="true" aria-expanded="false">
+                <span class="mode-icon" aria-hidden="true"></span>
+                <span id="mode-label" class="mode-label">Edit automatically</span>
+                <span class="mode-caret" aria-hidden="true">▾</span>
+              </button>
+              <button id="send-btn" class="send-btn" type="button" disabled aria-label="Send">
+                <span class="iconglyph send" aria-hidden="true">➤</span>
+              </button>
+            </div>
+          </div>
+          <div id="plus-menu" class="popover" role="menu" hidden>
+            <button class="popover-item" data-action="pick-workspace-file" type="button" role="menuitem"><span class="popover-glyph">📄</span><span>Add workspace file</span></button>
+            <button class="popover-item" data-action="pick-open-editor" type="button" role="menuitem"><span class="popover-glyph">🗂</span><span>Open editor file</span></button>
+            <button class="popover-item" data-action="pick-system-file" type="button" role="menuitem"><span class="popover-glyph">⬆</span><span>Upload from computer</span></button>
+            <button class="popover-item" data-action="add-active-selection" type="button" role="menuitem"><span class="popover-glyph">▢</span><span>Add active selection</span></button>
+          </div>
+          <div id="mode-menu" class="popover popover-right" role="menu" hidden>
+            <button class="popover-item" data-mode="default" type="button" role="menuitemradio"><span class="popover-check" aria-hidden="true">✓</span><span class="popover-body"><span class="popover-title">Ask before edits</span><span class="popover-sub">Confirm each tool call</span></span></button>
+            <button class="popover-item" data-mode="acceptEdits" type="button" role="menuitemradio"><span class="popover-check" aria-hidden="true">✓</span><span class="popover-body"><span class="popover-title">Edit automatically</span><span class="popover-sub">Apply file edits without asking</span></span></button>
+            <button class="popover-item" data-mode="plan" type="button" role="menuitemradio"><span class="popover-check" aria-hidden="true">✓</span><span class="popover-body"><span class="popover-title">Plan mode</span><span class="popover-sub">Plan before any changes</span></span></button>
+            <button class="popover-item" data-mode="bypassPermissions" type="button" role="menuitemradio"><span class="popover-check" aria-hidden="true">✓</span><span class="popover-body"><span class="popover-title">Auto (bypass)</span><span class="popover-sub">Skip all permission prompts</span></span></button>
+          </div>
+        </footer>
+      </main>
+    </div>
+
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-
-    <!-- Top header: connection state + session controls. -->
-    <header class="header">
-      <div class="status-row">
-        <span id="status-dot" class="status-dot status-idle" aria-hidden="true"></span>
-        <span id="status-label" class="status-label">Idle</span>
-        <button id="reconnect-btn" class="link-btn" type="button" hidden>Reconnect</button>
-      </div>
-      <div class="session-row">
-        <label class="session-label" for="project-select">Project</label>
-        <select id="project-select" class="select" aria-label="Project"></select>
-        <button id="stop-btn" class="icon-btn" type="button" title="Stop session" hidden>
-          Stop
-        </button>
-      </div>
-      <div class="session-row session-row-secondary" id="session-picker-row" hidden>
-        <label class="session-label" for="session-select">Session</label>
-        <select id="session-select" class="select" aria-label="Session"></select>
-      </div>
-      <div class="meta-row" id="meta-row" hidden>
-        <span id="meta-project" class="meta-project" title=""></span>
-        <span id="meta-session" class="meta-session"></span>
-      </div>
-    </header>
-
-    <!-- Main message list (flex-grow, scrollable). -->
-    <main id="messages" class="messages" aria-live="polite" aria-label="Chat messages"></main>
-
-    <!-- Bottom composer. -->
-    <footer class="composer">
-      <textarea
-        id="input"
-        class="input"
-        rows="1"
-        placeholder="Type a message… (⌘↵ to send)"
-        aria-label="Message"
-      ></textarea>
-      <div class="composer-row">
-        <span id="hint" class="hint"></span>
-        <button id="send-btn" class="primary-btn" type="button">Send</button>
-      </div>
-    </footer>
 
     <script type="module" src="../../media/main.js"></script>
   </body>
