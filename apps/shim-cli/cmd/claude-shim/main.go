@@ -906,6 +906,30 @@ func (s *state) emitSystemInit() {
 
 // dispatchBridge translates a single Bridge message into stdout envelopes.
 func (s *state) dispatchBridge(m *bridge.Message) error {
+	// Critical multi-chat filter: the bridge fans broadcastSessionMessage()
+	// out to EVERY connected WebSocket client (see packages/bridge/src/
+	// websocket.ts:3748 — `for (const client of this.wss.clients)`). With
+	// multiple shim processes (one per VSCode chat tab) sharing the bridge,
+	// each shim receives stream_delta / assistant / result / status events
+	// for OTHER shims' sessions as well. Without filtering, chat A's stream
+	// gets rendered into chat B's transcript — the exact cross-mixing the
+	// user has been seeing.
+	//
+	// We drop any sessioned message whose sessionId doesn't match our
+	// bridgeSessionID. Exceptions:
+	//   - `system/session_created`: bridge sends this targeted (`this.send(ws,…)`
+	//     in websocket.ts:849), so we only see OUR own. It also carries the
+	//     bridgeSessionID we need to install — must be processed before the
+	//     filter ever has a value to compare against.
+	//   - `session_list`: broadcast, but legitimately global — we walk all
+	//     entries to populate the store.
+	if m.Type != "session_list" && !(m.Type == "system" && m.StringField("subtype") == "session_created") {
+		if sid := m.StringField("sessionId"); sid != "" && s.bridgeSessionID != "" && sid != s.bridgeSessionID {
+			s.log.Debugf("bridge: drop cross-session msg type=%s sid=%s (ours=%s)", m.Type, sid, s.bridgeSessionID)
+			return nil
+		}
+	}
+
 	switch m.Type {
 	case "system":
 		// session_created carries the Bridge's internal session id. We
