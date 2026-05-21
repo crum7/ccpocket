@@ -138,8 +138,21 @@ func handleOneShotSubcommand(positional []string, log *logger.Logger) bool {
 		return false
 	}
 
+	// The extension prefixes argv with the original `claude` binary path
+	// when a claudeProcessWrapper is in effect (so the wrapper can defer
+	// to it). Locate the actual subcommand by scanning for the verb pair
+	// anywhere in the token stream — not just at index 0.
+	hasPair := func(a, b string) bool {
+		for i := 0; i+1 < len(verbs); i++ {
+			if verbs[i] == a && verbs[i+1] == b {
+				return true
+			}
+		}
+		return false
+	}
+
 	switch {
-	case verbs[0] == "auth" && verbs[1] == "status":
+	case hasPair("auth", "status"):
 		// Pretend we're logged in via a CC Pocket Bridge route. The extension
 		// only acts on .loggedIn; the rest is cosmetic.
 		stdout := sdk.NewWriter(os.Stdout)
@@ -716,12 +729,16 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		return nil
 
 	case "assistant":
-		// If we've been streaming, the extension already accumulated the
-		// full text via content_block_delta events — emitting a separate
-		// assistant envelope would create a duplicate message bubble in
-		// the UI. Just close the stream cleanly and skip.
-		if s.streamingTurn {
-			return s.endStreamingTurn("end_turn")
+		// Close any open streaming turn FIRST so the extension's parser
+		// finalizes accumulated content_block_delta into a complete
+		// content block before the canonical assistant envelope lands.
+		// We DO still emit the assistant envelope after — it acts as the
+		// authoritative "this is the persisted message" signal for the
+		// extension; suppressing it caused the UI to drop the tail of
+		// the response (deltas that arrived close to message_stop were
+		// rendered live but not persisted).
+		if err := s.endStreamingTurn("end_turn"); err != nil {
+			s.log.Errorf("close streaming turn (before assistant): %v", err)
 		}
 		return s.handleAssistant(m)
 
