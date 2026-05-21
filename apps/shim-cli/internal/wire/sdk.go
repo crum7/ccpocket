@@ -148,14 +148,89 @@ type ControlResponseEnv struct {
 	Error     string         `json:"error,omitempty"`
 }
 
-// ContentBlockDelta builds a stream_event for a text delta.
-func ContentBlockDelta(text string, sessionID string) StreamEvent {
+// ContentBlockDelta builds a stream_event for a text delta. The `index` is
+// required by the extension's stream parser (it uses it to locate the matching
+// content block created by content_block_start). For text-only MVP we always
+// emit index 0.
+func ContentBlockDelta(text string, sessionID string, index int) StreamEvent {
 	return StreamEvent{
 		Type: "stream_event",
 		Event: map[string]any{
 			"type":  "content_block_delta",
+			"index": index,
 			"delta": map[string]any{"type": "text_delta", "text": text},
 		},
+		SessionID: sessionID,
+	}
+}
+
+// MessageStart builds the SSE-style `message_start` stream event the extension
+// expects BEFORE any content_block_* events. Without this, the extension's
+// renderer crashes on the first content_block_delta with
+// `V.content.at(-1).type` of undefined.
+func MessageStart(messageID, sessionID, model string) StreamEvent {
+	return StreamEvent{
+		Type: "stream_event",
+		Event: map[string]any{
+			"type": "message_start",
+			"message": map[string]any{
+				"id":            messageID,
+				"type":          "message",
+				"role":          "assistant",
+				"model":         model,
+				"content":       []any{},
+				"stop_reason":   nil,
+				"stop_sequence": nil,
+				"usage":         map[string]any{},
+			},
+		},
+		SessionID: sessionID,
+	}
+}
+
+// ContentBlockStart opens a content block (typically a text block). Always
+// emitted once per block before any content_block_delta for that index.
+func ContentBlockStart(sessionID string, index int) StreamEvent {
+	return StreamEvent{
+		Type: "stream_event",
+		Event: map[string]any{
+			"type":          "content_block_start",
+			"index":         index,
+			"content_block": map[string]any{"type": "text", "text": ""},
+		},
+		SessionID: sessionID,
+	}
+}
+
+// ContentBlockStop closes a content block.
+func ContentBlockStop(sessionID string, index int) StreamEvent {
+	return StreamEvent{
+		Type: "stream_event",
+		Event: map[string]any{
+			"type":  "content_block_stop",
+			"index": index,
+		},
+		SessionID: sessionID,
+	}
+}
+
+// MessageDelta + MessageStop close the streaming turn.
+func MessageDelta(sessionID, stopReason string) StreamEvent {
+	return StreamEvent{
+		Type: "stream_event",
+		Event: map[string]any{
+			"type":  "message_delta",
+			"delta": map[string]any{"stop_reason": stopReason, "stop_sequence": nil},
+			"usage": map[string]any{},
+		},
+		SessionID: sessionID,
+	}
+}
+
+func MessageStop(sessionID string) StreamEvent {
+	return StreamEvent{
+		Type:      "stream_event",
+		Event:     map[string]any{"type": "message_stop"},
 		SessionID: sessionID,
 	}
 }

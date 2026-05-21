@@ -14,6 +14,7 @@ package main
 import (
 	"context"
 	cryptoRand "crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -349,6 +350,16 @@ type state struct {
 
 	initOnce sync.Once // gates the lazy system/init emission on first user input
 
+	// Streaming-turn state. The extension's stream parser requires the full
+	// SSE sequence `message_start` → `content_block_start` → multiple
+	// `content_block_delta` → `content_block_stop` → `message_delta` →
+	// `message_stop`. We wrap Bridge `stream_delta` events with the
+	// start/stop markers around each turn so the extension can consume them.
+	streamingTurn    bool
+	streamMessageID  string
+	streamModel      string
+	streamMu         sync.Mutex
+
 	finished     atomicBool
 	finishedExit atomic.Int32 // suggested exit code when finished is set
 }
@@ -589,6 +600,65 @@ func (s *state) flushPendingFirstInput() {
 	}
 }
 
+// ensureStreamingTurn emits the SSE prelude (`message_start` +
+// `content_block_start`) the extension's stream parser requires before any
+// `content_block_delta`. Idempotent — safe to call once per delta. The
+// optional `model` hint is used for the `message_start` `message.model`
+// field; when empty we use a generic "claude" fallback.
+func (s *state) ensureStreamingTurn(model string) error {
+	s.streamMu.Lock()
+	defer s.streamMu.Unlock()
+	if s.streamingTurn {
+		return nil
+	}
+	id := generateMessageID()
+	if model == "" {
+		model = "claude"
+	}
+	if err := s.stdout.Write(wire.MessageStart(id, s.sessionID, model)); err != nil {
+		return err
+	}
+	if err := s.stdout.Write(wire.ContentBlockStart(s.sessionID, 0)); err != nil {
+		return err
+	}
+	s.streamMessageID = id
+	s.streamModel = model
+	s.streamingTurn = true
+	return nil
+}
+
+// endStreamingTurn emits the SSE epilogue (`content_block_stop` →
+// `message_delta` → `message_stop`) to close out a streaming turn. Idempotent.
+func (s *state) endStreamingTurn(stopReason string) error {
+	s.streamMu.Lock()
+	defer s.streamMu.Unlock()
+	if !s.streamingTurn {
+		return nil
+	}
+	if stopReason == "" {
+		stopReason = "end_turn"
+	}
+	if err := s.stdout.Write(wire.ContentBlockStop(s.sessionID, 0)); err != nil {
+		return err
+	}
+	if err := s.stdout.Write(wire.MessageDelta(s.sessionID, stopReason)); err != nil {
+		return err
+	}
+	if err := s.stdout.Write(wire.MessageStop(s.sessionID)); err != nil {
+		return err
+	}
+	s.streamingTurn = false
+	return nil
+}
+
+// generateMessageID mints a random `msg_…` style id similar to what the
+// Anthropic API emits. We just need something unique per streaming turn.
+func generateMessageID() string {
+	var b [12]byte
+	_, _ = cryptoRand.Read(b[:])
+	return "msg_" + hex.EncodeToString(b[:])
+}
+
 // dispatchBridge translates a single Bridge message into stdout envelopes.
 func (s *state) dispatchBridge(m *bridge.Message) error {
 	switch m.Type {
@@ -612,6 +682,13 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		return nil
 
 	case "assistant":
+		// If we've been streaming, the extension already accumulated the
+		// full text via content_block_delta events — emitting a separate
+		// assistant envelope would create a duplicate message bubble in
+		// the UI. Just close the stream cleanly and skip.
+		if s.streamingTurn {
+			return s.endStreamingTurn("end_turn")
+		}
 		return s.handleAssistant(m)
 
 	case "stream_delta":
@@ -619,7 +696,10 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		if text == "" {
 			return nil
 		}
-		return s.stdout.Write(wire.ContentBlockDelta(text, s.sessionID))
+		if err := s.ensureStreamingTurn(""); err != nil {
+			return err
+		}
+		return s.stdout.Write(wire.ContentBlockDelta(text, s.sessionID, 0))
 
 	case "tool_result":
 		return s.handleToolResult(m)
@@ -650,6 +730,16 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			subtype = "success"
 		}
 		isError := subtype != "success"
+		// Make sure any open streaming turn is closed BEFORE the result
+		// envelope — otherwise the extension never sees content_block_stop /
+		// message_stop and treats the message as truncated.
+		stopReason := "end_turn"
+		if isError {
+			stopReason = "error"
+		}
+		if err := s.endStreamingTurn(stopReason); err != nil {
+			s.log.Errorf("close streaming turn: %v", err)
+		}
 		out := wire.Result{
 			Type:             "result",
 			Subtype:          subtype,
@@ -670,6 +760,10 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		errMsg := m.StringField("message")
 		errCode := m.StringField("errorCode")
 		s.log.Errorf("bridge error: %s (%s)", errMsg, errCode)
+		// Close any open streaming turn before emitting the terminal result.
+		if err := s.endStreamingTurn("error"); err != nil {
+			s.log.Errorf("close streaming turn (on error): %v", err)
+		}
 		// Treat fatal-looking error codes as terminal; otherwise just forward
 		// as a result/error and let the user retry.
 		s.finished.Store(true)
