@@ -1,52 +1,112 @@
-import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as vscode from 'vscode';
 
-export interface BuildHtmlConfig {
-  bridgeUrl: string;
-  bridgeToken: string;
-  flutterBuildPath: string;
-}
-
 /**
- * Content Security Policy applied to the webview.
+ * Compose the Content Security Policy for the sidebar webview.
  *
- * default-src 'none'
- *   — Deny by default; every resource type must be explicitly allowed.
- * img-src ${webview.cspSource} data: blob:
- *   — Flutter web emits images both as bundled assets (cspSource) and as
- *     data:/blob: URLs (e.g. CanvasKit-rendered or runtime-generated images).
- * style-src ${webview.cspSource} 'unsafe-inline'
- *   — Flutter injects inline styles during bootstrap; 'unsafe-inline' is
- *     unavoidable until Flutter web stops doing that.
- * script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-<nonce>'
- *   — main.dart.js and CanvasKit are served from the extension origin
- *     (cspSource). 'wasm-unsafe-eval' is required for CanvasKit's WASM module.
- *     The nonce permits our single inline config-injection <script>.
- * connect-src ws://localhost:* http://localhost:* ${webview.cspSource}
- *   — The webview talks to the local CC Pocket bridge over WebSocket and
- *     occasionally HTTP. cspSource is kept so Flutter's own fetch() calls for
- *     bundled assets still resolve.
+ * The bridge WebSocket connection lives in the **extension host** process,
+ * not the webview, so the webview never opens any network sockets of its own
+ * — it talks to the host exclusively via `postMessage`. That is why
+ * `connect-src` is restricted to `webview.cspSource` and does NOT include
+ * `ws://*` or `http://*`.
  */
-function buildCsp(webview: vscode.Webview, nonce?: string): string {
-  const scriptSrc = nonce
-    ? `script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}'`
-    : `script-src ${webview.cspSource} 'wasm-unsafe-eval'`;
+function buildCsp(webview: vscode.Webview): string {
   return [
     `default-src 'none'`,
     `img-src ${webview.cspSource} data: blob:`,
+    `font-src ${webview.cspSource} data:`,
     `style-src ${webview.cspSource} 'unsafe-inline'`,
-    scriptSrc,
-    `connect-src ws://localhost:* http://localhost:* ${webview.cspSource}`,
+    `script-src ${webview.cspSource}`,
+    `connect-src ${webview.cspSource}`,
   ].join('; ');
 }
 
-function generateNonce(): string {
-  return crypto.randomBytes(16).toString('base64');
+/**
+ * Rewrite a single href/src attribute value to a webview-safe URI.
+ *
+ * Absolute URLs (with a scheme), protocol-relative URLs, anchor links, and
+ * root-relative paths are left untouched — only plain relative paths are
+ * rewritten through `webview.asWebviewUri`.
+ */
+function rewriteAttr(
+  attrValue: string,
+  webview: vscode.Webview,
+  mediaRoot: vscode.Uri,
+): string {
+  if (!attrValue) return attrValue;
+  if (/^[a-z][a-z0-9+\-.]*:/i.test(attrValue)) return attrValue;
+  if (attrValue.startsWith('//')) return attrValue;
+  if (attrValue.startsWith('#')) return attrValue;
+  if (attrValue.startsWith('/')) return attrValue;
+
+  const cleaned = attrValue.replace(/^\.\//, '');
+  const segments = cleaned.split('/').filter((s) => s.length > 0);
+  if (segments.length === 0) return attrValue;
+  const assetUri = vscode.Uri.joinPath(mediaRoot, ...segments);
+  return webview.asWebviewUri(assetUri).toString();
 }
 
-function placeholderHtml(csp: string): string {
-  return `<!DOCTYPE html>
+/**
+ * Rewrite `href=` / `src=` attributes on `<link>`, `<script>`, and `<img>`
+ * tags so they resolve through `webview.asWebviewUri`. We deliberately do
+ * not touch `<a href>` because anchor navigation is not allowed in webviews
+ * and those URLs may be intentionally external.
+ */
+function rewriteAssetUrls(
+  html: string,
+  webview: vscode.Webview,
+  mediaRoot: vscode.Uri,
+): string {
+  html = html.replace(
+    /(<link\b[^>]*\bhref\s*=\s*)(["'])([^"']*)\2/gi,
+    (_m, prefix: string, quote: string, value: string) =>
+      `${prefix}${quote}${rewriteAttr(value, webview, mediaRoot)}${quote}`,
+  );
+  html = html.replace(
+    /(<script\b[^>]*\bsrc\s*=\s*)(["'])([^"']*)\2/gi,
+    (_m, prefix: string, quote: string, value: string) =>
+      `${prefix}${quote}${rewriteAttr(value, webview, mediaRoot)}${quote}`,
+  );
+  html = html.replace(
+    /(<img\b[^>]*\bsrc\s*=\s*)(["'])([^"']*)\2/gi,
+    (_m, prefix: string, quote: string, value: string) =>
+      `${prefix}${quote}${rewriteAttr(value, webview, mediaRoot)}${quote}`,
+  );
+  return html;
+}
+
+function escapeHtml(input: string): string {
+  return input.replace(/[&<>]/g, (c) =>
+    c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;',
+  );
+}
+
+/**
+ * Produce the HTML to set on `webview.html` for the sidebar view.
+ *
+ * The on-disk `apps/vscode/media/index.html` (built by the UI agent) is
+ * loaded verbatim except that we:
+ *   1. Inject a CSP `<meta>` tag scoped to the webview origin.
+ *   2. Inject a `<base href>` pointing at the webview-mapped `media/` folder.
+ *   3. Rewrite relative `href=`/`src=` attributes via `asWebviewUri`.
+ *
+ * The UI agent's `index.html` deliberately omits CSP and `<base>` so we are
+ * the single source of truth for both.
+ */
+export function buildHtml(
+  webview: vscode.Webview,
+  extensionUri: vscode.Uri,
+): string {
+  const mediaRoot = vscode.Uri.joinPath(extensionUri, 'media');
+  const indexPath = vscode.Uri.joinPath(mediaRoot, 'index.html');
+
+  let raw: string;
+  try {
+    raw = fs.readFileSync(indexPath.fsPath, 'utf8');
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    const csp = buildCsp(webview);
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -58,94 +118,51 @@ function placeholderHtml(csp: string): string {
       font-family: var(--vscode-font-family, -apple-system, system-ui, sans-serif);
       color: var(--vscode-foreground);
       background: var(--vscode-editor-background);
-      padding: 2rem;
+      padding: 1.5rem;
       line-height: 1.5;
     }
-    code {
-      background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1));
-      padding: 0.1em 0.4em;
-      border-radius: 3px;
-    }
-    .hint { opacity: 0.7; font-size: 0.9em; margin-top: 1.5rem; }
+    pre { white-space: pre-wrap; }
   </style>
 </head>
 <body>
-  <h1>CC Pocket</h1>
-  <p>Flutter web build not yet present.</p>
-  <p>Run <code>flutter build web</code> in <code>apps/mobile</code> to populate this panel.</p>
-  <p class="hint">Once built, this panel will load <code>apps/mobile/build/web/index.html</code> automatically.</p>
+  <h2>CC Pocket</h2>
+  <p>Failed to load <code>media/index.html</code>:</p>
+  <pre>${escapeHtml(reason)}</pre>
 </body>
 </html>`;
-}
-
-/**
- * Returns the HTML to render inside the webview.
- *
- * If the Flutter web build exists, its index.html is loaded and asset URLs
- * are rewritten through `webview.asWebviewUri`. Otherwise a placeholder page
- * is returned.
- *
- * When the Flutter build is loaded, a small inline `<script>` is injected at
- * the top of `<head>` that sets `window.ccpocketConfig` so the Flutter side
- * can pick up the bridge URL / token without any prior message round-trip.
- * The inline script is gated by a per-call CSP nonce.
- */
-export function buildHtml(
-  webview: vscode.Webview,
-  _extensionUri: vscode.Uri,
-  mobileWebRoot: vscode.Uri,
-  config: BuildHtmlConfig,
-): string {
-  const indexPath = vscode.Uri.joinPath(mobileWebRoot, 'index.html');
-
-  let raw: string;
-  try {
-    raw = fs.readFileSync(indexPath.fsPath, 'utf8');
-  } catch {
-    // No Flutter build → render placeholder with the nonce-less CSP.
-    return placeholderHtml(buildCsp(webview));
   }
 
-  const nonce = generateNonce();
-  const csp = buildCsp(webview, nonce);
-
-  // Compute the webview base URI for the Flutter build directory. Flutter's
-  // bootstrap script resolves assets relative to <base href>, so pointing it
-  // at the webview-mapped URI is sufficient to fix up most asset paths.
-  const baseHref = webview.asWebviewUri(mobileWebRoot).toString().replace(/\/?$/, '/');
+  const csp = buildCsp(webview);
+  // Trailing slash matters: `<base href="x/">` makes `foo.js` resolve to `x/foo.js`.
+  const baseHref = webview.asWebviewUri(mediaRoot).toString().replace(/\/?$/, '/');
 
   let html = raw;
 
-  // Inject (or replace) the CSP meta tag.
+  // (1) CSP meta — replace any existing tag, otherwise insert just inside <head>.
   const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}" />`;
-  if (/<meta[^>]+http-equiv=["']Content-Security-Policy["'][^>]*>/i.test(html)) {
+  if (/<meta[^>]+http-equiv\s*=\s*["']Content-Security-Policy["'][^>]*>/i.test(html)) {
     html = html.replace(
-      /<meta[^>]+http-equiv=["']Content-Security-Policy["'][^>]*>/i,
+      /<meta[^>]+http-equiv\s*=\s*["']Content-Security-Policy["'][^>]*>/i,
       cspMeta,
     );
+  } else if (/<head\b[^>]*>/i.test(html)) {
+    html = html.replace(/<head\b([^>]*)>/i, `<head$1>\n  ${cspMeta}`);
   } else {
-    html = html.replace(/<head([^>]*)>/i, `<head$1>\n  ${cspMeta}`);
+    html = `${cspMeta}\n${html}`;
   }
 
-  // Rewrite or inject <base href>.
-  if (/<base\s+href=/i.test(html)) {
-    html = html.replace(/<base\s+href=["'][^"']*["']\s*\/?>/i, `<base href="${baseHref}">`);
-  } else {
-    html = html.replace(/<head([^>]*)>/i, `<head$1>\n  <base href="${baseHref}">`);
+  // (2) <base href> — same insertion rules.
+  const baseTag = `<base href="${baseHref}">`;
+  if (/<base\s+href\s*=/i.test(html)) {
+    html = html.replace(/<base\s+href\s*=\s*["'][^"']*["']\s*\/?>/i, baseTag);
+  } else if (/<head\b[^>]*>/i.test(html)) {
+    html = html.replace(/<head\b([^>]*)>/i, `<head$1>\n  ${baseTag}`);
   }
 
-  // Inject window.ccpocketConfig immediately after <head> so it runs before
-  // any Flutter bootstrap script tags. We JSON-encode the whole object so
-  // embedded quotes / backslashes can't break out of the script literal.
-  const configPayload = {
-    bridgeUrl: config.bridgeUrl,
-    token: config.bridgeToken && config.bridgeToken.length > 0 ? config.bridgeToken : null,
-    source: 'vscode-extension',
-  };
-  // Escape `</` to prevent premature </script> termination inside the literal.
-  const configJson = JSON.stringify(configPayload).replace(/</g, '\\u003c');
-  const configScript = `<script nonce="${nonce}">window.ccpocketConfig = ${configJson};</script>`;
-  html = html.replace(/<head([^>]*)>/i, `<head$1>\n  ${configScript}`);
+  // (3) Asset URL rewriting — <base> alone covers most cases, but explicit
+  // `asWebviewUri` rewriting is the canonical, recommended approach and
+  // avoids the cases where a browser ignores <base> for module specifiers.
+  html = rewriteAssetUrls(html, webview, mediaRoot);
 
   return html;
 }

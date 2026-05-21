@@ -1,8 +1,8 @@
 {
   "name": "@ccpocket/vscode",
   "displayName": "CC Pocket",
-  "description": "VSCode panel that hosts the CC Pocket Flutter web client",
-  "version": "0.0.1",
+  "description": "VSCode sidebar chat for the CC Pocket bridge — Claude Code/Codex sessions in a sidebar",
+  "version": "0.1.0",
   "private": true,
   "license": "SEE LICENSE IN LICENSE",
   "author": "K9i",
@@ -21,13 +21,14 @@
     "Other"
   ],
   "activationEvents": [
+    "onView:ccpocket.placeholder",
     "onCommand:ccpocket.open"
   ],
   "contributes": {
     "commands": [
       {
         "command": "ccpocket.open",
-        "title": "CC Pocket: Open Panel",
+        "title": "CC Pocket: Focus Sidebar",
         "category": "CC Pocket"
       }
     ],
@@ -61,11 +62,6 @@
           "type": "string",
           "default": "",
           "description": "Optional API key if the bridge was started with BRIDGE_API_KEY"
-        },
-        "ccpocket.flutterBuildPath": {
-          "type": "string",
-          "default": "../mobile/build/web",
-          "description": "Path to the Flutter web build output to load in the webview (relative to the extension directory or absolute)"
         }
       }
     }
