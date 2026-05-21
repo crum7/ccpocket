@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<!--
+  CC Pocket webview test harness.
+
+  Mirrors apps/vscode/media/index.html but loads from `file://` or `http://`
+  outside of a VSCode webview. Before main.js runs we:
+
+    * Stub `acquireVsCodeApi()` so the UI thinks it's inside VSCode.
+    * Expose `window.__pwMessages` to inspect outbound traffic.
+    * Expose `window.__deliver(msg)` for scenarios to push synthetic
+      ExtensionToWebview messages onto the `message` event channel.
+    * Define `--vscode-*` CSS variables with sensible defaults so the dark/
+      light theme doesn't degrade to an unstyled blob in Chromium.
+
+  Keep this file in lockstep with media/index.html — if a new element id is
+  added there, mirror it here, otherwise main.js's strict `$(id)` lookup will
+  throw on boot.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CC Pocket — harness</title>
+    <!-- Permissive CSP equivalent: don't set a meta CSP at all, the harness
+         is for testing only and we want module loading + inline scripts to
+         "just work". -->
+    <style>
+      /* Provide minimal --vscode-* fallbacks so the UI renders something
+         visible in vanilla Chromium. The real extension overrides these via
+         VSCode-injected theme variables. */
+      :root {
+        --vscode-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        --vscode-font-size: 13px;
+        --vscode-foreground: #d4d4d4;
+        --vscode-editor-background: #1e1e1e;
+        --vscode-sideBar-background: #252526;
+        --vscode-panel-border: rgba(127, 127, 127, 0.25);
+        --vscode-button-background: #0e639c;
+        --vscode-button-foreground: #ffffff;
+        --vscode-button-hoverBackground: #1177bb;
+        --vscode-input-background: #3c3c3c;
+        --vscode-input-foreground: #cccccc;
+        --vscode-input-border: #3c3c3c;
+        --vscode-inputValidation-errorBackground: rgba(180, 60, 60, 0.18);
+        --vscode-inputValidation-errorForeground: #f48771;
+        --vscode-inputValidation-errorBorder: rgba(180, 60, 60, 0.4);
+        --vscode-descriptionForeground: #8a8a8a;
+        --vscode-textLink-foreground: #3794ff;
+      }
+      html,
+      body {
+        background: var(--vscode-editor-background);
+        color: var(--vscode-foreground);
+      }
+    </style>
+    <link rel="stylesheet" href="../../media/styles.css" />
+    <script>
+      // ----- VSCode API stub --------------------------------------------------
+      window.__pwMessages = [];
+      window.acquireVsCodeApi = function () {
+        return {
+          postMessage: function (m) {
+            window.__pwMessages.push(m);
+          },
+          getState: function () {
+            try {
+              return JSON.parse(localStorage.getItem("cc.state") || "null");
+            } catch (e) {
+              return null;
+            }
+          },
+          setState: function (s) {
+            localStorage.setItem("cc.state", JSON.stringify(s));
+          },
+        };
+      };
+
+      // ----- Synthetic ExtensionToWebview dispatch ---------------------------
+      // Scenarios call this to push messages onto the same channel VSCode
+      // would post to. Using MessageEvent matches the real shape (event.data).
+      window.__deliver = function (message) {
+        window.dispatchEvent(new MessageEvent("message", { data: message }));
+      };
+
+      // ----- Diagnostics for tests ------------------------------------------
+      // Surface uncaught errors so Playwright's page.on('pageerror') sees them
+      // even if main.js swallows something synchronously during boot.
+      window.__pwErrors = [];
+      window.addEventListener("error", function (ev) {
+        window.__pwErrors.push({
+          message: ev.message,
+          filename: ev.filename,
+          lineno: ev.lineno,
+          colno: ev.colno,
+        });
+      });
+      window.addEventListener("unhandledrejection", function (ev) {
+        window.__pwErrors.push({
+          message: "unhandledrejection: " + String(ev.reason),
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <!-- Toast banner for transient errors. Hidden until populated by main.js. -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <!-- Top header: connection state + session controls. -->
+    <header class="header">
+      <div class="status-row">
+        <span id="status-dot" class="status-dot status-idle" aria-hidden="true"></span>
+        <span id="status-label" class="status-label">Idle</span>
+        <button id="reconnect-btn" class="link-btn" type="button" hidden>Reconnect</button>
+      </div>
+      <div class="session-row">
+        <label class="session-label" for="project-select">Project</label>
+        <select id="project-select" class="select" aria-label="Project"></select>
+        <button id="stop-btn" class="icon-btn" type="button" title="Stop session" hidden>
+          Stop
+        </button>
+      </div>
+      <div class="session-row session-row-secondary" id="session-picker-row" hidden>
+        <label class="session-label" for="session-select">Session</label>
+        <select id="session-select" class="select" aria-label="Session"></select>
+      </div>
+      <div class="meta-row" id="meta-row" hidden>
+        <span id="meta-project" class="meta-project" title=""></span>
+        <span id="meta-session" class="meta-session"></span>
+      </div>
+    </header>
+
+    <!-- Main message list (flex-grow, scrollable). -->
+    <main id="messages" class="messages" aria-live="polite" aria-label="Chat messages"></main>
+
+    <!-- Bottom composer. -->
+    <footer class="composer">
+      <textarea
+        id="input"
+        class="input"
+        rows="1"
+        placeholder="Type a message… (⌘↵ to send)"
+        aria-label="Message"
+      ></textarea>
+      <div class="composer-row">
+        <span id="hint" class="hint"></span>
+        <button id="send-btn" class="primary-btn" type="button">Send</button>
+      </div>
+    </footer>
+
+    <script type="module" src="../../media/main.js"></script>
+  </body>
+</html>
