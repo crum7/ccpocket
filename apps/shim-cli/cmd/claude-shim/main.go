@@ -967,17 +967,35 @@ func (s *state) handleAssistant(m *bridge.Message) error {
 		return nil
 	}
 
+	// When the assistant envelope follows a streamed turn, reuse the same
+	// id (and our generated streamMessageID for `uuid`) as the message_start
+	// SSE event. The extension keys live-rendered messages by id, so
+	// matching ids cause it to update the existing bubble in place rather
+	// than appending a second one. Without this the user sees every
+	// response twice — once accumulated from deltas, once from this
+	// envelope.
+	s.streamMu.Lock()
+	useID := inner.ID
+	useUUID := m.StringField("messageUuid")
+	if s.streamMessageID != "" {
+		useID = s.streamMessageID
+		if useUUID == "" {
+			useUUID = s.streamMessageID
+		}
+	}
+	s.streamMu.Unlock()
+
 	out := wire.AssistantOut{
 		Type: "assistant",
 		Message: wire.AssistantInner{
-			ID:      inner.ID,
+			ID:      useID,
 			Role:    "assistant",
 			Type:    "message",
 			Model:   inner.Model,
 			Content: cleaned,
 		},
 		SessionID: s.sessionID,
-		UUID:      m.StringField("messageUuid"),
+		UUID:      useUUID,
 	}
 	return s.stdout.Write(out)
 }
