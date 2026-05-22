@@ -90,14 +90,42 @@ func (c *Client) Start(opts StartOpts) error {
 	return c.send(msg)
 }
 
-// Input forwards a user text input.
-func (c *Client) Input(sessionID, text string) error {
+// Image is a single image attachment for an input message.
+type Image struct {
+	Base64   string
+	MimeType string
+}
+
+// Input forwards a user text input, optionally with attached images. The
+// bridge accepts `images: [{base64, mimeType}, …]` alongside `text` (see
+// packages/bridge/src/websocket.ts around line 948), so screenshots pasted
+// into the VSCode chat reach claude as multimodal turns.
+func (c *Client) Input(sessionID, text string, images ...Image) error {
 	msg := map[string]any{
 		"type": "input",
 		"text": text,
 	}
 	if sessionID != "" {
 		msg["sessionId"] = sessionID
+	}
+	if len(images) > 0 {
+		imgs := make([]map[string]any, 0, len(images))
+		for _, img := range images {
+			if img.Base64 == "" {
+				continue
+			}
+			mime := img.MimeType
+			if mime == "" {
+				mime = "image/png"
+			}
+			imgs = append(imgs, map[string]any{
+				"base64":   img.Base64,
+				"mimeType": mime,
+			})
+		}
+		if len(imgs) > 0 {
+			msg["images"] = imgs
+		}
 	}
 	return c.send(msg)
 }

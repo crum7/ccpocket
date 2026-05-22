@@ -37,13 +37,24 @@ type UserMessage struct {
 }
 
 // UserContentItem is a single content block inside a user message.
-// Supports both text inputs ({type:"text", text:"…"}) and tool results
-// ({type:"tool_result", tool_use_id:"…", content:"…"}).
+// Supports text inputs ({type:"text", text:"…"}), tool results
+// ({type:"tool_result", tool_use_id:"…", content:"…"}), and images
+// (Anthropic-SDK style: {type:"image", source:{type:"base64", media_type:"image/png", data:"<base64>"}}).
 type UserContentItem struct {
 	Type       string          `json:"type"`
 	Text       string          `json:"text,omitempty"`
 	ToolUseID  string          `json:"tool_use_id,omitempty"`
 	ToolResult json.RawMessage `json:"content,omitempty"`
+	Source     *ImageSource    `json:"source,omitempty"`
+}
+
+// ImageSource is the Anthropic-style image source descriptor. The
+// extension pastes screenshots as base64 with media_type set to image/png
+// (or image/jpeg). We forward both fields to bridge as {base64, mimeType}.
+type ImageSource struct {
+	Type      string `json:"type"`       // "base64"
+	MediaType string `json:"media_type"` // e.g. "image/png"
+	Data      string `json:"data"`       // base64-encoded payload
 }
 
 // ----- Outbound (shim -> extension, on stdout) ----------------------------

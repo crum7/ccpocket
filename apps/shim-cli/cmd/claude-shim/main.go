@@ -476,7 +476,8 @@ type state struct {
 	started   bool
 	// pendingFirstInput holds the first user prompt while we wait for the
 	// Bridge's `session_created` reply (which carries the canonical sessionId).
-	pendingFirstInput string
+	pendingFirstInput  string
+	pendingFirstImages []bridge.Image
 
 	initOnce sync.Once // gates the lazy system/init emission on first user input
 
@@ -651,13 +652,27 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	// requests.
 	s.emitSystemInit()
 
-	// Walk content blocks: collect text, forward tool_result responses.
+	// Walk content blocks: collect text, image attachments, and tool_result
+	// responses. Image blocks come through when the user pastes a screenshot
+	// into the VSCode chat — the extension serializes them as Anthropic-SDK
+	// image content ({type:"image", source:{type:"base64", media_type, data}}),
+	// which we re-pack as bridge's images: [{base64, mimeType}] shape.
 	var textParts []string
+	var images []bridge.Image
 	for _, c := range msg.Content {
 		switch c.Type {
 		case "text":
 			if c.Text != "" {
 				textParts = append(textParts, c.Text)
+			}
+		case "image":
+			if c.Source != nil && c.Source.Data != "" {
+				images = append(images, bridge.Image{
+					Base64:   c.Source.Data,
+					MimeType: c.Source.MediaType,
+				})
+			} else {
+				s.log.Debugf("stdin: image content with empty source — dropping")
 			}
 		case "tool_result":
 			s.log.Debugf("stdin: tool_result for %s (not yet forwarded)", c.ToolUseID)
@@ -667,7 +682,7 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 		}
 	}
 	combined := strings.Join(textParts, "\n")
-	if combined == "" {
+	if combined == "" && len(images) == 0 {
 		return nil
 	}
 
@@ -687,6 +702,7 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	s.startedMu.Lock()
 	if !s.started {
 		s.pendingFirstInput = combined
+		s.pendingFirstImages = images
 		// Resolve the Bridge sessionId we want to resume.
 		//
 		// Priority:
@@ -753,6 +769,7 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 		}
 		if err := s.client.Start(opts); err != nil {
 			s.pendingFirstInput = ""
+			s.pendingFirstImages = nil
 			s.startedMu.Unlock()
 			return fmt.Errorf("bridge start: %w", err)
 		}
@@ -763,7 +780,7 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	}
 	s.startedMu.Unlock()
 
-	return s.client.Input(s.bridgeSessionID, combined)
+	return s.client.Input(s.bridgeSessionID, combined, images...)
 }
 
 // runBridgeLoop reads Bridge messages and translates them into SDK envelopes
@@ -794,13 +811,15 @@ func (s *state) runBridgeLoop(ctx context.Context) error {
 func (s *state) flushPendingFirstInput() {
 	s.startedMu.Lock()
 	pending := s.pendingFirstInput
+	pendingImages := s.pendingFirstImages
 	s.pendingFirstInput = ""
+	s.pendingFirstImages = nil
 	s.startedMu.Unlock()
-	if pending == "" {
+	if pending == "" && len(pendingImages) == 0 {
 		return
 	}
-	s.log.Infof("bridge: flushing buffered first input to bridge session %s (%d chars)", s.bridgeSessionID, len(pending))
-	if err := s.client.Input(s.bridgeSessionID, pending); err != nil {
+	s.log.Infof("bridge: flushing buffered first input to bridge session %s (%d chars, %d images)", s.bridgeSessionID, len(pending), len(pendingImages))
+	if err := s.client.Input(s.bridgeSessionID, pending, pendingImages...); err != nil {
 		s.log.Errorf("bridge input (first turn): %v", err)
 	}
 }
