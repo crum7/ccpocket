@@ -609,7 +609,15 @@ func (s *state) handleControlRequest(env wire.StdinEnvelope) error {
 	// safe — the UI just shows no slash-commands / model picker entries until
 	// we wire them up properly.
 	if subtype == "initialize" {
-		resp["commands"] = []any{}
+		// Advertise shim-handled slash commands so the extension's autocomplete
+		// picks them up. The extension reads `name`/`description` off each entry.
+		resp["commands"] = []any{
+			map[string]any{
+				"name":        "sessions",
+				"description": "List past CC Pocket Bridge sessions (handled in-shim)",
+				"argumentHint": "",
+			},
+		}
 		resp["models"] = []any{}
 		resp["agents"] = []any{}
 	}
@@ -1046,6 +1054,27 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		}
 		if err := s.endStreamingTurn(stopReason); err != nil {
 			s.log.Errorf("close streaming turn: %v", err)
+		}
+
+		// Critical for multi-turn context: claude SDK forks the session UUID on
+		// every `--resume`, so the claudeSessionId that's valid for the NEXT
+		// spawn's --resume is the one claude emitted during THIS turn. The
+		// bridge captures it from claude's `result` event (session.ts:294) but
+		// doesn't auto-broadcast session_list afterwards. Without explicitly
+		// asking now, our store keeps the prior turn's UUID and the next
+		// resume jumps back two turns of history — exactly the "Claude forgot
+		// what we were just talking about" symptom.
+		select {
+		case <-s.sessionListPing:
+		default:
+		}
+		if err := s.client.ListSessions(); err != nil {
+			s.log.Debugf("pre-result list_sessions: %v", err)
+		}
+		select {
+		case <-s.sessionListPing:
+		case <-time.After(800 * time.Millisecond):
+			s.log.Debugf("pre-result: session_list refresh timed out — store may have stale claudeSessionId")
 		}
 		out := wire.Result{
 			Type:             "result",
