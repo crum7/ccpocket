@@ -506,6 +506,14 @@ type state struct {
 	streamModel      string
 	streamMu         sync.Mutex
 
+	// claudeIdRequestOnce fires exactly one ListSessions request per turn,
+	// scheduled at the first sign of claude actively responding (the first
+	// stream_delta or assistant envelope). By the time claude is streaming,
+	// the bridge has already captured its current claudeSessionId from
+	// claude's system event; refreshing session_list now gives our store
+	// the LATEST id well before the result envelope closes the turn.
+	claudeIdRequestOnce sync.Once
+
 	finished     atomicBool
 	finishedExit atomic.Int32 // suggested exit code when finished is set
 }
@@ -805,6 +813,25 @@ func (s *state) runBridgeLoop(ctx context.Context) error {
 	}
 }
 
+// requestClaudeSessionIdRefresh asks the bridge to (re-)broadcast its
+// session_list exactly once per turn. The follow-up session_list arrives in
+// the same dispatch loop a few ms later and indexSessionList persists
+// (externalSessionID → claudeSessionId) to the store, so the NEXT spawn for
+// this chat can hand the right --resume value to claude.
+//
+// Trigger sites: the first stream_delta and the first assistant envelope —
+// either guarantees claude has emitted its system event, which is the point
+// at which session.claudeSessionId becomes non-empty inside the bridge.
+// Fire-and-forget on purpose: blocking the bridge dispatch goroutine on the
+// reply would deadlock since the reply is dispatched by the same goroutine.
+func (s *state) requestClaudeSessionIdRefresh() {
+	s.claudeIdRequestOnce.Do(func() {
+		if err := s.client.ListSessions(); err != nil {
+			s.log.Debugf("turn-start list_sessions: %v", err)
+		}
+	})
+}
+
 // flushPendingFirstInput sends the buffered first prompt once the Bridge has
 // confirmed a session_created (which carries the canonical sessionId we must
 // now use). No-op when nothing is buffered.
@@ -1023,6 +1050,10 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		if err := s.endStreamingTurn("end_turn"); err != nil {
 			s.log.Errorf("close streaming turn (before assistant): %v", err)
 		}
+		// Some turns produce only tool_use blocks (no stream_delta), so the
+		// stream_delta-side trigger never fires. Repeat the request here as
+		// a safety net; sync.Once dedupes if stream_delta already fired.
+		s.requestClaudeSessionIdRefresh()
 		return s.handleAssistant(m)
 
 	case "stream_delta":
@@ -1030,6 +1061,12 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 		if text == "" {
 			return nil
 		}
+		// Claude is actively responding now → its system/init has been
+		// captured by the bridge, so session.claudeSessionId is valid.
+		// Fire-and-forget a ListSessions so the broadcast that comes back
+		// updates our store mapping (externalSessionID → claudeSessionId)
+		// before the turn ends. Once per turn to avoid spamming the bridge.
+		s.requestClaudeSessionIdRefresh()
 		if err := s.ensureStreamingTurn(""); err != nil {
 			return err
 		}
@@ -1075,26 +1112,13 @@ func (s *state) dispatchBridge(m *bridge.Message) error {
 			s.log.Errorf("close streaming turn: %v", err)
 		}
 
-		// Critical for multi-turn context: claude SDK forks the session UUID on
-		// every `--resume`, so the claudeSessionId that's valid for the NEXT
-		// spawn's --resume is the one claude emitted during THIS turn. The
-		// bridge captures it from claude's `result` event (session.ts:294) but
-		// doesn't auto-broadcast session_list afterwards. Without explicitly
-		// asking now, our store keeps the prior turn's UUID and the next
-		// resume jumps back two turns of history — exactly the "Claude forgot
-		// what we were just talking about" symptom.
-		select {
-		case <-s.sessionListPing:
-		default:
-		}
-		if err := s.client.ListSessions(); err != nil {
-			s.log.Debugf("pre-result list_sessions: %v", err)
-		}
-		select {
-		case <-s.sessionListPing:
-		case <-time.After(800 * time.Millisecond):
-			s.log.Debugf("pre-result: session_list refresh timed out — store may have stale claudeSessionId")
-		}
+		// The mid-turn `requestClaudeSessionIdRefresh()` (called from the
+		// stream_delta / assistant handlers) already nudged the bridge for a
+		// fresh session_list with the current turn's claudeSessionId. By the
+		// time we land here the response broadcast has been processed by
+		// dispatchBridge → indexSessionList → store. No blocking wait needed
+		// — and indeed a wait on the same goroutine would deadlock since
+		// it's the dispatch loop that would consume the session_list reply.
 		out := wire.Result{
 			Type:             "result",
 			Subtype:          subtype,
