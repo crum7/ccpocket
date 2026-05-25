@@ -23,6 +23,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -506,6 +507,11 @@ type state struct {
 	streamModel      string
 	streamMu         sync.Mutex
 
+	// lastListedSessions holds the entries shown by the most recent /sessions
+	// invocation in display order, so a follow-up `/resume <N>` (1-indexed)
+	// can refer back to them by row number.
+	lastListedSessions atomic.Pointer[[]sessionEntry]
+
 	// claudeIdRequestOnce fires exactly one ListSessions request per turn,
 	// scheduled at the first sign of claude actively responding (the first
 	// stream_delta or assistant envelope). By the time claude is streaming,
@@ -622,9 +628,14 @@ func (s *state) handleControlRequest(env wire.StdinEnvelope) error {
 		// picks them up. The extension reads `name`/`description` off each entry.
 		resp["commands"] = []any{
 			map[string]any{
-				"name":        "sessions",
-				"description": "List past CC Pocket Bridge sessions (handled in-shim)",
+				"name":         "sessions",
+				"description":  "List past CC Pocket Bridge sessions",
 				"argumentHint": "",
+			},
+			map[string]any{
+				"name":         "resume",
+				"description":  "Switch this chat tab to a past bridge session",
+				"argumentHint": "<N | claudeSessionId-prefix>",
 			},
 		}
 		resp["models"] = []any{}
@@ -697,8 +708,13 @@ func (s *state) handleUserInput(env wire.StdinEnvelope) error {
 	// Built-in slash commands handled entirely inside the shim — never forwarded
 	// to the bridge. Lets the user query bridge state (past sessions, etc.)
 	// from any chat tab without disturbing the active conversation.
-	if cmd := matchSlashCommand(combined); cmd == "/sessions" {
-		return s.handleSessionsCommand()
+	if cmd, arg := matchSlashCommand(combined); cmd != "" {
+		switch cmd {
+		case "/sessions":
+			return s.handleSessionsCommand()
+		case "/resume":
+			return s.handleResumeCommand(arg)
+		}
 	}
 
 	// First user input triggers Bridge `start`. The Bridge replies with
@@ -1220,56 +1236,89 @@ func (s *state) indexSessionList(m *bridge.Message) {
 }
 
 // matchSlashCommand returns the canonical command token (e.g. "/sessions")
-// if input is a single-line slash command we handle in-shim, or "" otherwise.
-// Tolerates leading/trailing whitespace and ignores anything after the first
-// token so future commands can take arguments.
-func matchSlashCommand(input string) string {
+// and the trailing argument string if input is a single-line slash command
+// we handle in-shim. Returns ("", "") otherwise. Multi-line input is treated
+// as a normal prompt that happens to start with a slash and is NOT
+// intercepted.
+func matchSlashCommand(input string) (string, string) {
 	trimmed := strings.TrimSpace(input)
 	if !strings.HasPrefix(trimmed, "/") {
-		return ""
+		return "", ""
 	}
-	// Multi-line input is treated as a normal prompt that happens to start
-	// with a slash — don't intercept.
 	if strings.Contains(trimmed, "\n") {
-		return ""
+		return "", ""
 	}
 	first := trimmed
+	rest := ""
 	if i := strings.IndexAny(trimmed, " \t"); i >= 0 {
 		first = trimmed[:i]
+		rest = strings.TrimSpace(trimmed[i+1:])
 	}
 	switch first {
 	case "/sessions":
-		return "/sessions"
+		return "/sessions", rest
+	case "/resume":
+		return "/resume", rest
 	}
-	return ""
+	return "", ""
 }
 
-// handleSessionsCommand renders the bridge's session list as a synthetic
-// assistant message and closes the turn — never forwarding the user's
-// `/sessions` text to the bridge. The bridge is asked for a fresh list_sessions
-// and we wait briefly for the broadcast to land; if it doesn't, we fall back
-// to whatever cached entry we have. A turn-terminating result envelope is
-// always emitted so the extension's UI state returns to idle.
-func (s *state) handleSessionsCommand() error {
-	s.emitSystemInit()
+// sessionEntry is the decoded shape of a single record inside the bridge's
+// session_list message. Used by both /sessions (rendering) and /resume
+// (matching by index or claudeSessionId prefix).
+type sessionEntry struct {
+	ID              string `json:"id"`
+	ClaudeSessionID string `json:"claudeSessionId"`
+	ProjectPath     string `json:"projectPath"`
+	Name            string `json:"name"`
+	Status          string `json:"status"`
+	CreatedAt       string `json:"createdAt"`
+	LastActivityAt  string `json:"lastActivityAt"`
+	LastMessage     string `json:"lastMessage"`
+	GitBranch       string `json:"gitBranch"`
+	Provider        string `json:"provider"`
+}
 
-	// Drain any stale ping so we wait for a FRESH broadcast.
+// fetchFreshSessionEntries asks the bridge to (re-)broadcast its session_list
+// and blocks briefly for the reply. Returns the entries sorted by
+// lastActivityAt desc, or whatever's cached if the wait times out.
+func (s *state) fetchFreshSessionEntries() []sessionEntry {
 	select {
 	case <-s.sessionListPing:
 	default:
 	}
 	if err := s.client.ListSessions(); err != nil {
-		s.log.Errorf("/sessions: list_sessions request failed: %v", err)
+		s.log.Errorf("list_sessions request failed: %v", err)
 	}
 	select {
 	case <-s.sessionListPing:
 	case <-time.After(1500 * time.Millisecond):
-		s.log.Debugf("/sessions: no fresh session_list within 1500ms — using cached")
+		s.log.Debugf("no fresh session_list within 1500ms — using cached")
 	}
+	m := s.sessionListLast.Load()
+	if m == nil {
+		return nil
+	}
+	raw, ok := m.Decoded["sessions"]
+	if !ok {
+		return nil
+	}
+	var entries []sessionEntry
+	if err := json.Unmarshal(raw, &entries); err != nil {
+		s.log.Debugf("session_list decode failed: %v", err)
+		return nil
+	}
+	sort.SliceStable(entries, func(i, j int) bool {
+		return entries[i].LastActivityAt > entries[j].LastActivityAt
+	})
+	return entries
+}
 
-	body := s.renderSessionsMarkdown(s.sessionListLast.Load())
-
-	msgID := "msg_sessions_" + newEventUUID()
+// respondAsAssistant emits a synthetic assistant message + terminal result
+// envelope so the extension renders the text and returns the UI to idle.
+// Shared by every in-shim slash command.
+func (s *state) respondAsAssistant(body string) error {
+	msgID := "msg_shim_" + newEventUUID()
 	if err := s.stdout.Write(wire.AssistantOut{
 		Type: "assistant",
 		Message: wire.AssistantInner{
@@ -1285,7 +1334,7 @@ func (s *state) handleSessionsCommand() error {
 		SessionID: s.sessionID,
 		UUID:      newEventUUID(),
 	}); err != nil {
-		s.log.Errorf("/sessions: write assistant: %v", err)
+		s.log.Errorf("shim slash: write assistant: %v", err)
 	}
 	return s.stdout.Write(wire.Result{
 		Type:             "result",
@@ -1300,40 +1349,110 @@ func (s *state) handleSessionsCommand() error {
 	})
 }
 
-// renderSessionsMarkdown formats the bridge's session_list into a readable
-// markdown summary. Sorted by lastActivityAt desc so the most active sessions
-// appear first. Tells the user how to resume — we can't add a clickable
-// action since the Claude Code extension's UI is closed.
-func (s *state) renderSessionsMarkdown(m *bridge.Message) string {
-	if m == nil {
-		return "_(bridge から session_list がまだ届いていません。少し待ってからもう一度試してください)_"
-	}
-	raw, ok := m.Decoded["sessions"]
-	if !ok {
-		return "_(session_list の sessions フィールドが空でした)_"
-	}
-	var entries []struct {
-		ID              string `json:"id"`
-		ClaudeSessionID string `json:"claudeSessionId"`
-		ProjectPath     string `json:"projectPath"`
-		Name            string `json:"name"`
-		Status          string `json:"status"`
-		CreatedAt       string `json:"createdAt"`
-		LastActivityAt  string `json:"lastActivityAt"`
-		LastMessage     string `json:"lastMessage"`
-		GitBranch       string `json:"gitBranch"`
-		Provider        string `json:"provider"`
-	}
-	if err := json.Unmarshal(raw, &entries); err != nil {
-		return fmt.Sprintf("_(session_list を decode できませんでした: %v)_", err)
+// handleSessionsCommand renders the bridge's session list and remembers the
+// displayed order so a follow-up `/resume <N>` can refer back by row number.
+func (s *state) handleSessionsCommand() error {
+	s.emitSystemInit()
+	entries := s.fetchFreshSessionEntries()
+	if entries == nil {
+		return s.respondAsAssistant("_(bridge から session_list が取得できませんでした。少し待ってもう一度試してください)_")
 	}
 	if len(entries) == 0 {
-		return "**過去のセッション: 0件**\n\nまだ bridge にセッションが登録されていません。"
+		return s.respondAsAssistant("**過去のセッション: 0件**\n\nまだ bridge にセッションが登録されていません。")
 	}
-	sort.SliceStable(entries, func(i, j int) bool {
-		return entries[i].LastActivityAt > entries[j].LastActivityAt
-	})
+	cached := append([]sessionEntry(nil), entries...)
+	s.lastListedSessions.Store(&cached)
+	return s.respondAsAssistant(renderSessionsMarkdown(entries))
+}
 
+// handleResumeCommand switches the current chat tab over to a past bridge
+// session by writing (externalSessionID → target claudeSessionId) into the
+// store. The next user message in this tab spawns a fresh shim that looks up
+// the mapping and tells the bridge to claude --resume <target>. The
+// transcript already on screen in the webview is unaffected (we can't
+// retroactively load history into the extension's view).
+//
+// Arg formats accepted:
+//   - 1-indexed row number from the most recent /sessions output (e.g. `3`)
+//   - exact claudeSessionId (UUID) or unique prefix
+//   - exact bridge id or unique prefix (resolved to its claudeSessionId)
+func (s *state) handleResumeCommand(arg string) error {
+	s.emitSystemInit()
+	if arg == "" {
+		return s.respondAsAssistant("使い方: `/resume <N>` (`/sessions` の行番号) もしくは `/resume <claudeSessionId>` (先頭一致でOK)")
+	}
+
+	entries := s.fetchFreshSessionEntries()
+	if len(entries) == 0 {
+		if cached := s.lastListedSessions.Load(); cached != nil {
+			entries = *cached
+		}
+	}
+	if len(entries) == 0 {
+		return s.respondAsAssistant("bridge から session_list が取得できませんでした。`/sessions` を先に試してください。")
+	}
+
+	var match *sessionEntry
+	// 1-indexed numeric lookup against the most recent /sessions output if we
+	// have it; otherwise against the freshly-fetched list (same sort order).
+	if n, err := strconv.Atoi(arg); err == nil && n >= 1 {
+		lookup := entries
+		if cached := s.lastListedSessions.Load(); cached != nil {
+			lookup = *cached
+		}
+		if n <= len(lookup) {
+			match = &lookup[n-1]
+		}
+	}
+	if match == nil {
+		var prefixHits []*sessionEntry
+		for i := range entries {
+			e := &entries[i]
+			if strings.HasPrefix(e.ClaudeSessionID, arg) || strings.HasPrefix(e.ID, arg) {
+				prefixHits = append(prefixHits, e)
+			}
+		}
+		if len(prefixHits) == 1 {
+			match = prefixHits[0]
+		} else if len(prefixHits) > 1 {
+			return s.respondAsAssistant(fmt.Sprintf("`%s` で複数のセッションに一致しました(%d件)。もっと長いプレフィックスを指定してください。", arg, len(prefixHits)))
+		}
+	}
+	if match == nil {
+		return s.respondAsAssistant(fmt.Sprintf("`%s` に一致するセッションが見つかりませんでした。`/sessions` で一覧を確認してください。", arg))
+	}
+	if match.ClaudeSessionID == "" {
+		return s.respondAsAssistant("そのセッションには claudeSessionId がまだ確定していません(初回 turn 完了前)。少し待ってからもう一度試してください。")
+	}
+
+	if s.store == nil || s.externalSessionID == "" {
+		return s.respondAsAssistant("内部状態エラー: sessionstore が初期化されていません。")
+	}
+	if err := s.store.Put(s.externalSessionID, match.ClaudeSessionID, match.ProjectPath); err != nil {
+		return s.respondAsAssistant("store 更新に失敗しました: " + err.Error())
+	}
+
+	title := match.Name
+	if title == "" {
+		title = "(no name)"
+	}
+	lastLine := truncate(strings.ReplaceAll(match.LastMessage, "\n", " "), 120)
+	body := fmt.Sprintf(
+		"**セッション切替準備完了 → %s**\n\n"+
+			"次のメッセージから `%s` の文脈を継いで会話できます。\n\n"+
+			"- project: `%s`\n"+
+			"- claudeSessionId: `%s`\n"+
+			"- 直前メッセージ: %s\n\n"+
+			"_注意: 上のチャット履歴は元のままです(VSCode 拡張の表示には介入できないため)。新しい入力を送ると claude 側の履歴を引き継ぎます。_",
+		title, title, match.ProjectPath, match.ClaudeSessionID, lastLine,
+	)
+	return s.respondAsAssistant(body)
+}
+
+// renderSessionsMarkdown formats the bridge's session_list into a readable
+// markdown summary. Sorted by lastActivityAt desc so the most active sessions
+// appear first.
+func renderSessionsMarkdown(entries []sessionEntry) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "**過去のセッション一覧 — %d 件**\n\n", len(entries))
 	for i, e := range entries {
@@ -1364,7 +1483,8 @@ func (s *state) renderSessionsMarkdown(m *bridge.Message) string {
 		b.WriteString("\n")
 	}
 	b.WriteString("---\n")
-	b.WriteString("_resume するには別のチャットタブを開いて、最初の入力で目的の `claudeSessionId` を含むメッセージを送ってください。VSCode 拡張の UI 側で `--resume <id>` を発火する手段がないため、shim 側からの直接オープンは現状不可です。_\n")
+	b.WriteString("**継続したいセッションを開く**: `/resume <N>` (上の行番号) もしくは `/resume <claudeSessionId>`(先頭一致OK)。\n")
+	b.WriteString("_次のメッセージから対象セッションの履歴を引き継いで会話できます。VSCode 拡張側の表示済み履歴は変わりません。_\n")
 	return b.String()
 }
 
