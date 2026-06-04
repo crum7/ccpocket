@@ -2681,15 +2681,26 @@ export class BridgeWebSocketServer {
             ["ls-files", "--cached", "--others", "--exclude-standard"],
             { cwd: msg.projectPath },
           );
-          const FILE_LIST_MAX_BYTES = 64 * 1024 * 1024;
+          // Cap the result so a huge project root (e.g. a whole home dir) can't
+          // flood the client. The old execFile path errored past 10MB; sending
+          // the full list instead overwhelmed the app (it received an oversized
+          // file_list and dropped the WebSocket, looping connect/disconnect).
+          // Bound by file count primarily (keeps @-mention scoring responsive)
+          // and bytes as a secondary guard; kill git early once either is hit.
+          const FILE_LIST_MAX_FILES = 50000;
+          const FILE_LIST_MAX_BYTES = 16 * 1024 * 1024;
           const chunks: Buffer[] = [];
           let bytes = 0;
+          let fileCount = 0;
           let truncated = false;
           let stderr = "";
           child.stdout.on("data", (chunk: Buffer) => {
             if (truncated) return;
+            for (let i = 0; i < chunk.length; i++) {
+              if (chunk[i] === 0x0a) fileCount++;
+            }
             bytes += chunk.length;
-            if (bytes > FILE_LIST_MAX_BYTES) {
+            if (fileCount > FILE_LIST_MAX_FILES || bytes > FILE_LIST_MAX_BYTES) {
               truncated = true;
               child.kill();
               return;
@@ -2722,10 +2733,11 @@ export class BridgeWebSocketServer {
               .toString()
               .trim()
               .split("\n")
-              .filter(Boolean);
+              .filter(Boolean)
+              .slice(0, FILE_LIST_MAX_FILES);
             if (truncated) {
               console.warn(
-                `[list_files] output exceeded ${FILE_LIST_MAX_BYTES} bytes for ${msg.projectPath}; returning ${files.length} files (truncated)`,
+                `[list_files] too many files in ${msg.projectPath}; returning first ${files.length} (truncated to keep the client responsive)`,
               );
             }
             this.send(ws, { type: "file_list", files } as Record<
