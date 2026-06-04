@@ -573,11 +573,11 @@ class _ChatScreenBody extends HookWidget {
     }, [sessionId]);
 
     // --- Initial requests on mount ---
+    // NOTE: the project file list is intentionally NOT fetched here. On a huge
+    // project root it returns a very large list that makes opening a session
+    // heavy. It is fetched on demand instead (@-mention start / Explore open).
     useEffect(() {
       final bridge = context.read<BridgeService>();
-      if (projectPath != null && projectPath!.isNotEmpty) {
-        bridge.requestFileList(projectPath!);
-      }
       bridge.requestSessionList();
       bridge.refreshBranch(sessionId);
       return null;
