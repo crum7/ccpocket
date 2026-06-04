@@ -21,6 +21,7 @@ import '../../../widgets/file_mention_overlay.dart';
 import '../../../widgets/slash_command_overlay.dart';
 import '../../settings/state/settings_cubit.dart';
 import '../../../services/draft_service.dart';
+import '../../../services/bridge_service.dart';
 import '../../prompt_history/widgets/prompt_history_sheet.dart';
 import '../../../widgets/slash_command_sheet.dart'
     show
@@ -254,6 +255,17 @@ class ChatInputWithOverlays extends HookWidget {
           final inMention = mentionQuery != null;
           if (inMention != isInMentionContext.value) {
             isInMentionContext.value = inMention;
+            // Fetch the project file list on demand the moment an @-mention
+            // begins (it is no longer fetched proactively). The watched
+            // FileListCubit rebuilds this widget when the result arrives, so
+            // suggestions appear as soon as the bridge responds.
+            if (inMention) {
+              final projectPath =
+                  context.read<ChatSessionCubit>().state.projectPath;
+              if (projectPath != null && projectPath.isNotEmpty) {
+                context.read<BridgeService>().requestFileList(projectPath);
+              }
+            }
           }
           if (mentionQuery != null && projectFiles.isNotEmpty) {
             final q = mentionQuery.toLowerCase();

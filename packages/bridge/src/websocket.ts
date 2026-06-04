@@ -1,5 +1,5 @@
 import type { Server as HttpServer } from "node:http";
-import { execFile, execFileSync } from "node:child_process";
+import { execFile, execFileSync, spawn } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import { lstat, readFile, readlink, stat, unlink } from "node:fs/promises";
 import { resolve, extname, basename, relative } from "node:path";
@@ -2670,30 +2670,70 @@ export class BridgeWebSocketServer {
           this.send(ws, this.buildPathNotAllowedError(msg.projectPath));
           break;
         }
-        execFile(
-          "git",
-          ["ls-files", "--cached", "--others", "--exclude-standard"],
-          { cwd: msg.projectPath, maxBuffer: 10 * 1024 * 1024 },
-          (err, stdout) => {
-            if (err) {
-              if (/not a git repository/i.test(err.message)) {
-                // Non-git project: silently return empty list (file listing is auxiliary)
+        // Stream `git ls-files` rather than buffering it: on large repos the
+        // output can exceed any fixed stdout buffer (the old execFile path
+        // failed with "stdout maxBuffer length exceeded"). We accumulate
+        // chunks ourselves and cap the total so a pathological repo can't blow
+        // up memory — past the cap we keep what we have and mark it truncated.
+        {
+          const child = spawn(
+            "git",
+            ["ls-files", "--cached", "--others", "--exclude-standard"],
+            { cwd: msg.projectPath },
+          );
+          const FILE_LIST_MAX_BYTES = 64 * 1024 * 1024;
+          const chunks: Buffer[] = [];
+          let bytes = 0;
+          let truncated = false;
+          let stderr = "";
+          child.stdout.on("data", (chunk: Buffer) => {
+            if (truncated) return;
+            bytes += chunk.length;
+            if (bytes > FILE_LIST_MAX_BYTES) {
+              truncated = true;
+              child.kill();
+              return;
+            }
+            chunks.push(chunk);
+          });
+          child.stderr.on("data", (chunk: Buffer) => {
+            if (stderr.length < 4096) stderr += chunk.toString();
+          });
+          child.on("error", (err) => {
+            this.send(ws, {
+              type: "error",
+              message: `Failed to list files: ${err.message}`,
+            });
+          });
+          child.on("close", (code) => {
+            if (code !== 0 && !truncated) {
+              if (/not a git repository/i.test(stderr)) {
+                // Non-git project: silently return empty list (auxiliary feature)
                 this.send(ws, { type: "file_list", files: [] });
               } else {
                 this.send(ws, {
                   type: "error",
-                  message: `Failed to list files: ${err.message}`,
+                  message: `Failed to list files: ${stderr.trim() || `git exited with code ${code}`}`,
                 });
               }
               return;
             }
-            const files = stdout.trim().split("\n").filter(Boolean);
+            const files = Buffer.concat(chunks)
+              .toString()
+              .trim()
+              .split("\n")
+              .filter(Boolean);
+            if (truncated) {
+              console.warn(
+                `[list_files] output exceeded ${FILE_LIST_MAX_BYTES} bytes for ${msg.projectPath}; returning ${files.length} files (truncated)`,
+              );
+            }
             this.send(ws, { type: "file_list", files } as Record<
               string,
               unknown
             >);
-          },
-        );
+          });
+        }
         break;
       }
 

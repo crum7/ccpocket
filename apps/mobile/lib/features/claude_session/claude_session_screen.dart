@@ -51,15 +51,6 @@ import 'widgets/rewind_action_sheet.dart';
 import 'widgets/rewind_message_list_sheet.dart' show UserMessageHistorySheet;
 import 'widgets/usage_summary_bar.dart';
 
-const _fileListRefreshToolNames = {
-  'Edit',
-  'FileEdit',
-  'MultiEdit',
-  'Write',
-  'NotebookEdit',
-  'Bash',
-};
-
 class _NoopListenable implements Listenable {
   const _NoopListenable();
 
@@ -592,23 +583,11 @@ class _ChatScreenBody extends HookWidget {
       return null;
     }, [sessionId, projectPath]);
 
-    useEffect(() {
-      if (projectPath == null || projectPath!.isEmpty) return null;
-
-      final bridge = context.read<BridgeService>();
-      final sub = bridge.messagesForSession(sessionId).listen((msg) {
-        if (msg case ToolResultMessage(
-          :final toolName,
-        ) when _fileListRefreshToolNames.contains(toolName)) {
-          bridge.requestFileList(projectPath!);
-        } else if (msg case ResultMessage(
-          :final fileEdits,
-        ) when (fileEdits ?? 0) > 0) {
-          bridge.requestFileList(projectPath!);
-        }
-      });
-      return sub.cancel;
-    }, [sessionId, projectPath]);
+    // The project file list (used by @-mention autocomplete and Explore) is no
+    // longer fetched proactively on every Edit/Write/Bash tool result — that
+    // caused repeated `git ls-files` calls (heavy, and the bridge could exceed
+    // its stdout buffer on large repos). It is now fetched on demand: when the
+    // user starts an @-mention (chat input) or opens the Explore pane.
 
     // --- Listen for branch updates ---
     useEffect(() {

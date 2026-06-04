@@ -17,7 +17,12 @@ import 'streaming_state_cubit.dart';
 /// session. Older entries are dropped from RAM to keep long conversations
 /// snappy; closing & reopening the tab re-fetches them from the bridge via
 /// past_history.
-const int _maxLiveEntries = 30;
+///
+/// The chat list is virtualized ([ListView.builder], only visible items are
+/// built), so raising this mainly costs memory + per-update list copies rather
+/// than render time. 100 lets users scroll back meaningfully further while
+/// staying cheap.
+const int _maxLiveEntries = 100;
 
 /// Manages the state of a single chat session.
 ///
