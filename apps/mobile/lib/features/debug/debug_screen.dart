@@ -5,6 +5,7 @@ import 'package:shorebird_code_push/shorebird_code_push.dart';
 import 'package:talker_flutter/talker_flutter.dart';
 
 import '../../core/logger.dart';
+import '../../features/split_pane/split_pane_debug_screen.dart';
 import '../../features/settings/state/settings_cubit.dart';
 import '../../features/settings/state/settings_state.dart';
 import '../../features/settings/widgets/app_locale_bottom_sheet.dart';
@@ -101,6 +102,19 @@ class DebugScreen extends StatelessWidget {
                     subtitle: Text(l.viewMockChatScenarios),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.router.push(MockPreviewRoute()),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.grid_view_outlined),
+                    title: const Text('Split Pane (debug)'),
+                    subtitle: const Text(
+                      'tmux-style split layout playground',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const SplitPaneDebugScreen(),
+                      ),
+                    ),
                   ),
                 ],
               );
