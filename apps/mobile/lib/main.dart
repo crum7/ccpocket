@@ -42,6 +42,7 @@ import 'router/app_router.dart';
 import 'router/session_route_observer.dart';
 import 'services/app_icon_service.dart';
 import 'services/bridge_service.dart';
+import 'services/connection_manager.dart';
 import 'services/connection_url_parser.dart';
 import 'services/database_service.dart';
 import 'services/draft_service.dart';
@@ -190,6 +191,10 @@ void main() async {
   }
 
   final bridge = BridgeService();
+  // The app's initial connection. ConnectionManager can hold additional live
+  // connections alongside it (multi-bridge foundation, design §3.1); the rest
+  // of the app still reads `bridge` as the active connection for now.
+  final connectionManager = ConnectionManager.withPrimary(bridge);
   final fcmService = FcmService();
   final draftService = DraftService(prefs);
   final inAppReviewService = InAppReviewService(prefs: prefs);
@@ -211,6 +216,7 @@ void main() async {
       providers: [
         RepositoryProvider.value(value: logger),
         RepositoryProvider<BridgeService>.value(value: bridge),
+        RepositoryProvider<ConnectionManager>.value(value: connectionManager),
         RepositoryProvider<DatabaseService>.value(value: dbService),
         RepositoryProvider<DraftService>.value(value: draftService),
         RepositoryProvider<InAppReviewService>.value(value: inAppReviewService),
