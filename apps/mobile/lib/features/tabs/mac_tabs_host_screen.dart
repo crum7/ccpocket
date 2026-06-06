@@ -4,13 +4,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../models/session_ref.dart';
+import '../../services/bridge_connection.dart';
 import '../claude_session/claude_session_screen.dart';
 import '../codex_session/codex_session_screen.dart';
 import '../session_list/session_list_screen.dart';
 import '../session_list/workspace_shell_screen.dart';
+import '../split_pane/state/pane_node.dart';
+import '../split_pane/state/pane_tree_cubit.dart';
+import '../split_pane/widgets/pane_tree_view.dart';
 import 'tab_active_scope.dart';
 import 'tabs_cubit.dart';
 import 'tabs_state.dart';
+
+/// Kill switch for the in-tab split-pane layout. When false, each tab renders
+/// its single session exactly as before (no behavioral change).
+const bool kEnableSplitPanes = true;
 
 /// Hosts the macOS tab system. On non-macOS platforms this is a thin
 /// pass-through that renders [AdaptiveHomeScreen] (the upstream behaviour).
@@ -135,34 +144,260 @@ class MacTabsHostScreen extends StatelessWidget {
   }
 }
 
-class _SessionTabContent extends StatelessWidget {
-  const _SessionTabContent({required this.tab});
-
-  final TabEntry tab;
-
-  @override
-  Widget build(BuildContext context) {
-    if (tab.provider == TabProvider.codex) {
-      return CodexSessionScreen(
-        sessionId: tab.sessionId,
-        projectPath: tab.projectPath,
-        gitBranch: tab.gitBranch,
-        worktreePath: tab.worktreePath,
-        isPending: tab.isPending,
-        initialSandboxMode: tab.initialSandboxMode,
-        initialPermissionMode: tab.initialPermissionMode,
-        pendingSessionCreated: tab.pendingSessionCreated,
-      );
-    }
-    return ClaudeSessionScreen(
+/// Builds the session screen for a tab (Claude or Codex). Shared by the direct
+/// (unsplit) render and each split pane.
+Widget _sessionScreenFor(TabEntry tab) {
+  if (tab.provider == TabProvider.codex) {
+    return CodexSessionScreen(
       sessionId: tab.sessionId,
       projectPath: tab.projectPath,
       gitBranch: tab.gitBranch,
       worktreePath: tab.worktreePath,
       isPending: tab.isPending,
-      initialPermissionMode: tab.initialPermissionMode,
       initialSandboxMode: tab.initialSandboxMode,
+      initialPermissionMode: tab.initialPermissionMode,
       pendingSessionCreated: tab.pendingSessionCreated,
+    );
+  }
+  return ClaudeSessionScreen(
+    sessionId: tab.sessionId,
+    projectPath: tab.projectPath,
+    gitBranch: tab.gitBranch,
+    worktreePath: tab.worktreePath,
+    isPending: tab.isPending,
+    initialPermissionMode: tab.initialPermissionMode,
+    initialSandboxMode: tab.initialSandboxMode,
+    pendingSessionCreated: tab.pendingSessionCreated,
+  );
+}
+
+/// A tab's content. When [kEnableSplitPanes] is off (or the tab hasn't been
+/// split) this renders exactly the same single session screen as before.
+/// ⌘D / ⌘⇧D split the active tab; each pane hosts a session.
+class _SessionTabContent extends StatefulWidget {
+  const _SessionTabContent({required this.tab});
+
+  final TabEntry tab;
+
+  @override
+  State<_SessionTabContent> createState() => _SessionTabContentState();
+}
+
+class _SessionTabContentState extends State<_SessionTabContent> {
+  PaneTreeCubit? _paneTree;
+  bool _handlerRegistered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (kEnableSplitPanes) {
+      _paneTree = PaneTreeCubit(
+        initialSession: SessionRef(
+          connectionId: BridgeConnection.primaryId,
+          sessionId: widget.tab.sessionId,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_handlerRegistered) {
+      HardwareKeyboard.instance.removeHandler(_onKey);
+    }
+    _paneTree?.close();
+    super.dispose();
+  }
+
+  // Only the active tab listens for ⌘D, so the split lands in the visible tab.
+  bool _onKey(KeyEvent event) {
+    final cubit = _paneTree;
+    if (cubit == null || event is! KeyDownEvent) return false;
+    final keyboard = HardwareKeyboard.instance;
+    if (!keyboard.isMetaPressed) return false;
+    if (event.logicalKey == LogicalKeyboardKey.keyD) {
+      cubit.splitFocused(
+        keyboard.isShiftPressed ? SplitAxis.column : SplitAxis.row,
+      );
+      return true;
+    }
+    return false;
+  }
+
+  void _syncHandler(bool isActive) {
+    if (_paneTree == null) return;
+    if (isActive && !_handlerRegistered) {
+      HardwareKeyboard.instance.addHandler(_onKey);
+      _handlerRegistered = true;
+    } else if (!isActive && _handlerRegistered) {
+      HardwareKeyboard.instance.removeHandler(_onKey);
+      _handlerRegistered = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = _paneTree;
+    if (cubit == null) return _sessionScreenFor(widget.tab);
+
+    _syncHandler(TabActiveScope.of(context));
+
+    return BlocProvider.value(
+      value: cubit,
+      child: BlocBuilder<PaneTreeCubit, PaneTreeState>(
+        bloc: cubit,
+        builder: (context, state) {
+          // Not split yet → identical to the pre-split behavior.
+          if (state.root.leaves.length == 1) {
+            return _sessionScreenFor(widget.tab);
+          }
+          return PaneTreeView(
+            root: state.root,
+            focusedId: state.focusedId,
+            onFocus: cubit.focus,
+            onResize: cubit.resizeSplit,
+            leafBuilder: (context, leaf, isFocused) => _PaneSlot(
+              leaf: leaf,
+              isFocused: isFocused,
+              originTab: widget.tab,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// One pane in a split tab: the focus chrome + a close button, hosting either a
+/// session screen or (for an empty pane) a picker of open sessions.
+class _PaneSlot extends StatelessWidget {
+  final LeafPane leaf;
+  final bool isFocused;
+  final TabEntry originTab;
+
+  const _PaneSlot({
+    required this.leaf,
+    required this.isFocused,
+    required this.originTab,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final paneTree = context.read<PaneTreeCubit>();
+    final ref = leaf.session;
+
+    Widget content;
+    if (ref == null) {
+      content = _PaneSessionPicker(leaf: leaf);
+    } else if (ref.sessionId == originTab.sessionId) {
+      content = _sessionScreenFor(originTab);
+    } else {
+      TabEntry? match;
+      for (final t in context.read<TabsCubit>().state.tabs) {
+        if (t.sessionId == ref.sessionId) {
+          match = t;
+          break;
+        }
+      }
+      content = match != null
+          ? _sessionScreenFor(match)
+          : const Center(child: Text('Session unavailable'));
+    }
+
+    return Container(
+      margin: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isFocused ? scheme.primary : scheme.outlineVariant,
+          width: isFocused ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(5),
+        child: Stack(
+          children: [
+            Positioned.fill(child: content),
+            Positioned(
+              top: 2,
+              right: 2,
+              child: Material(
+                color: scheme.surface.withValues(alpha: 0.7),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  iconSize: 16,
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Close pane',
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    paneTree.focus(leaf.id);
+                    paneTree.closeFocused();
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Picker shown in an empty pane: choose one of the open sessions to display.
+class _PaneSessionPicker extends StatelessWidget {
+  final LeafPane leaf;
+
+  const _PaneSessionPicker({required this.leaf});
+
+  @override
+  Widget build(BuildContext context) {
+    final paneTree = context.read<PaneTreeCubit>();
+    final tabs = context.watch<TabsCubit>().state.tabs;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 320),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                'Select a session for this pane',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  for (final t in tabs)
+                    ListTile(
+                      dense: true,
+                      leading: Icon(
+                        t.provider == TabProvider.codex
+                            ? Icons.terminal
+                            : Icons.chat_bubble_outline,
+                        size: 18,
+                      ),
+                      title: Text(
+                        t.displayLabel,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => paneTree.setSession(
+                        leaf.id,
+                        SessionRef(
+                          connectionId: BridgeConnection.primaryId,
+                          sessionId: t.sessionId,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -295,7 +295,7 @@ void main() async {
 /// Dev convenience: when true (debug builds only) the app jumps straight to the
 /// Split Pane playground on launch, so it isn't buried under Settings → Debug.
 /// Flip to false to boot into the normal app.
-const bool kAutoOpenSplitPaneDebug = true;
+const bool kAutoOpenSplitPaneDebug = false;
 
 class CcpocketApp extends StatefulWidget {
   const CcpocketApp({
