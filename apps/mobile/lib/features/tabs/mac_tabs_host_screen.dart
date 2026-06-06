@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../models/messages.dart';
 import '../../models/session_ref.dart';
 import '../../services/bridge_connection.dart';
 import '../claude_session/claude_session_screen.dart';
@@ -187,6 +188,10 @@ class _SessionTabContentState extends State<_SessionTabContent> {
   PaneTreeCubit? _paneTree;
   bool _handlerRegistered = false;
 
+  /// Sessions explicitly opened into a pane via its embedded Home, keyed by
+  /// pane id. Holds the full render params (the pane tree only stores ids).
+  final Map<String, WorkspaceSessionSelection> _paneSelections = {};
+
   @override
   void initState() {
     super.initState();
@@ -256,55 +261,17 @@ class _SessionTabContentState extends State<_SessionTabContent> {
             focusedId: state.focusedId,
             onFocus: cubit.focus,
             onResize: cubit.resizeSplit,
-            leafBuilder: (context, leaf, isFocused) => _PaneSlot(
-              leaf: leaf,
-              isFocused: isFocused,
-              originTab: widget.tab,
-            ),
+            leafBuilder: _buildPane,
           );
         },
       ),
     );
   }
-}
 
-/// One pane in a split tab: the focus chrome + a close button, hosting either a
-/// session screen or (for an empty pane) a picker of open sessions.
-class _PaneSlot extends StatelessWidget {
-  final LeafPane leaf;
-  final bool isFocused;
-  final TabEntry originTab;
+  // ---- pane content -------------------------------------------------------
 
-  const _PaneSlot({
-    required this.leaf,
-    required this.isFocused,
-    required this.originTab,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildPane(BuildContext context, LeafPane leaf, bool isFocused) {
     final scheme = Theme.of(context).colorScheme;
-    final paneTree = context.read<PaneTreeCubit>();
-    final ref = leaf.session;
-
-    Widget content;
-    if (ref == null) {
-      content = _PaneSessionPicker(leaf: leaf);
-    } else if (ref.sessionId == originTab.sessionId) {
-      content = _sessionScreenFor(originTab);
-    } else {
-      TabEntry? match;
-      for (final t in context.read<TabsCubit>().state.tabs) {
-        if (t.sessionId == ref.sessionId) {
-          match = t;
-          break;
-        }
-      }
-      content = match != null
-          ? _sessionScreenFor(match)
-          : const Center(child: Text('Session unavailable'));
-    }
-
     return Container(
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
@@ -318,7 +285,7 @@ class _PaneSlot extends StatelessWidget {
         borderRadius: BorderRadius.circular(5),
         child: Stack(
           children: [
-            Positioned.fill(child: content),
+            Positioned.fill(child: _paneContent(leaf)),
             Positioned(
               top: 2,
               right: 2,
@@ -331,8 +298,8 @@ class _PaneSlot extends StatelessWidget {
                   tooltip: 'Close pane',
                   icon: const Icon(Icons.close),
                   onPressed: () {
-                    paneTree.focus(leaf.id);
-                    paneTree.closeFocused();
+                    _paneTree!.focus(leaf.id);
+                    _paneTree!.closeFocused();
                   },
                 ),
               ),
@@ -342,62 +309,71 @@ class _PaneSlot extends StatelessWidget {
       ),
     );
   }
-}
 
-/// Picker shown in an empty pane: choose one of the open sessions to display.
-class _PaneSessionPicker extends StatelessWidget {
-  final LeafPane leaf;
+  Widget _paneContent(LeafPane leaf) {
+    // A session explicitly opened into this pane via its embedded Home.
+    final selection = _paneSelections[leaf.id];
+    if (selection != null) return _sessionScreenForSelection(leaf, selection);
 
-  const _PaneSessionPicker({required this.leaf});
+    // The pane that kept the tab's own session after the split.
+    final ref = leaf.session;
+    if (ref != null && ref.sessionId == widget.tab.sessionId) {
+      return _sessionScreenFor(widget.tab);
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    final paneTree = context.read<PaneTreeCubit>();
-    final tabs = context.watch<TabsCubit>().state.tabs;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(
-                'Select a session for this pane',
-                style: Theme.of(context).textTheme.titleSmall,
-              ),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                children: [
-                  for (final t in tabs)
-                    ListTile(
-                      dense: true,
-                      leading: Icon(
-                        t.provider == TabProvider.codex
-                            ? Icons.terminal
-                            : Icons.chat_bubble_outline,
-                        size: 18,
-                      ),
-                      title: Text(
-                        t.displayLabel,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onTap: () => paneTree.setSession(
-                        leaf.id,
-                        SessionRef(
-                          connectionId: BridgeConnection.primaryId,
-                          sessionId: t.sessionId,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+    // Empty pane → the Home (session list). Picking a session loads it here.
+    return SessionListScreen(
+      embedded: true,
+      onSelectWorkspaceSession: (selection) {
+        setState(() => _paneSelections[leaf.id] = selection);
+        _paneTree!.setSession(
+          leaf.id,
+          SessionRef(
+            connectionId: BridgeConnection.primaryId,
+            sessionId: selection.sessionId,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _sessionScreenForSelection(
+    LeafPane leaf,
+    WorkspaceSessionSelection s,
+  ) {
+    void backToHome() {
+      setState(() => _paneSelections.remove(leaf.id));
+      _paneTree!.setSession(leaf.id, null);
+    }
+
+    if (s.provider == Provider.codex) {
+      return CodexSessionScreen(
+        key: ValueKey('pane_codex_${leaf.id}_${s.sessionId}'),
+        sessionId: s.sessionId,
+        projectPath: s.projectPath,
+        gitBranch: s.gitBranch,
+        worktreePath: s.worktreePath,
+        isPending: s.isPending,
+        initialSandboxMode: s.sandboxMode,
+        initialPermissionMode: s.permissionMode,
+        initialApprovalPolicy: s.approvalPolicy,
+        pendingSessionCreated: s.pendingSessionCreated,
+        onBackToSessions: backToHome,
+        hideSessionBackButton: true,
+      );
+    }
+    return ClaudeSessionScreen(
+      key: ValueKey('pane_claude_${leaf.id}_${s.sessionId}'),
+      sessionId: s.sessionId,
+      projectPath: s.projectPath,
+      gitBranch: s.gitBranch,
+      worktreePath: s.worktreePath,
+      isPending: s.isPending,
+      initialPermissionMode: s.permissionMode,
+      initialSandboxMode: s.sandboxMode,
+      pendingSessionCreated: s.pendingSessionCreated,
+      onBackToSessions: backToHome,
+      hideSessionBackButton: true,
     );
   }
 }
