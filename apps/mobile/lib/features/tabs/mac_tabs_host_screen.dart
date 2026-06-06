@@ -4,9 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../models/machine.dart';
 import '../../models/messages.dart';
 import '../../models/session_ref.dart';
+import '../../providers/bridge_cubits.dart';
+import '../../providers/machine_manager_cubit.dart';
 import '../../services/bridge_connection.dart';
+import '../../services/connection_manager.dart';
 import '../claude_session/claude_session_screen.dart';
 import '../codex_session/codex_session_screen.dart';
 import '../session_list/session_list_screen.dart';
@@ -332,17 +336,14 @@ class _SessionTabContentState extends State<_SessionTabContent> {
       );
     }
 
-    // Empty pane → the Home (session list). Picking a session loads it here.
-    return SessionListScreen(
-      embedded: true,
-      onSelectWorkspaceSession: (selection) {
+    // Empty pane → Home with a machine selector. Picking a session loads it
+    // here, scoped to the chosen connection.
+    return _PaneHome(
+      onPick: (connectionId, selection) {
         setState(() => _paneSelections[leaf.id] = selection);
         _paneTree!.setSession(
           leaf.id,
-          SessionRef(
-            connectionId: BridgeConnection.primaryId,
-            sessionId: selection.sessionId,
-          ),
+          SessionRef(connectionId: connectionId, sessionId: selection.sessionId),
         );
       },
     );
@@ -385,6 +386,193 @@ class _SessionTabContentState extends State<_SessionTabContent> {
       pendingSessionCreated: s.pendingSessionCreated,
       onBackToSessions: backToHome,
       hideSessionBackButton: true,
+    );
+  }
+}
+
+/// Maps a bridge [SessionInfo] to the selection used to render a session.
+WorkspaceSessionSelection _selectionFromInfo(SessionInfo info) {
+  final provider = Provider.values.firstWhere(
+    (p) => p.value == info.provider,
+    orElse: () => Provider.claude,
+  );
+  return WorkspaceSessionSelection(
+    sessionId: info.id,
+    projectPath: info.projectPath,
+    gitBranch: info.gitBranch,
+    worktreePath: info.worktreePath,
+    provider: provider,
+    permissionMode: info.permissionMode,
+    sandboxMode: info.codexSandboxMode,
+    approvalPolicy: info.codexApprovalPolicy,
+  );
+}
+
+/// Home shown in an empty pane: pick a machine (connection), then a session on
+/// it. The primary machine reuses the full session list; other machines show a
+/// lightweight list of their active sessions.
+class _PaneHome extends StatefulWidget {
+  final void Function(String connectionId, WorkspaceSessionSelection selection)
+  onPick;
+
+  const _PaneHome({required this.onPick});
+
+  @override
+  State<_PaneHome> createState() => _PaneHomeState();
+}
+
+class _PaneHomeState extends State<_PaneHome> {
+  String _connectionId = BridgeConnection.primaryId;
+
+  @override
+  Widget build(BuildContext context) {
+    final machines =
+        context.watch<MachineManagerCubit?>()?.state.machines ??
+        const <MachineWithStatus>[];
+    return Column(
+      children: [
+        _MachineSelectorBar(
+          machines: machines,
+          selectedId: _connectionId,
+          onSelectPrimary: () =>
+              setState(() => _connectionId = BridgeConnection.primaryId),
+          onSelectMachine: (m) {
+            context.read<ConnectionManager>().connectMachine(
+              m,
+              makeActive: false,
+            );
+            setState(() => _connectionId = m.uniqueKey);
+          },
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: _connectionId == BridgeConnection.primaryId
+              ? SessionListScreen(
+                  embedded: true,
+                  onSelectWorkspaceSession: (sel) =>
+                      widget.onPick(BridgeConnection.primaryId, sel),
+                )
+              : _ConnectionSessionList(
+                  connectionId: _connectionId,
+                  onPick: (info) =>
+                      widget.onPick(_connectionId, _selectionFromInfo(info)),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MachineSelectorBar extends StatelessWidget {
+  final List<MachineWithStatus> machines;
+  final String selectedId;
+  final VoidCallback onSelectPrimary;
+  final ValueChanged<Machine> onSelectMachine;
+
+  const _MachineSelectorBar({
+    required this.machines,
+    required this.selectedId,
+    required this.onSelectPrimary,
+    required this.onSelectMachine,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Row(
+        children: [
+          ChoiceChip(
+            label: const Text('This Mac'),
+            selected: selectedId == BridgeConnection.primaryId,
+            onSelected: (_) => onSelectPrimary(),
+          ),
+          for (final m in machines) ...[
+            const SizedBox(width: 6),
+            ChoiceChip(
+              label: Text(m.machine.displayName),
+              selected: selectedId == m.machine.uniqueKey,
+              onSelected: (_) => onSelectMachine(m.machine),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Lightweight list of a non-primary connection's active sessions.
+class _ConnectionSessionList extends StatefulWidget {
+  final String connectionId;
+  final ValueChanged<SessionInfo> onPick;
+
+  const _ConnectionSessionList({
+    required this.connectionId,
+    required this.onPick,
+  });
+
+  @override
+  State<_ConnectionSessionList> createState() => _ConnectionSessionListState();
+}
+
+class _ConnectionSessionListState extends State<_ConnectionSessionList> {
+  @override
+  void initState() {
+    super.initState();
+    // Ask the connection for its session list (it answers once connected).
+    context
+        .read<ConnectionManager>()
+        .byId(widget.connectionId)
+        ?.bridge
+        .requestSessionList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final conn = context.read<ConnectionManager>().byId(widget.connectionId);
+    if (conn == null) {
+      return const Center(child: Text('Not connected'));
+    }
+    return BlocProvider.value(
+      value: conn.activeSessionsCubit,
+      child: BlocBuilder<ActiveSessionsCubit, List<SessionInfo>>(
+        builder: (context, sessions) {
+          if (sessions.isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16),
+                child: Text('No active sessions on this machine yet.'),
+              ),
+            );
+          }
+          return ListView.builder(
+            itemCount: sessions.length,
+            itemBuilder: (context, i) {
+              final s = sessions[i];
+              final title = (s.name?.isNotEmpty ?? false)
+                  ? s.name!
+                  : s.projectPath;
+              return ListTile(
+                dense: true,
+                leading: Icon(
+                  s.provider == 'codex'
+                      ? Icons.terminal
+                      : Icons.chat_bubble_outline,
+                  size: 18,
+                ),
+                title: Text(title, overflow: TextOverflow.ellipsis),
+                subtitle: Text(
+                  s.lastMessage,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                onTap: () => widget.onPick(s),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
