@@ -24,8 +24,32 @@ class SplitPaneDebugScreen extends StatelessWidget {
   }
 }
 
-class _SplitPaneDebugBody extends StatelessWidget {
+class _SplitPaneDebugBody extends StatefulWidget {
   const _SplitPaneDebugBody();
+
+  @override
+  State<_SplitPaneDebugBody> createState() => _SplitPaneDebugBodyState();
+}
+
+class _SplitPaneDebugBodyState extends State<_SplitPaneDebugBody> {
+  // Explicit node so the shortcut scope reliably holds keyboard focus from the
+  // moment the screen opens — `autofocus` alone wasn't grabbing it, so ⌘D/⌘⇧D/
+  // ⌘W did nothing until something else was clicked.
+  final FocusNode _focusNode = FocusNode(debugLabel: 'split-pane-shortcuts');
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,8 +64,14 @@ class _SplitPaneDebugBody extends StatelessWidget {
             cubit.closeFocused(),
       },
       child: Focus(
+        focusNode: _focusNode,
         autofocus: true,
-        child: Scaffold(
+        // Restore keyboard focus to the shortcut scope after tapping panes or
+        // toolbar buttons, so the shortcuts keep working.
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: _focusNode.requestFocus,
+          child: Scaffold(
           appBar: AppBar(
             title: const Text('Split Pane (debug)'),
             actions: [
@@ -78,6 +108,7 @@ class _SplitPaneDebugBody extends StatelessWidget {
               },
             ),
           ),
+        ),
         ),
       ),
     );
