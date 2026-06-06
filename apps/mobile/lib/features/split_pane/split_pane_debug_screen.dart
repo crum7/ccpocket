@@ -32,83 +32,81 @@ class _SplitPaneDebugBody extends StatefulWidget {
 }
 
 class _SplitPaneDebugBodyState extends State<_SplitPaneDebugBody> {
-  // Explicit node so the shortcut scope reliably holds keyboard focus from the
-  // moment the screen opens — `autofocus` alone wasn't grabbing it, so ⌘D/⌘⇧D/
-  // ⌘W did nothing until something else was clicked.
-  final FocusNode _focusNode = FocusNode(debugLabel: 'split-pane-shortcuts');
-
+  // The shortcuts must work whenever this screen is on top, regardless of which
+  // widget inside the app currently holds focus. A focus-scoped handler
+  // (CallbackShortcuts/Shortcuts) only fires when its subtree is focused, which
+  // wasn't the case here (the key just bubbled to macOS → system beep). A
+  // process-level keyboard handler, registered only while this screen is
+  // mounted, catches ⌘D/⌘⇧D/⌘W directly and consumes them.
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _focusNode.requestFocus();
-    });
+    HardwareKeyboard.instance.addHandler(_onKey);
   }
 
   @override
   void dispose() {
-    _focusNode.dispose();
+    HardwareKeyboard.instance.removeHandler(_onKey);
     super.dispose();
+  }
+
+  bool _onKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    final keyboard = HardwareKeyboard.instance;
+    if (!keyboard.isMetaPressed) return false;
+
+    final cubit = context.read<PaneTreeCubit>();
+    switch (event.logicalKey) {
+      case LogicalKeyboardKey.keyD:
+        cubit.splitFocused(
+          keyboard.isShiftPressed ? SplitAxis.column : SplitAxis.row,
+        );
+        return true; // consume → no system beep
+      case LogicalKeyboardKey.keyW:
+        cubit.closeFocused();
+        return true;
+    }
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<PaneTreeCubit>();
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyD, meta: true): () =>
-            cubit.splitFocused(SplitAxis.row),
-        const SingleActivator(LogicalKeyboardKey.keyD, meta: true, shift: true):
-            () => cubit.splitFocused(SplitAxis.column),
-        const SingleActivator(LogicalKeyboardKey.keyW, meta: true): () =>
-            cubit.closeFocused(),
-      },
-      child: Focus(
-        focusNode: _focusNode,
-        autofocus: true,
-        // Restore keyboard focus to the shortcut scope after tapping panes or
-        // toolbar buttons, so the shortcuts keep working.
-        child: GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: _focusNode.requestFocus,
-          child: Scaffold(
-          appBar: AppBar(
-            title: const Text('Split Pane (debug)'),
-            actions: [
-              IconButton(
-                tooltip: 'Split vertical (⌘D)',
-                icon: const Icon(Icons.splitscreen_outlined),
-                onPressed: () => cubit.splitFocused(SplitAxis.row),
-              ),
-              IconButton(
-                tooltip: 'Split horizontal (⌘⇧D)',
-                icon: const Icon(Icons.horizontal_split_outlined),
-                onPressed: () => cubit.splitFocused(SplitAxis.column),
-              ),
-              IconButton(
-                tooltip: 'Close focused (⌘W)',
-                icon: const Icon(Icons.close_fullscreen_outlined),
-                onPressed: () => cubit.closeFocused(),
-              ),
-              const SizedBox(width: 8),
-            ],
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Split Pane (debug)'),
+        actions: [
+          IconButton(
+            tooltip: 'Split vertical (⌘D)',
+            icon: const Icon(Icons.splitscreen_outlined),
+            onPressed: () => cubit.splitFocused(SplitAxis.row),
           ),
-          body: Padding(
-            padding: const EdgeInsets.all(8),
-            child: BlocBuilder<PaneTreeCubit, PaneTreeState>(
-              builder: (context, state) {
-                return PaneTreeView(
-                  root: state.root,
-                  focusedId: state.focusedId,
-                  onFocus: cubit.focus,
-                  onResize: cubit.resizeSplit,
-                  leafBuilder: (context, leaf, isFocused) =>
-                      _PanePlaceholder(leaf: leaf, isFocused: isFocused),
-                );
-              },
-            ),
+          IconButton(
+            tooltip: 'Split horizontal (⌘⇧D)',
+            icon: const Icon(Icons.horizontal_split_outlined),
+            onPressed: () => cubit.splitFocused(SplitAxis.column),
           ),
-        ),
+          IconButton(
+            tooltip: 'Close focused (⌘W)',
+            icon: const Icon(Icons.close_fullscreen_outlined),
+            onPressed: () => cubit.closeFocused(),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(8),
+        child: BlocBuilder<PaneTreeCubit, PaneTreeState>(
+          builder: (context, state) {
+            return PaneTreeView(
+              root: state.root,
+              focusedId: state.focusedId,
+              onFocus: cubit.focus,
+              onResize: cubit.resizeSplit,
+              leafBuilder: (context, leaf, isFocused) =>
+                  _PanePlaceholder(leaf: leaf, isFocused: isFocused),
+            );
+          },
         ),
       ),
     );
