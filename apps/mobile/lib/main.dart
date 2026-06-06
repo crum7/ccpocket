@@ -43,6 +43,7 @@ import 'router/session_route_observer.dart';
 import 'services/app_icon_service.dart';
 import 'services/bridge_service.dart';
 import 'services/connection_manager.dart';
+import 'features/split_pane/split_pane_debug_screen.dart';
 import 'services/connection_url_parser.dart';
 import 'services/database_service.dart';
 import 'services/draft_service.dart';
@@ -291,6 +292,11 @@ void main() async {
   );
 }
 
+/// Dev convenience: when true (debug builds only) the app jumps straight to the
+/// Split Pane playground on launch, so it isn't buried under Settings → Debug.
+/// Flip to false to boot into the normal app.
+const bool kAutoOpenSplitPaneDebug = true;
+
 class CcpocketApp extends StatefulWidget {
   const CcpocketApp({
     required this.fcmService,
@@ -350,6 +356,17 @@ class _CcpocketAppState extends State<CcpocketApp> {
     NotificationService.instance.onNotificationTap = (payload) {
       _openSessionFromPayload(payload);
     };
+
+    // Dev shortcut: jump straight to the Split Pane playground on launch.
+    if (kDebugMode && kAutoOpenSplitPaneDebug) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _appRouter.navigatorKey.currentState?.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const SplitPaneDebugScreen(),
+          ),
+        );
+      });
+    }
   }
 
   void _initFcmHandlers() {
