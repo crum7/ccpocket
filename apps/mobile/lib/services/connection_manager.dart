@@ -105,6 +105,7 @@ class ConnectionManager {
     if (conn == null) return;
     conn.bridge.disconnect();
     conn.bridge.dispose();
+    unawaited(conn.disposeCubits());
     if (_activeId == id) {
       _activeId = _connections.keys.isNotEmpty ? _connections.keys.first : null;
     }
@@ -118,6 +119,7 @@ class ConnectionManager {
   void dispose() {
     for (final conn in _connections.values) {
       conn.bridge.dispose();
+      unawaited(conn.disposeCubits());
     }
     _connections.clear();
     _activeId = null;

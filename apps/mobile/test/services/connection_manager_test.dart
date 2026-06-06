@@ -124,6 +124,35 @@ void main() {
       m.dispose();
     });
 
+    test('per-connection cubits are lazy, cached, and disposed', () async {
+      final conn = BridgeConnection(
+        id: 'm1',
+        label: 'M1',
+        bridge: _FakeBridge(),
+      );
+      final sessions = conn.activeSessionsCubit;
+      expect(sessions.state, isEmpty);
+      // Same instance on second access (cached, not recreated).
+      expect(identical(conn.activeSessionsCubit, sessions), isTrue);
+
+      await conn.disposeCubits();
+      expect(sessions.isClosed, isTrue);
+    });
+
+    test('disconnect disposes the connection cubits', () async {
+      final m = ConnectionManager.withPrimary(
+        _FakeBridge(),
+        bridgeFactory: _FakeBridge.new,
+      );
+      final conn = m.connectUrl(id: 'm1', url: 'ws://h:1', label: 'M1');
+      final sessions = conn.activeSessionsCubit; // force creation
+
+      m.disconnect('m1');
+      await Future<void>.delayed(Duration.zero); // let disposeCubits run
+
+      expect(sessions.isClosed, isTrue);
+    });
+
     test('connections stream emits the list on add and remove', () async {
       final m = ConnectionManager.withPrimary(
         _FakeBridge(),

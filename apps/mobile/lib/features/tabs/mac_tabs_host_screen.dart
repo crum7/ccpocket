@@ -13,6 +13,7 @@ import '../session_list/session_list_screen.dart';
 import '../session_list/workspace_shell_screen.dart';
 import '../split_pane/state/pane_node.dart';
 import '../split_pane/state/pane_tree_cubit.dart';
+import '../split_pane/widgets/pane_scope.dart';
 import '../split_pane/widgets/pane_tree_view.dart';
 import 'tab_active_scope.dart';
 import 'tabs_cubit.dart';
@@ -311,14 +312,24 @@ class _SessionTabContentState extends State<_SessionTabContent> {
   }
 
   Widget _paneContent(LeafPane leaf) {
+    final connectionId = leaf.session?.connectionId ?? BridgeConnection.primaryId;
+
     // A session explicitly opened into this pane via its embedded Home.
     final selection = _paneSelections[leaf.id];
-    if (selection != null) return _sessionScreenForSelection(leaf, selection);
+    if (selection != null) {
+      return PaneScope(
+        connectionId: connectionId,
+        child: _sessionScreenForSelection(leaf, selection),
+      );
+    }
 
     // The pane that kept the tab's own session after the split.
     final ref = leaf.session;
     if (ref != null && ref.sessionId == widget.tab.sessionId) {
-      return _sessionScreenFor(widget.tab);
+      return PaneScope(
+        connectionId: connectionId,
+        child: _sessionScreenFor(widget.tab),
+      );
     }
 
     // Empty pane → the Home (session list). Picking a session loads it here.
