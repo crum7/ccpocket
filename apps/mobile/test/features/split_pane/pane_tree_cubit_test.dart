@@ -48,6 +48,32 @@ void main() {
       expect((root.children[1] as SplitPane).axis, SplitAxis.column);
     });
 
+    test('consecutive same-axis splits keep all panes equal (1/n)', () {
+      final c = PaneTreeCubit();
+      c.splitFocused(SplitAxis.row); // 2
+      c.splitFocused(SplitAxis.row); // 3
+      c.splitFocused(SplitAxis.row); // 4
+
+      final root = c.state.root as SplitPane;
+      expect(root.children.length, 4);
+      expect(root.children.every((n) => n is LeafPane), isTrue);
+      for (final w in root.weights) {
+        expect(w, closeTo(0.25, 1e-9));
+      }
+    });
+
+    test('a perpendicular split nests instead of flattening', () {
+      final c = PaneTreeCubit();
+      c.splitFocused(SplitAxis.row); // row[A, B], focus B
+      c.splitFocused(SplitAxis.column); // B → column[B, C]
+
+      final root = c.state.root as SplitPane;
+      expect(root.axis, SplitAxis.row);
+      expect(root.children.length, 2);
+      expect(root.children[1], isA<SplitPane>());
+      expect((root.children[1] as SplitPane).axis, SplitAxis.column);
+    });
+
     test('setSessionForFocused assigns to the focused pane only', () {
       final c = PaneTreeCubit();
       c.splitFocused(SplitAxis.row);

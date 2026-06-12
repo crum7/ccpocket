@@ -56,12 +56,38 @@ class PaneTreeCubit extends Cubit<PaneTreeState> {
 
   /// Split the focused pane along [axis], creating a new empty pane that
   /// becomes focused. The existing pane keeps its session.
+  ///
+  /// When the focused pane already sits in a split of the same [axis], the new
+  /// pane is inserted as a sibling and all of them are rebalanced to equal
+  /// sizes (so 3 panes become 1/3 each, 4 become 1/4, …). Only a split in a
+  /// different direction nests.
   void splitFocused(SplitAxis axis) {
     final target = state.focusedId;
     final existing = _findLeaf(state.root, target);
     if (existing == null) return;
 
     final newLeaf = LeafPane(id: _nextId());
+    final parent = _findParentSplit(state.root, target);
+
+    if (parent != null && parent.axis == axis) {
+      // Same direction → add a sibling and split the space evenly.
+      final index = parent.children.indexWhere((c) => c.id == target);
+      final children = [...parent.children]..insert(index + 1, newLeaf);
+      final equal = List.filled(children.length, 1.0 / children.length);
+      emit(
+        PaneTreeState(
+          root: _replace(
+            state.root,
+            parent.id,
+            parent.copyWith(children: children, weights: equal),
+          ),
+          focusedId: newLeaf.id,
+        ),
+      );
+      return;
+    }
+
+    // Root leaf, or a perpendicular split → wrap into a new even 2-way split.
     final split = SplitPane(
       id: _nextId(),
       axis: axis,
@@ -145,6 +171,19 @@ class PaneTreeCubit extends Cubit<PaneTreeState> {
       for (final c in node.children) {
         final r = _findNode(c, id);
         if (r != null) return r;
+      }
+    }
+    return null;
+  }
+
+  /// The split that directly contains [childId], or null if [childId] is the
+  /// root (has no parent).
+  static SplitPane? _findParentSplit(PaneNode node, String childId) {
+    if (node is SplitPane) {
+      for (final c in node.children) {
+        if (c.id == childId) return node;
+        final found = _findParentSplit(c, childId);
+        if (found != null) return found;
       }
     }
     return null;
