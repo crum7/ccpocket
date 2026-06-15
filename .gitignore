@@ -83,3 +83,9 @@ web-preview.png
 
 # Local verification fixture repos
 tmp/verification/issue54-path/
+
+# Ephemeral git worktrees created by isolated agent runs
+.claude/worktrees/
+
+# Generated webview test screenshots (VSCode extension)
+apps/vscode/test/webview/out/
