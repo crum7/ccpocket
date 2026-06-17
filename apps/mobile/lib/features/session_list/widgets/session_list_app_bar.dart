@@ -13,6 +13,7 @@ import '../../../widgets/workspace_pane_chrome.dart';
 class SessionListSliverAppBar extends StatelessWidget {
   final VoidCallback onTitleTap;
   final VoidCallback onDisconnect;
+  final VoidCallback? onOpenById;
   final bool forceElevated;
   final double? toolbarHeight;
 
@@ -20,6 +21,7 @@ class SessionListSliverAppBar extends StatelessWidget {
     super.key,
     required this.onTitleTap,
     required this.onDisconnect,
+    this.onOpenById,
     this.forceElevated = false,
     this.toolbarHeight,
   });
@@ -35,6 +37,13 @@ class SessionListSliverAppBar extends StatelessWidget {
       toolbarHeight: toolbarHeight ?? kToolbarHeight,
       title: GestureDetector(onTap: onTitleTap, child: Text(l.appTitle)),
       actions: [
+        if (onOpenById != null)
+          IconButton(
+            key: const ValueKey('open_by_id_button'),
+            icon: const Icon(Icons.tag),
+            onPressed: onOpenById,
+            tooltip: 'Open by ID',
+          ),
         IconButton(
           key: const ValueKey('settings_button'),
           icon: Badge(
@@ -68,6 +77,7 @@ class SessionListPaneHeader extends StatelessWidget {
   final VoidCallback? onOpenGallery;
   final VoidCallback? onDisconnect;
   final VoidCallback? onTogglePaneVisibility;
+  final VoidCallback? onOpenById;
 
   const SessionListPaneHeader({
     super.key,
@@ -76,6 +86,7 @@ class SessionListPaneHeader extends StatelessWidget {
     this.onOpenGallery,
     this.onDisconnect,
     this.onTogglePaneVisibility,
+    this.onOpenById,
   });
 
   @override
@@ -84,6 +95,7 @@ class SessionListPaneHeader extends StatelessWidget {
     final openGallery = onOpenGallery;
     final disconnect = onDisconnect;
     final togglePaneVisibility = onTogglePaneVisibility;
+    final openById = onOpenById;
     final chrome = resolveWorkspacePaneChrome(
       platform: Theme.of(context).platform,
       isAdaptiveWorkspace: true,
@@ -129,6 +141,16 @@ class SessionListPaneHeader extends StatelessWidget {
               ),
               compact: chrome.useMacOSAdaptiveChrome,
             ),
+            if (openById != null) ...[
+              SizedBox(width: actionGap),
+              _PaneHeaderActionButton(
+                key: const ValueKey('open_by_id_button'),
+                tooltip: 'Open by ID',
+                onPressed: openById,
+                icon: const Icon(Icons.tag),
+                compact: chrome.useMacOSAdaptiveChrome,
+              ),
+            ],
             if (openGallery != null ||
                 disconnect != null ||
                 togglePaneVisibility != null)
