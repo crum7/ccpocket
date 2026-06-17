@@ -1101,18 +1101,13 @@ class _SessionListScreenState extends State<SessionListScreen>
     }
 
     if (match != null) {
-      _navigateToChat(
-        match.sessionId,
-        projectPath: match.projectPath,
-        gitBranch: match.gitBranch,
-        provider: match.provider == Provider.codex.value
-            ? Provider.codex
-            : Provider.claude,
-        permissionMode: match.rawPermissionMode,
-        sandboxMode: match.codexSandboxMode,
-        approvalPolicy: match.codexApprovalPolicy,
-      );
+      // Exactly like tapping the session in the list: sends resume_session
+      // (starting the SDK) and navigates once the session is live.
+      _resumeSession(match);
     } else {
+      // Not in the loaded list: ask the bridge to resume by id (it resolves the
+      // session's cwd from disk), then open the screen.
+      context.read<BridgeService>().resumeSession(id, '');
       _navigateToChat(id);
     }
   }
