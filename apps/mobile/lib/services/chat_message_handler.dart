@@ -126,6 +126,11 @@ const _unsupportedActions = <String, UnsupportedAction>{
   'git_revert_hunks': UnsupportedAction.showUpdateHint,
 };
 
+/// Matches the bridge's transient "Session `<id>` not found" error, sent when a
+/// request (get_history, refresh_branch, …) arrives before resume_session has
+/// registered the session. Suppressed so it doesn't litter the chat on startup.
+final _transientSessionNotFound = RegExp(r'^Session .+ not found$');
+
 /// Processes [ServerMessage]s into [ChatStateUpdate]s.
 ///
 /// Pure logic — no Flutter dependencies. Tracks streaming and thinking state
@@ -268,6 +273,16 @@ class ChatMessageHandler {
           logger.warning(
             '[handler] old bridge: unsupported message (type unknown)',
           );
+          return const ChatStateUpdate();
+        }
+        // Transient during session startup: the screen polls get_history (and
+        // refresh_branch, etc.) before resume_session has registered the
+        // session on the bridge, so it briefly answers "Session <id> not
+        // found". These are noise, not actionable — suppress them. (Real
+        // "could not find / sidechain" resume errors use different wording and
+        // still surface.)
+        if (_transientSessionNotFound.hasMatch(message)) {
+          logger.warning('[handler] suppressed transient: $message');
           return const ChatStateUpdate();
         }
         logger.error('[handler] error message: $message');
