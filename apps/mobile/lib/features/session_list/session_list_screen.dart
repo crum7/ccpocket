@@ -1055,38 +1055,23 @@ class _SessionListScreenState extends State<SessionListScreen>
     );
   }
 
-  /// Prompt for a session id and (re)open it. Looks the id up among the loaded
-  /// sessions to recover its project path / provider; if it isn't loaded, an
-  /// optional project path lets the user open it anyway.
+  /// Prompt for a session id and (re)open it. If the id is among the loaded
+  /// sessions we pass its known project path / provider; otherwise we open by
+  /// id alone — the bridge resolves the session's cwd from disk.
   Future<void> _showOpenByIdDialog() async {
     final idController = TextEditingController();
-    final pathController = TextEditingController();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Open session by ID'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: idController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Session ID',
-                hintText: 'e.g. 20ac7b39-438e-...',
-              ),
-              onSubmitted: (_) => Navigator.pop(ctx, true),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: pathController,
-              decoration: const InputDecoration(
-                labelText: 'Project path (optional)',
-                hintText: 'used only if the ID is not in the list',
-              ),
-              onSubmitted: (_) => Navigator.pop(ctx, true),
-            ),
-          ],
+        content: TextField(
+          controller: idController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Session ID',
+            hintText: 'e.g. 20ac7b39-438e-...',
+          ),
+          onSubmitted: (_) => Navigator.pop(ctx, true),
         ),
         actions: [
           TextButton(
@@ -1102,11 +1087,11 @@ class _SessionListScreenState extends State<SessionListScreen>
     );
 
     final id = idController.text.trim();
-    final path = pathController.text.trim();
     idController.dispose();
-    pathController.dispose();
     if (confirmed != true || id.isEmpty || !mounted) return;
 
+    // Use known metadata if the session is already loaded (faster, exact
+    // provider); otherwise open by id and let the bridge resolve the cwd.
     RecentSession? match;
     for (final s in context.read<SessionListCubit>().state.sessions) {
       if (s.sessionId == id) {
@@ -1127,20 +1112,9 @@ class _SessionListScreenState extends State<SessionListScreen>
         sandboxMode: match.codexSandboxMode,
         approvalPolicy: match.codexApprovalPolicy,
       );
-      return;
+    } else {
+      _navigateToChat(id);
     }
-
-    if (path.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Session not found in the list. Enter a project path to open it anyway.',
-          ),
-        ),
-      );
-      return;
-    }
-    _navigateToChat(id, projectPath: path);
   }
 
   void _navigateToChat(

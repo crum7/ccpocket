@@ -25,6 +25,7 @@ import {
   getAllRecentSessions,
   getCodexSessionHistory,
   getSessionHistory,
+  findSessionCwd,
   findSessionsByClaudeIds,
   extractMessageImages,
   getClaudeSessionName,
@@ -2180,8 +2181,28 @@ export class BridgeWebSocketServer {
         console.log(
           `[ws] resume_session: sessionId=${msg.sessionId} projectPath=${msg.projectPath} provider=${msg.provider ?? "claude"}`,
         );
+        // Allow resuming by session id alone: if no project path was supplied,
+        // resolve the session's recorded cwd from its JSONL on disk.
+        let resumeProjectPathInput = msg.projectPath;
+        if (
+          resumeProjectPathInput == null ||
+          `${resumeProjectPathInput}`.trim() === ""
+        ) {
+          const resolvedCwd = await findSessionCwd(msg.sessionId);
+          if (!resolvedCwd) {
+            this.send(ws, {
+              type: "error",
+              message: `Could not find session ${msg.sessionId} on this machine.`,
+            });
+            break;
+          }
+          console.log(
+            `[ws] resume_session: resolved cwd ${resolvedCwd} for ${msg.sessionId}`,
+          );
+          resumeProjectPathInput = resolvedCwd;
+        }
         const resumeProjectPath = resolvePlatformPath(
-          msg.projectPath,
+          resumeProjectPathInput,
           this.platform,
         );
         if (!this.isPathAllowed(resumeProjectPath)) {

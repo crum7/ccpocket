@@ -1748,6 +1748,37 @@ async function findSessionJsonlPath(sessionId: string): Promise<string | null> {
   return null;
 }
 
+/**
+ * Resolve the working directory (project path) a session was run in, by its
+ * sessionId alone — so a session can be resumed without the client supplying a
+ * path. Searches Claude then Codex session files and reads the `cwd` recorded
+ * in the JSONL. Returns null if the session can't be located.
+ */
+export async function findSessionCwd(
+  sessionId: string,
+): Promise<string | null> {
+  const jsonlPath =
+    (await findSessionJsonlPath(sessionId)) ??
+    (await findCodexSessionJsonlPath(sessionId));
+  if (!jsonlPath) return null;
+  try {
+    const raw = await readFile(jsonlPath, "utf-8");
+    for (const line of raw.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const obj = JSON.parse(trimmed) as Record<string, unknown>;
+        if (typeof obj.cwd === "string" && obj.cwd) return obj.cwd;
+      } catch {
+        // Not a JSON line — keep scanning.
+      }
+    }
+  } catch {
+    // Unreadable file.
+  }
+  return null;
+}
+
 async function findCodexSessionJsonlPath(threadId: string): Promise<string | null> {
   const files = await listCodexSessionFiles();
   for (const filePath of files) {
