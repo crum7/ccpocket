@@ -2182,24 +2182,31 @@ export class BridgeWebSocketServer {
           `[ws] resume_session: sessionId=${msg.sessionId} projectPath=${msg.projectPath} provider=${msg.provider ?? "claude"}`,
         );
         // Allow resuming by session id alone: if no project path was supplied,
-        // resolve the session's recorded cwd from its JSONL on disk.
+        // resolve the session's cwd from disk (indexed path, else JSONL).
         let resumeProjectPathInput = msg.projectPath;
         if (
           resumeProjectPathInput == null ||
           `${resumeProjectPathInput}`.trim() === ""
         ) {
-          const resolvedCwd = await findSessionCwd(msg.sessionId);
-          if (!resolvedCwd) {
+          const resolved = await findSessionCwd(msg.sessionId);
+          if (!resolved) {
             this.send(ws, {
               type: "error",
               message: `Could not find session ${msg.sessionId} on this machine.`,
             });
             break;
           }
+          if (resolved.isSidechain) {
+            this.send(ws, {
+              type: "error",
+              message: `Session ${msg.sessionId} is a subagent (sidechain) session and can't be resumed directly.`,
+            });
+            break;
+          }
           console.log(
-            `[ws] resume_session: resolved cwd ${resolvedCwd} for ${msg.sessionId}`,
+            `[ws] resume_session: resolved cwd ${resolved.cwd} for ${msg.sessionId}`,
           );
-          resumeProjectPathInput = resolvedCwd;
+          resumeProjectPathInput = resolved.cwd;
         }
         const resumeProjectPath = resolvePlatformPath(
           resumeProjectPathInput,

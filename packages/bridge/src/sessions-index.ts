@@ -1748,15 +1748,58 @@ async function findSessionJsonlPath(sessionId: string): Promise<string | null> {
   return null;
 }
 
+export interface ResolvedSessionLocation {
+  /** The cwd to resume the session in. */
+  cwd: string;
+  /** True if this is a subagent (sidechain) session, which can't be resumed. */
+  isSidechain: boolean;
+}
+
 /**
- * Resolve the working directory (project path) a session was run in, by its
- * sessionId alone — so a session can be resumed without the client supplying a
- * path. Searches Claude then Codex session files and reads the `cwd` recorded
- * in the JSONL. Returns null if the session can't be located.
+ * Resolve where a session lives by its sessionId alone — so it can be resumed
+ * without the client supplying a path. Prefers the indexed project path (the
+ * same value the recent-session list uses), falling back to the `cwd` recorded
+ * in the JSONL. Returns null if the session can't be located on this machine.
  */
 export async function findSessionCwd(
   sessionId: string,
-): Promise<string | null> {
+): Promise<ResolvedSessionLocation | null> {
+  // 1. Indexed project path — exactly what the recent-session list resumes in.
+  const projectsDir = join(homedir(), ".claude", "projects");
+  let projectDirs: string[] = [];
+  try {
+    projectDirs = await readdir(projectsDir);
+  } catch {
+    // ~/.claude/projects doesn't exist.
+  }
+  for (const dirName of projectDirs) {
+    if (dirName.startsWith(".")) continue;
+    let raw: string;
+    try {
+      raw = await readFile(
+        join(projectsDir, dirName, "sessions-index.json"),
+        "utf-8",
+      );
+    } catch {
+      continue;
+    }
+    let index: RawSessionIndexFile;
+    try {
+      index = JSON.parse(raw) as RawSessionIndexFile;
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(index.entries)) continue;
+    const entry = index.entries.find((e) => e.sessionId === sessionId);
+    if (entry?.projectPath) {
+      return {
+        cwd: entry.projectPath,
+        isSidechain: entry.isSidechain === true,
+      };
+    }
+  }
+
+  // 2. Fallback: read the cwd directly from the session JSONL.
   const jsonlPath =
     (await findSessionJsonlPath(sessionId)) ??
     (await findCodexSessionJsonlPath(sessionId));
@@ -1768,7 +1811,9 @@ export async function findSessionCwd(
       if (!trimmed) continue;
       try {
         const obj = JSON.parse(trimmed) as Record<string, unknown>;
-        if (typeof obj.cwd === "string" && obj.cwd) return obj.cwd;
+        if (typeof obj.cwd === "string" && obj.cwd) {
+          return { cwd: obj.cwd, isSidechain: obj.isSidechain === true };
+        }
       } catch {
         // Not a JSON line — keep scanning.
       }
