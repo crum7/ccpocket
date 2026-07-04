@@ -293,8 +293,21 @@ describe("buildThinkingOptions", () => {
     });
   });
 
+  it("forces adaptive thinking for claude-opus-4-8", () => {
+    expect(buildThinkingOptions("claude-opus-4-8")).toEqual({
+      thinking: { type: "adaptive" },
+    });
+  });
+
+  it("forces adaptive thinking for claude-opus-4-8[1m]", () => {
+    expect(buildThinkingOptions("claude-opus-4-8[1m]")).toEqual({
+      thinking: { type: "adaptive" },
+    });
+  });
+
   it("returns empty options for other models", () => {
     expect(buildThinkingOptions("claude-sonnet-4-6")).toEqual({});
+    expect(buildThinkingOptions("claude-fable-5")).toEqual({});
   });
 });
 

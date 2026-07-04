@@ -70,10 +70,10 @@ export function buildThinkingOptions(
 ): { thinking?: { type: "adaptive" } } {
   if (
     typeof model === "string"
-    && /^claude-opus-4-7(?:\[1m\])?$/.test(model.trim())
+    && /^claude-opus-4-[78](?:\[1m\])?$/.test(model.trim())
   ) {
-    // Opus 4.7 rejects the legacy "thinking.type.enabled" behavior that older
-    // Claude Agent SDK releases can fall back to. Force adaptive thinking.
+    // Opus 4.7/4.8 reject the legacy "thinking.type.enabled" behavior that
+    // older Claude Agent SDK releases can fall back to. Force adaptive thinking.
     return { thinking: { type: "adaptive" } };
   }
   return {};

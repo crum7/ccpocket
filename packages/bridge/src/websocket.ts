@@ -87,6 +87,9 @@ type ClaudePermissionMode =
 // ---- Available model lists (delivered to clients via session_list) ----
 
 const CLAUDE_MODELS: string[] = [
+  "claude-opus-4-8",
+  "claude-opus-4-8[1m]",
+  "claude-fable-5",
   "claude-opus-4-7",
   "claude-opus-4-7[1m]",
   "claude-opus-4-6",
