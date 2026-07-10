@@ -10,6 +10,7 @@ import '../../models/session_ref.dart';
 import '../../providers/bridge_cubits.dart';
 import '../../providers/machine_manager_cubit.dart';
 import '../../services/bridge_connection.dart';
+import '../../services/bridge_service.dart';
 import '../../services/connection_manager.dart';
 import '../claude_session/claude_session_screen.dart';
 import '../codex_session/codex_session_screen.dart';
@@ -35,15 +36,31 @@ const bool kEnableSplitPanes = true;
 ///   - Tabs 1..N are open sessions kept alive via [IndexedStack] so their
 ///     state survives tab switches.
 @RoutePage()
-class MacTabsHostScreen extends StatelessWidget {
+class MacTabsHostScreen extends StatefulWidget {
   const MacTabsHostScreen({super.key});
+
+  @override
+  State<MacTabsHostScreen> createState() => _MacTabsHostScreenState();
+}
+
+class _MacTabsHostScreenState extends State<MacTabsHostScreen> {
+  bool _restored = false;
 
   @override
   Widget build(BuildContext context) {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.macOS) {
       return const AdaptiveHomeScreen();
     }
-    return BlocBuilder<TabsCubit, TabsState>(
+    return BlocListener<ConnectionCubit, BridgeConnectionState>(
+      // Reopen the sessions that were open when the app was last killed, once
+      // the bridge is back. Only once per launch.
+      listenWhen: (prev, curr) =>
+          !_restored && curr == BridgeConnectionState.connected,
+      listener: (context, _) {
+        _restored = true;
+        _restoreTabs(context);
+      },
+      child: BlocBuilder<TabsCubit, TabsState>(
       builder: (context, state) {
         return Shortcuts(
           shortcuts: {
@@ -146,7 +163,40 @@ class MacTabsHostScreen extends StatelessWidget {
           ),
         );
       },
+      ),
     );
+  }
+
+  /// Restore and resume the persisted session tabs from the previous launch.
+  void _restoreTabs(BuildContext context) {
+    final tabsCubit = context.read<TabsCubit>();
+    // Don't stomp tabs the user already opened before we connected.
+    if (tabsCubit.state.tabs.isNotEmpty) return;
+    final persisted = tabsCubit.readPersisted();
+    if (persisted.tabs.isEmpty) return;
+
+    final bridge = context.read<BridgeService>();
+    for (final tab in persisted.tabs) {
+      // Resume so the SDK session is live on the bridge (empty projectPath →
+      // the bridge resolves the cwd from the session id).
+      bridge.resumeSession(
+        tab.sessionId,
+        tab.projectPath ?? '',
+        provider: tab.provider == TabProvider.codex ? 'codex' : 'claude',
+        permissionMode: tab.initialPermissionMode,
+        sandboxMode: tab.initialSandboxMode,
+      );
+      tabsCubit.openSession(
+        sessionId: tab.sessionId,
+        provider: tab.provider,
+        projectPath: tab.projectPath,
+        gitBranch: tab.gitBranch,
+        worktreePath: tab.worktreePath,
+        initialPermissionMode: tab.initialPermissionMode,
+        initialSandboxMode: tab.initialSandboxMode,
+      );
+    }
+    tabsCubit.selectTab(persisted.activeIndex.clamp(0, persisted.tabs.length));
   }
 }
 

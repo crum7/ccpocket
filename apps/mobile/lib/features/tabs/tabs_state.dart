@@ -34,6 +34,34 @@ class TabEntry {
   final String? initialSandboxMode;
   final ValueNotifier<SystemMessage?>? pendingSessionCreated;
 
+  /// Serialize for session-restore persistence. Excludes [pendingSessionCreated]
+  /// (a runtime notifier) and [isPending] (only fully-created sessions are
+  /// restored).
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'sessionId': sessionId,
+    'provider': provider.name,
+    if (projectPath != null) 'projectPath': projectPath,
+    if (gitBranch != null) 'gitBranch': gitBranch,
+    if (worktreePath != null) 'worktreePath': worktreePath,
+    if (initialPermissionMode != null) 'permissionMode': initialPermissionMode,
+    if (initialSandboxMode != null) 'sandboxMode': initialSandboxMode,
+  };
+
+  factory TabEntry.fromJson(Map<String, dynamic> json) => TabEntry(
+    id: json['id'] as String,
+    sessionId: json['sessionId'] as String,
+    provider: TabProvider.values.firstWhere(
+      (p) => p.name == json['provider'],
+      orElse: () => TabProvider.claude,
+    ),
+    projectPath: json['projectPath'] as String?,
+    gitBranch: json['gitBranch'] as String?,
+    worktreePath: json['worktreePath'] as String?,
+    initialPermissionMode: json['permissionMode'] as String?,
+    initialSandboxMode: json['sandboxMode'] as String?,
+  );
+
   /// Short label shown in the tab strip.
   String get displayLabel {
     final path = projectPath;

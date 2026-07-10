@@ -262,7 +262,7 @@ void main() async {
                 ProjectHistoryCubit(const [], bridge.projectHistoryStream),
           ),
           BlocProvider(create: (_) => ServerDiscoveryCubit()),
-          BlocProvider(create: (_) => TabsCubit()),
+          BlocProvider(create: (_) => TabsCubit(prefs: prefs)),
           BlocProvider(
             create: (ctx) =>
                 SessionListCubit(bridge: ctx.read<BridgeService>()),

@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/messages.dart';
 import 'tabs_state.dart';
@@ -8,10 +12,61 @@ import 'tabs_state.dart';
 ///
 /// Index 0 is always the home (session list). Indices 1..N correspond to
 /// [TabsState.tabs] entries (offset by one).
+///
+/// When a [SharedPreferences] is provided, the open (non-pending) tabs and the
+/// active index are persisted on every change so they can be restored (and
+/// resumed) on the next launch.
 class TabsCubit extends Cubit<TabsState> {
-  TabsCubit() : super(const TabsState(tabs: [], activeIndex: 0));
+  TabsCubit({SharedPreferences? prefs})
+    : _prefs = prefs,
+      super(const TabsState(tabs: [], activeIndex: 0)) {
+    if (_prefs != null) {
+      _sub = stream.listen(_persist);
+    }
+  }
+
+  final SharedPreferences? _prefs;
+  StreamSubscription<TabsState>? _sub;
+  static const _prefsKey = 'open_session_tabs_v1';
 
   int _seq = 0;
+
+  void _persist(TabsState state) {
+    final prefs = _prefs;
+    if (prefs == null) return;
+    final tabs = state.tabs.where((t) => !t.isPending).toList();
+    prefs.setString(
+      _prefsKey,
+      jsonEncode({
+        'activeIndex': state.activeIndex,
+        'tabs': tabs.map((t) => t.toJson()).toList(),
+      }),
+    );
+  }
+
+  /// The persisted (non-pending) tabs + active index for restore on launch.
+  ({List<TabEntry> tabs, int activeIndex}) readPersisted() {
+    final prefs = _prefs;
+    final raw = prefs?.getString(_prefsKey);
+    if (raw == null || raw.isEmpty) {
+      return (tabs: const <TabEntry>[], activeIndex: 0);
+    }
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final tabs = (data['tabs'] as List)
+          .map((e) => TabEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+      return (tabs: tabs, activeIndex: (data['activeIndex'] as int?) ?? 0);
+    } catch (_) {
+      return (tabs: const <TabEntry>[], activeIndex: 0);
+    }
+  }
+
+  @override
+  Future<void> close() {
+    _sub?.cancel();
+    return super.close();
+  }
 
   /// Open a session as a new tab, or switch to the existing tab if the same
   /// session is already open.
