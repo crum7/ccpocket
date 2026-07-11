@@ -61,7 +61,11 @@ class _MacTabsHostScreenState extends State<MacTabsHostScreen> {
           !_restored && curr == BridgeConnectionState.connected,
       listener: (context, _) {
         _restored = true;
-        _restoreTabs(context);
+        // Defer until the first frames / Flutter view have fully settled before
+        // creating the restored session screens — building many at once during
+        // the fragile startup window races the native drag-and-drop plugin
+        // (super_native_extensions) and can segfault.
+        Future.delayed(const Duration(milliseconds: 600), _restoreTabs);
       },
       child: BlocBuilder<TabsCubit, TabsState>(
       builder: (context, state) {
@@ -170,30 +174,44 @@ class _MacTabsHostScreenState extends State<MacTabsHostScreen> {
     );
   }
 
-  /// Restore and resume the persisted session tabs from the previous launch.
-  void _restoreTabs(BuildContext context) {
+  /// Restore the persisted session tabs from the previous launch.
+  ///
+  /// The bridge (which keeps running when only the client was killed) still
+  /// holds these sessions, so each screen reconnects via get_history — no
+  /// resume needed. Tabs are recreated one at a time so each session screen's
+  /// native drop target registers on its own frame instead of a crash-prone
+  /// burst (super_native_extensions segfaults on a big startup burst).
+  void _restoreTabs() {
+    if (!mounted) return;
     final tabsCubit = context.read<TabsCubit>();
     // Don't stomp tabs the user already opened before we connected.
     if (tabsCubit.state.tabs.isNotEmpty) return;
     final persisted = tabsCubit.readPersisted();
     if (persisted.tabs.isEmpty) return;
+    _openRestoredTab(persisted.tabs, 0, persisted.activeIndex);
+  }
 
-    // Recreate the tabs. The bridge (which keeps running when only the client
-    // was killed) still holds these sessions, so each screen reconnects via
-    // get_history — no resume needed (and the live session id isn't a UUID the
-    // SDK's --resume would accept anyway).
-    for (final tab in persisted.tabs) {
-      tabsCubit.openSession(
-        sessionId: tab.sessionId,
-        provider: tab.provider,
-        projectPath: tab.projectPath,
-        gitBranch: tab.gitBranch,
-        worktreePath: tab.worktreePath,
-        initialPermissionMode: tab.initialPermissionMode,
-        initialSandboxMode: tab.initialSandboxMode,
-      );
+  void _openRestoredTab(List<TabEntry> tabs, int index, int activeIndex) {
+    if (!mounted) return;
+    final tabsCubit = context.read<TabsCubit>();
+    if (index >= tabs.length) {
+      tabsCubit.selectTab(activeIndex.clamp(0, tabs.length));
+      return;
     }
-    tabsCubit.selectTab(persisted.activeIndex.clamp(0, persisted.tabs.length));
+    final tab = tabs[index];
+    tabsCubit.openSession(
+      sessionId: tab.sessionId,
+      provider: tab.provider,
+      projectPath: tab.projectPath,
+      gitBranch: tab.gitBranch,
+      worktreePath: tab.worktreePath,
+      initialPermissionMode: tab.initialPermissionMode,
+      initialSandboxMode: tab.initialSandboxMode,
+    );
+    Future.delayed(
+      const Duration(milliseconds: 250),
+      () => _openRestoredTab(tabs, index + 1, activeIndex),
+    );
   }
 }
 
