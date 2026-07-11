@@ -14,7 +14,6 @@ import '../../models/session_ref.dart';
 import '../../providers/bridge_cubits.dart';
 import '../../providers/machine_manager_cubit.dart';
 import '../../services/bridge_connection.dart';
-import '../../services/bridge_service.dart';
 import '../../services/connection_manager.dart';
 import '../claude_session/claude_session_screen.dart';
 import '../codex_session/codex_session_screen.dart';
@@ -179,17 +178,11 @@ class _MacTabsHostScreenState extends State<MacTabsHostScreen> {
     final persisted = tabsCubit.readPersisted();
     if (persisted.tabs.isEmpty) return;
 
-    final bridge = context.read<BridgeService>();
+    // Recreate the tabs. The bridge (which keeps running when only the client
+    // was killed) still holds these sessions, so each screen reconnects via
+    // get_history — no resume needed (and the live session id isn't a UUID the
+    // SDK's --resume would accept anyway).
     for (final tab in persisted.tabs) {
-      // Resume so the SDK session is live on the bridge (empty projectPath →
-      // the bridge resolves the cwd from the session id).
-      bridge.resumeSession(
-        tab.sessionId,
-        tab.projectPath ?? '',
-        provider: tab.provider == TabProvider.codex ? 'codex' : 'claude',
-        permissionMode: tab.initialPermissionMode,
-        sandboxMode: tab.initialSandboxMode,
-      );
       tabsCubit.openSession(
         sessionId: tab.sessionId,
         provider: tab.provider,
@@ -266,11 +259,8 @@ class _SessionTabContentState extends State<_SessionTabContent> {
         root: saved.root,
         focusedId: saved.focusedId,
       );
-      // Resume the sessions the restored panes reference (the tab's own session
-      // is resumed by the tab-restore path).
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _resumeRestoredPaneSessions();
-      });
+      // No resume needed — the restored panes' session screens reconnect to the
+      // still-live bridge sessions via get_history.
     } else {
       _paneTree = PaneTreeCubit(
         initialSession: SessionRef(
@@ -342,18 +332,6 @@ class _SessionTabContentState extends State<_SessionTabContent> {
     );
   }
 
-  void _resumeRestoredPaneSessions() {
-    final bridge = context.read<BridgeService>();
-    for (final sel in _paneSelections.values) {
-      bridge.resumeSession(
-        sel.sessionId,
-        sel.projectPath ?? '',
-        provider: sel.provider == Provider.codex ? 'codex' : 'claude',
-        permissionMode: sel.permissionMode,
-        sandboxMode: sel.sandboxMode,
-      );
-    }
-  }
 
   // Only the active tab listens for ⌘D, so the split lands in the visible tab.
   bool _onKey(KeyEvent event) {
