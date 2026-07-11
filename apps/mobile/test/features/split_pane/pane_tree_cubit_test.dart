@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ccpocket/models/session_ref.dart';
 import 'package:ccpocket/features/split_pane/state/pane_node.dart';
@@ -163,6 +165,34 @@ void main() {
       c.resizeSplit(splitId, [1, 1, 1]); // wrong length
       c.resizeSplit('pane_0', [0.5, 0.5]); // not a split
       expect(c.state.root, before);
+    });
+
+    test('a split tree survives a JSON round-trip', () {
+      final c = PaneTreeCubit();
+      c.splitFocused(SplitAxis.row);
+      c.splitFocused(SplitAxis.column);
+      c.setSessionForFocused(_ref('deep'));
+
+      final json = jsonDecode(jsonEncode(c.state.root.toJson()))
+          as Map<String, dynamic>;
+      final restored = PaneNode.fromJson(json);
+
+      expect(restored, c.state.root); // deep == on the node tree
+    });
+
+    test('restored cubit continues the id sequence without collisions', () {
+      final c = PaneTreeCubit();
+      c.splitFocused(SplitAxis.row); // pane_0, pane_1, split pane_2
+
+      final restored = PaneTreeCubit.restored(
+        root: c.state.root,
+        focusedId: c.state.focusedId,
+      );
+      restored.splitFocused(SplitAxis.row);
+      restored.splitFocused(SplitAxis.column);
+
+      final ids = restored.state.root.leaves.map((l) => l.id).toList();
+      expect(ids.toSet().length, ids.length); // all unique
     });
 
     test('normalizeWeights falls back to equal on degenerate input', () {

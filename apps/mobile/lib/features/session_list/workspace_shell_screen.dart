@@ -161,6 +161,38 @@ class WorkspaceSessionSelection {
     this.approvalPolicy,
     this.pendingSessionCreated,
   });
+
+  /// Serialize for split-layout persistence. Omits [pendingSessionCreated]
+  /// (a runtime notifier).
+  Map<String, dynamic> toJson() => {
+    'sessionId': sessionId,
+    if (projectPath != null) 'projectPath': projectPath,
+    if (gitBranch != null) 'gitBranch': gitBranch,
+    if (worktreePath != null) 'worktreePath': worktreePath,
+    'isPending': isPending,
+    if (provider != null) 'provider': provider!.value,
+    if (permissionMode != null) 'permissionMode': permissionMode,
+    if (sandboxMode != null) 'sandboxMode': sandboxMode,
+    if (approvalPolicy != null) 'approvalPolicy': approvalPolicy,
+  };
+
+  factory WorkspaceSessionSelection.fromJson(Map<String, dynamic> json) =>
+      WorkspaceSessionSelection(
+        sessionId: json['sessionId'] as String,
+        projectPath: json['projectPath'] as String?,
+        gitBranch: json['gitBranch'] as String?,
+        worktreePath: json['worktreePath'] as String?,
+        isPending: json['isPending'] as bool? ?? false,
+        provider: json['provider'] == null
+            ? null
+            : Provider.values.firstWhere(
+                (p) => p.value == json['provider'],
+                orElse: () => Provider.claude,
+              ),
+        permissionMode: json['permissionMode'] as String?,
+        sandboxMode: json['sandboxMode'] as String?,
+        approvalPolicy: json['approvalPolicy'] as String?,
+      );
 }
 
 class WorkspaceShellScreen extends StatefulWidget {

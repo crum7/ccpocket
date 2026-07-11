@@ -1,8 +1,12 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/machine.dart';
 import '../../models/messages.dart';
@@ -242,15 +246,32 @@ class _SessionTabContent extends StatefulWidget {
 class _SessionTabContentState extends State<_SessionTabContent> {
   PaneTreeCubit? _paneTree;
   bool _handlerRegistered = false;
+  StreamSubscription<PaneTreeState>? _persistSub;
 
   /// Sessions explicitly opened into a pane via its embedded Home, keyed by
   /// pane id. Holds the full render params (the pane tree only stores ids).
   final Map<String, WorkspaceSessionSelection> _paneSelections = {};
 
+  String get _layoutKey => 'pane_layout_v1_${widget.tab.sessionId}';
+
   @override
   void initState() {
     super.initState();
-    if (kEnableSplitPanes) {
+    if (!kEnableSplitPanes) return;
+
+    final saved = _loadLayout(context.read<SharedPreferences>());
+    if (saved != null) {
+      _paneSelections.addAll(saved.selections);
+      _paneTree = PaneTreeCubit.restored(
+        root: saved.root,
+        focusedId: saved.focusedId,
+      );
+      // Resume the sessions the restored panes reference (the tab's own session
+      // is resumed by the tab-restore path).
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _resumeRestoredPaneSessions();
+      });
+    } else {
       _paneTree = PaneTreeCubit(
         initialSession: SessionRef(
           connectionId: BridgeConnection.primaryId,
@@ -258,6 +279,7 @@ class _SessionTabContentState extends State<_SessionTabContent> {
         ),
       );
     }
+    _persistSub = _paneTree!.stream.listen((_) => _persistLayout());
   }
 
   @override
@@ -265,8 +287,72 @@ class _SessionTabContentState extends State<_SessionTabContent> {
     if (_handlerRegistered) {
       HardwareKeyboard.instance.removeHandler(_onKey);
     }
+    _persistSub?.cancel();
     _paneTree?.close();
     super.dispose();
+  }
+
+  ({
+    PaneNode root,
+    String focusedId,
+    Map<String, WorkspaceSessionSelection> selections,
+  })?
+  _loadLayout(SharedPreferences prefs) {
+    final raw = prefs.getString(_layoutKey);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final root = PaneNode.fromJson(data['tree'] as Map<String, dynamic>);
+      if (root.leaves.length <= 1) return null; // nothing meaningful to restore
+      final selections = <String, WorkspaceSessionSelection>{};
+      (data['selections'] as Map<String, dynamic>).forEach((k, v) {
+        selections[k] = WorkspaceSessionSelection.fromJson(
+          v as Map<String, dynamic>,
+        );
+      });
+      return (
+        root: root,
+        focusedId: data['focusedId'] as String? ?? root.leaves.first.id,
+        selections: selections,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _persistLayout() {
+    final cubit = _paneTree;
+    if (cubit == null || !mounted) return;
+    final prefs = context.read<SharedPreferences>();
+    final state = cubit.state;
+    // Only persist once actually split — a lone pane is just the default.
+    if (state.root.leaves.length <= 1) {
+      prefs.remove(_layoutKey);
+      return;
+    }
+    prefs.setString(
+      _layoutKey,
+      jsonEncode({
+        'focusedId': state.focusedId,
+        'tree': state.root.toJson(),
+        'selections': {
+          for (final e in _paneSelections.entries) e.key: e.value.toJson(),
+        },
+      }),
+    );
+  }
+
+  void _resumeRestoredPaneSessions() {
+    final bridge = context.read<BridgeService>();
+    for (final sel in _paneSelections.values) {
+      bridge.resumeSession(
+        sel.sessionId,
+        sel.projectPath ?? '',
+        provider: sel.provider == Provider.codex ? 'codex' : 'claude',
+        permissionMode: sel.permissionMode,
+        sandboxMode: sel.sandboxMode,
+      );
+    }
   }
 
   // Only the active tab listens for ⌘D, so the split lands in the visible tab.

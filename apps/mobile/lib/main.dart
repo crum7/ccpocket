@@ -218,6 +218,7 @@ void main() async {
         RepositoryProvider.value(value: logger),
         RepositoryProvider<BridgeService>.value(value: bridge),
         RepositoryProvider<ConnectionManager>.value(value: connectionManager),
+        RepositoryProvider<SharedPreferences>.value(value: prefs),
         RepositoryProvider<DatabaseService>.value(value: dbService),
         RepositoryProvider<DraftService>.value(value: draftService),
         RepositoryProvider<InAppReviewService>.value(value: inAppReviewService),

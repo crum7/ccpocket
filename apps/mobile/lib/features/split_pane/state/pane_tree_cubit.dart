@@ -52,7 +52,32 @@ class PaneTreeCubit extends Cubit<PaneTreeState> {
         ),
       );
 
+  /// Restore a previously persisted layout. Continues the id sequence past the
+  /// highest existing pane id so new splits don't collide.
+  PaneTreeCubit.restored({required PaneNode root, required String focusedId})
+    : _seq = _maxPaneSeq(root) + 1,
+      super(PaneTreeState(root: root, focusedId: focusedId));
+
   String _nextId() => 'pane_${_seq++}';
+
+  static int _maxPaneSeq(PaneNode node) {
+    var max = 0;
+    void walk(PaneNode n) {
+      final m = RegExp(r'^pane_(\d+)$').firstMatch(n.id);
+      if (m != null) {
+        final v = int.parse(m.group(1)!);
+        if (v > max) max = v;
+      }
+      if (n is SplitPane) {
+        for (final c in n.children) {
+          walk(c);
+        }
+      }
+    }
+
+    walk(node);
+    return max;
+  }
 
   /// Split the focused pane along [axis], creating a new empty pane that
   /// becomes focused. The existing pane keeps its session.

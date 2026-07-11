@@ -22,6 +22,31 @@ sealed class PaneNode {
 
   /// All leaf panes under this node, left-to-right / top-to-bottom.
   List<LeafPane> get leaves;
+
+  Map<String, dynamic> toJson();
+
+  /// Rebuild a tree from [toJson] output.
+  static PaneNode fromJson(Map<String, dynamic> json) {
+    if (json['type'] == 'split') {
+      return SplitPane(
+        id: json['id'] as String,
+        axis: SplitAxis.values.byName(json['axis'] as String),
+        children: (json['children'] as List)
+            .map((c) => PaneNode.fromJson(c as Map<String, dynamic>))
+            .toList(),
+        weights: (json['weights'] as List)
+            .map((w) => (w as num).toDouble())
+            .toList(),
+      );
+    }
+    final session = json['session'];
+    return LeafPane(
+      id: json['id'] as String,
+      session: session == null
+          ? null
+          : SessionRef.fromJson(session as Map<String, dynamic>),
+    );
+  }
 }
 
 /// A single pane. [session] is null when the pane is empty (shows a picker).
@@ -38,6 +63,13 @@ class LeafPane extends PaneNode {
 
   LeafPane withSession(SessionRef? session) =>
       LeafPane(id: id, session: session);
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'leaf',
+    'id': id,
+    if (session != null) 'session': session!.toJson(),
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -80,6 +112,15 @@ class SplitPane extends PaneNode {
         children: children ?? this.children,
         weights: weights ?? this.weights,
       );
+
+  @override
+  Map<String, dynamic> toJson() => {
+    'type': 'split',
+    'id': id,
+    'axis': axis.name,
+    'weights': weights,
+    'children': [for (final c in children) c.toJson()],
+  };
 
   @override
   bool operator ==(Object other) =>

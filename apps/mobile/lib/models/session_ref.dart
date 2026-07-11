@@ -18,6 +18,16 @@ class SessionRef {
 
   const SessionRef({required this.connectionId, required this.sessionId});
 
+  Map<String, dynamic> toJson() => {
+    'connectionId': connectionId,
+    'sessionId': sessionId,
+  };
+
+  factory SessionRef.fromJson(Map<String, dynamic> json) => SessionRef(
+    connectionId: json['connectionId'] as String,
+    sessionId: json['sessionId'] as String,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
