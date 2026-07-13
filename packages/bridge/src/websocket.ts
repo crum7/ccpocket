@@ -2168,6 +2168,8 @@ export class BridgeWebSocketServer {
               sessionId,
               success: true,
             } as Record<string, unknown>);
+            // Drop the session from every client's "running" list right away.
+            this.broadcastSessionList();
           })
           .catch((err) => {
             this.send(ws, {
@@ -3769,9 +3771,21 @@ export class BridgeWebSocketServer {
     return this.sessionManager.get(sessions[sessions.length - 1].id);
   }
 
+  /** Live sessions, excluding any that have been archived. */
+  private activeSessions() {
+    const archived = this.archiveStore.archivedIds();
+    return this.sessionManager
+      .list()
+      .filter(
+        (s) =>
+          !archived.has(s.id) &&
+          !(s.claudeSessionId != null && archived.has(s.claudeSessionId)),
+      );
+  }
+
   private sendSessionList(ws: WebSocket): void {
     this.pruneDebugEvents();
-    const sessions = this.sessionManager.list();
+    const sessions = this.activeSessions();
     this.send(ws, {
       type: "session_list",
       sessions,
@@ -3787,7 +3801,7 @@ export class BridgeWebSocketServer {
   /** Broadcast session list to all connected clients. */
   private broadcastSessionList(): void {
     this.pruneDebugEvents();
-    const sessions = this.sessionManager.list();
+    const sessions = this.activeSessions();
     this.broadcast({
       type: "session_list",
       sessions,

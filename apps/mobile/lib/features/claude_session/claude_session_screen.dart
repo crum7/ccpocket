@@ -886,6 +886,19 @@ class _ChatScreenBody extends HookWidget {
                               _renameSession(context, sessionId);
                             case 'terminal':
                               _openInTerminal(context, projectPath);
+                            case 'archive':
+                              context.read<BridgeService>().archiveSession(
+                                sessionId: sessionId,
+                                provider: 'claude',
+                                projectPath: projectPath ?? '',
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    AppLocalizations.of(context).sessionArchived,
+                                  ),
+                                ),
+                              );
                           }
                         },
                         itemBuilder: (context) {
@@ -903,6 +916,19 @@ class _ChatScreenBody extends HookWidget {
                                   size: 20,
                                 ),
                                 title: Text(l.rename),
+                                dense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              key: const ValueKey('menu_archive'),
+                              value: 'archive',
+                              child: ListTile(
+                                leading: const Icon(
+                                  Icons.archive_outlined,
+                                  size: 20,
+                                ),
+                                title: Text(l.archive),
                                 dense: true,
                                 contentPadding: EdgeInsets.zero,
                               ),
