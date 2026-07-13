@@ -14,6 +14,7 @@ import '../../models/session_ref.dart';
 import '../../providers/bridge_cubits.dart';
 import '../../providers/machine_manager_cubit.dart';
 import '../../services/bridge_connection.dart';
+import '../../services/bridge_service.dart';
 import '../../services/connection_manager.dart';
 import '../claude_session/claude_session_screen.dart';
 import '../codex_session/codex_session_screen.dart';
@@ -258,6 +259,7 @@ class _SessionTabContentState extends State<_SessionTabContent> {
   PaneTreeCubit? _paneTree;
   bool _handlerRegistered = false;
   StreamSubscription<PaneTreeState>? _persistSub;
+  StreamSubscription<ServerMessage>? _pendingCreateSub;
 
   /// Sessions explicitly opened into a pane via its embedded Home, keyed by
   /// pane id. Holds the full render params (the pane tree only stores ids).
@@ -296,6 +298,7 @@ class _SessionTabContentState extends State<_SessionTabContent> {
       HardwareKeyboard.instance.removeHandler(_onKey);
     }
     _persistSub?.cancel();
+    _pendingCreateSub?.cancel();
     _paneTree?.close();
     super.dispose();
   }
@@ -477,8 +480,30 @@ class _SessionTabContentState extends State<_SessionTabContent> {
           leaf.id,
           SessionRef(connectionId: connectionId, sessionId: selection.sessionId),
         );
+        _watchPendingSessionCreated(selection);
       },
     );
+  }
+
+  /// A new session opened into a pane is "pending" until the bridge answers
+  /// session_created. That resolution is normally driven by the (now-unmounted)
+  /// embedded Home, so drive it here from the persistent tab content instead —
+  /// otherwise the pane is stuck on "Creating session…" forever.
+  void _watchPendingSessionCreated(WorkspaceSessionSelection selection) {
+    final notifier = selection.pendingSessionCreated;
+    if (!selection.isPending || notifier == null) return;
+    _pendingCreateSub?.cancel();
+    _pendingCreateSub = context.read<BridgeService>().messages.listen((msg) {
+      if (msg is SystemMessage &&
+          msg.subtype == 'session_created' &&
+          msg.sessionId != null &&
+          !msg.clearContext &&
+          msg.sourceSessionId == null) {
+        notifier.value = msg;
+        _pendingCreateSub?.cancel();
+        _pendingCreateSub = null;
+      }
+    });
   }
 
   Widget _sessionScreenForSelection(
