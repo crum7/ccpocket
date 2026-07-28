@@ -79,6 +79,48 @@ export function buildThinkingOptions(
   return {};
 }
 
+/** Moonshot's Anthropic-compatible endpoint. Must end with `/anthropic`. */
+const KIMI_BASE_URL = "https://api.moonshot.ai/anthropic";
+
+/**
+ * When a Kimi (Moonshot) model is selected, Claude Code must be pointed at
+ * Moonshot's Anthropic-compatible endpoint for THIS query only. Returns the
+ * env overrides to merge into the SDK `query({ options: { env } })`, or
+ * undefined for non-Kimi models or when no Kimi key (`KIMI_API_KEY`) is set.
+ *
+ * Notes:
+ * - Moonshot authenticates with ANTHROPIC_AUTH_TOKEN (not ANTHROPIC_API_KEY);
+ *   we strip any inherited ANTHROPIC_API_KEY (set to undefined) so a
+ *   co-configured Claude key can't shadow it on the Moonshot endpoint.
+ * - The endpoint does not support Tool Search yet → ENABLE_TOOL_SEARCH=false.
+ * - kimi-k3 has a 1M context window; widen auto-compact to match.
+ * - No thinking option is sent (buildThinkingOptions returns {} for kimi-*),
+ *   which is required: kimi-k2.7-code rejects `thinking.type` other than
+ *   "enabled", and the endpoint's default (thinking on) is what we want.
+ */
+export function buildKimiEnv(
+  model: string | undefined,
+): Record<string, string | undefined> | undefined {
+  if (typeof model !== "string" || !/^kimi-/.test(model.trim())) return undefined;
+  const apiKey = process.env.KIMI_API_KEY;
+  if (!apiKey) return undefined;
+  const m = model.trim();
+  const env: Record<string, string | undefined> = {
+    ANTHROPIC_BASE_URL: KIMI_BASE_URL,
+    ANTHROPIC_AUTH_TOKEN: apiKey,
+    ANTHROPIC_API_KEY: undefined,
+    ANTHROPIC_MODEL: m,
+    ANTHROPIC_DEFAULT_OPUS_MODEL: m,
+    ANTHROPIC_DEFAULT_SONNET_MODEL: m,
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: m,
+    ANTHROPIC_DEFAULT_FABLE_MODEL: m,
+    CLAUDE_CODE_SUBAGENT_MODEL: m,
+    ENABLE_TOOL_SEARCH: "false",
+  };
+  if (m === "kimi-k3") env.CLAUDE_CODE_AUTO_COMPACT_WINDOW = "1048576";
+  return env;
+}
+
 /**
  * Parse a permission rule in ToolName(ruleContent) format.
  * Matches the CLI's internal pzT() function: /^([^(]+)\(([^)]+)\)$/
@@ -527,6 +569,7 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
         permissionMode: options?.permissionMode ?? "default",
         ...(options?.model ? { model: options.model } : {}),
         ...buildThinkingOptions(options?.model),
+        ...(buildKimiEnv(options?.model) ? { env: buildKimiEnv(options?.model) } : {}),
         ...(options?.effort ? { effort: options.effort } : {}),
         ...(options?.maxTurns != null ? { maxTurns: options.maxTurns } : {}),
         ...(options?.maxBudgetUsd != null ? { maxBudgetUsd: options.maxBudgetUsd } : {}),
