@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   parseRule,
   matchesSessionRule,
@@ -6,6 +6,7 @@ import {
   ACCEPT_EDITS_AUTO_APPROVE,
   extractTokenUsage,
   buildThinkingOptions,
+  buildKimiEnv,
   isFileEditToolName,
   sdkMessageToServerMessage,
   buildAuthError,
@@ -308,6 +309,53 @@ describe("buildThinkingOptions", () => {
   it("returns empty options for other models", () => {
     expect(buildThinkingOptions("claude-sonnet-4-6")).toEqual({});
     expect(buildThinkingOptions("claude-fable-5")).toEqual({});
+  });
+
+  it("does not inject thinking for kimi models", () => {
+    // Required: kimi-k2.7-code rejects thinking.type other than "enabled".
+    expect(buildThinkingOptions("kimi-k3")).toEqual({});
+    expect(buildThinkingOptions("kimi-k2.7-code")).toEqual({});
+  });
+});
+
+describe("buildKimiEnv", () => {
+  const original = process.env.KIMI_API_KEY;
+  afterEach(() => {
+    if (original === undefined) delete process.env.KIMI_API_KEY;
+    else process.env.KIMI_API_KEY = original;
+  });
+
+  it("returns undefined for non-Kimi models", () => {
+    process.env.KIMI_API_KEY = "sk-test";
+    expect(buildKimiEnv("claude-opus-4-8")).toBeUndefined();
+    expect(buildKimiEnv(undefined)).toBeUndefined();
+  });
+
+  it("returns undefined for kimi models when no key is set", () => {
+    delete process.env.KIMI_API_KEY;
+    expect(buildKimiEnv("kimi-k3")).toBeUndefined();
+  });
+
+  it("points Claude Code at Moonshot for kimi models", () => {
+    process.env.KIMI_API_KEY = "sk-test";
+    const env = buildKimiEnv("kimi-k2.7-code");
+    expect(env).toMatchObject({
+      ANTHROPIC_BASE_URL: "https://api.moonshot.ai/anthropic",
+      ANTHROPIC_AUTH_TOKEN: "sk-test",
+      ANTHROPIC_API_KEY: undefined,
+      ANTHROPIC_MODEL: "kimi-k2.7-code",
+      CLAUDE_CODE_SUBAGENT_MODEL: "kimi-k2.7-code",
+      ENABLE_TOOL_SEARCH: "false",
+    });
+    // Non-k3 models do not widen the compact window.
+    expect(env).not.toHaveProperty("CLAUDE_CODE_AUTO_COMPACT_WINDOW");
+  });
+
+  it("widens the auto-compact window for kimi-k3's 1M context", () => {
+    process.env.KIMI_API_KEY = "sk-test";
+    expect(buildKimiEnv("kimi-k3")).toMatchObject({
+      CLAUDE_CODE_AUTO_COMPACT_WINDOW: "1048576",
+    });
   });
 });
 

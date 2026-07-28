@@ -98,6 +98,23 @@ const CLAUDE_MODELS: string[] = [
   "claude-haiku-4-6",
 ];
 
+/**
+ * Kimi (Moonshot) models, routed through Claude Code via Moonshot's
+ * Anthropic-compatible endpoint (see `buildKimiEnv` in sdk-process.ts).
+ * Only offered to clients when a Kimi API key (`KIMI_API_KEY`) is configured,
+ * so the picker never shows models that would fail auth.
+ */
+const KIMI_MODELS: string[] = [
+  "kimi-k3",
+  "kimi-k2.7-code",
+  "kimi-k2.7-code-highspeed",
+];
+
+/** Model list sent to clients: Claude models, plus Kimi models if a key is set. */
+function availableClaudeModels(): string[] {
+  return process.env.KIMI_API_KEY ? [...CLAUDE_MODELS, ...KIMI_MODELS] : CLAUDE_MODELS;
+}
+
 const CODEX_MODELS: string[] = [
   "gpt-5.4",
   "gpt-5.4-mini",
@@ -3790,7 +3807,7 @@ export class BridgeWebSocketServer {
       type: "session_list",
       sessions,
       allowedDirs: this.allowedDirs,
-      claudeModels: CLAUDE_MODELS,
+      claudeModels: availableClaudeModels(),
       codexModels: CODEX_MODELS,
       codexProfiles: this.codexProfiles,
       defaultCodexProfile: this.defaultCodexProfile,
@@ -3806,7 +3823,7 @@ export class BridgeWebSocketServer {
       type: "session_list",
       sessions,
       allowedDirs: this.allowedDirs,
-      claudeModels: CLAUDE_MODELS,
+      claudeModels: availableClaudeModels(),
       codexModels: CODEX_MODELS,
       codexProfiles: this.codexProfiles,
       defaultCodexProfile: this.defaultCodexProfile,

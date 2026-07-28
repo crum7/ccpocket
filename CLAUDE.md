@@ -91,6 +91,7 @@ Flutter App ←WebSocket→ websocket.ts ←→ session.ts ─┤
 | `BRIDGE_PORT` | `8765` | WebSocketポート |
 | `BRIDGE_HOST` | `0.0.0.0` | バインドアドレス |
 | `BRIDGE_API_KEY` | (なし) | APIキー認証 (設定時に有効化) |
+| `KIMI_API_KEY` | (なし) | Moonshot (Kimi) APIキー。設定時、`kimi-*` モデルが選択肢に追加され、選択セッションのみ Moonshot の Anthropic 互換エンドポイントへルーティングされる |
 | `BRIDGE_ALLOWED_DIRS` | `$HOME` | 許可するプロジェクトディレクトリ (カンマ区切り) |
 | `BRIDGE_RECORDING` | (なし) | セッション録画を有効化 (設定時に有効化) |
 | `BRIDGE_DISABLE_MDNS` | (なし) | mDNSアドバタイズメントを無効化 (設定時に有効化) |
