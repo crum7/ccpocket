@@ -552,6 +552,7 @@ class ChatMessageHandler {
             messageUuid: m.userMessageUuid,
             imageCount: m.imageCount,
             imageUrls: m.imageUrls,
+            attachmentNames: m.attachmentNames,
             timestamp: ts,
           ),
         );

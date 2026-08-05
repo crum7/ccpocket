@@ -9,3 +9,6 @@ bool get isDesktopPlatform =>
 
 /// Whether the current platform is a mobile OS (iOS, Android).
 bool get isMobilePlatform => Platform.isIOS || Platform.isAndroid;
+
+/// Whether the current platform is macOS.
+bool get isMacOSPlatform => Platform.isMacOS;

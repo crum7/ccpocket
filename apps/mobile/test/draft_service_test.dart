@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ccpocket/services/draft_service.dart';
+import 'package:ccpocket/models/file_attachment.dart';
 
 void main() {
   late DraftService draftService;
@@ -109,6 +110,38 @@ void main() {
       final result = draftService.getImageDraft('real_1');
       expect(result, isNotNull);
       expect(result![0].mimeType, 'image/jpeg');
+    });
+  });
+
+  group('File draft cache', () {
+    test('saveFileDraft stores files in memory', () {
+      final files = [
+        FileAttachment(
+          name: 'notes.txt',
+          mimeType: 'text/plain',
+          bytes: Uint8List.fromList([1, 2, 3]),
+        ),
+      ];
+
+      draftService.saveFileDraft('session-1', files);
+
+      expect(draftService.getFileDraft('session-1')?.single.name, 'notes.txt');
+    });
+
+    test('migrateFileDraft moves files to the new session ID', () {
+      final files = [
+        FileAttachment(
+          name: 'report.pdf',
+          mimeType: 'application/pdf',
+          bytes: Uint8List.fromList([1]),
+        ),
+      ];
+      draftService.saveFileDraft('pending-1', files);
+
+      draftService.migrateFileDraft('pending-1', 'session-1');
+
+      expect(draftService.getFileDraft('pending-1'), isNull);
+      expect(draftService.getFileDraft('session-1')?.single.name, 'report.pdf');
     });
   });
 }

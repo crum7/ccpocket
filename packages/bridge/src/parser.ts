@@ -2,6 +2,7 @@ import type { GalleryImageInfo } from "./gallery-store.js";
 import type { ImageRef } from "./image-store.js";
 import type { WindowInfo } from "./screenshot.js";
 import type { WorktreeInfo } from "./worktree.js";
+import type { FileAttachmentPayload } from "./file-attachments.js";
 
 // Re-export for convenience
 export type { ImageRef } from "./image-store.js";
@@ -88,6 +89,7 @@ export type ClientMessage =
       text: string;
       sessionId?: string;
       images?: Array<{ base64: string; mimeType: string }>;
+      files?: FileAttachmentPayload[];
       imageId?: string;
       imageBase64?: string;
       mimeType?: string;
@@ -424,6 +426,7 @@ export type ServerMessage =
       isSynthetic?: boolean;
       isMeta?: boolean;
       imageCount?: number;
+      attachments?: Array<{ name: string; mimeType: string }>;
     }
   | { type: "window_list"; windows: WindowInfo[] }
   | {

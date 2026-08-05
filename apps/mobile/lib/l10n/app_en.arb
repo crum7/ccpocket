@@ -577,6 +577,26 @@
   },
   "selectFromGallery": "Select from Gallery",
   "pasteFromClipboard": "Paste from Clipboard",
+  "selectFiles": "Choose Files",
+  "attachmentLimitReached": "You can attach up to {max} images and files",
+  "@attachmentLimitReached": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "fileTooLarge": "{name} is larger than {max} MB and cannot be attached",
+  "@fileTooLarge": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "max": {"type": "int"}
+    }
+  },
+  "failedToLoadFile": "Could not read {name}",
+  "@failedToLoadFile": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
 
   "voiceInputLanguage": "Voice Input Language",
   "hideVoiceInput": "Hide voice input button",
@@ -606,12 +626,13 @@
   "tooltipSlashCommand": "Slash commands",
   "tooltipMention": "Mention file",
   "tooltipPermissionMode": "Permission mode",
-  "tooltipAttachImage": "Attach image",
+  "tooltipAttachImage": "Attach image or file",
   "tooltipPromptHistory": "Prompt history",
   "tooltipVoiceInput": "Voice input",
   "tooltipStopRecording": "Stop recording",
   "tooltipSendMessage": "Send message",
   "tooltipRemoveImage": "Remove image",
+  "tooltipRemoveFile": "Remove file",
   "tooltipClearDiff": "Clear diff selection",
 
   "showMore": "Show more",

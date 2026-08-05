@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/file_attachment.dart';
+
 /// Persists unsent chat input text and image attachments per session.
 ///
 /// Uses an in-memory cache for fast reads and writes through to
@@ -12,6 +14,7 @@ class DraftService {
   final Map<String, String> _cache = {};
   final Map<String, List<({Uint8List bytes, String mimeType})>> _imageCache =
       {};
+  final Map<String, List<FileAttachment>> _fileCache = {};
 
   static const _prefix = 'draft_v1_';
   static const _imagePrefix = 'draft_image_v1_';
@@ -121,6 +124,31 @@ class DraftService {
         .toList();
     _prefs.setString('$_imagePrefix$newId', jsonEncode(jsonList));
     deleteImageDraft(oldId);
+  }
+
+  /// Save regular file drafts in memory for the given session.
+  ///
+  /// File bytes are intentionally not written to SharedPreferences because
+  /// attachments can be much larger than text and image draft metadata.
+  void saveFileDraft(String sessionId, List<FileAttachment> files) {
+    if (files.isEmpty) {
+      deleteFileDraft(sessionId);
+      return;
+    }
+    _fileCache[sessionId] = files;
+  }
+
+  List<FileAttachment>? getFileDraft(String sessionId) => _fileCache[sessionId];
+
+  void deleteFileDraft(String sessionId) {
+    _fileCache.remove(sessionId);
+  }
+
+  void migrateFileDraft(String oldId, String newId) {
+    final files = _fileCache.remove(oldId);
+    if (files != null) {
+      _fileCache[newId] = files;
+    }
   }
 
   /// Decode stored image draft string.

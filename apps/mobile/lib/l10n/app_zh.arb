@@ -697,6 +697,26 @@
   },
   "selectFromGallery": "从图库选择",
   "pasteFromClipboard": "从剪贴板粘贴",
+  "selectFiles": "选择文件",
+  "attachmentLimitReached": "图片和文件合计最多可附加 {max} 个",
+  "@attachmentLimitReached": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "fileTooLarge": "{name} 超过 {max} MB，无法附加",
+  "@fileTooLarge": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "max": {"type": "int"}
+    }
+  },
+  "failedToLoadFile": "无法读取 {name}",
+  "@failedToLoadFile": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
 
   "voiceInputLanguage": "语音输入语言",
   "hideVoiceInput": "隐藏语音输入按钮",
@@ -728,12 +748,13 @@
   "tooltipSlashCommand": "斜杠命令",
   "tooltipMention": "提及文件",
   "tooltipPermissionMode": "权限模式",
-  "tooltipAttachImage": "附加图片",
+  "tooltipAttachImage": "附加图片或文件",
   "tooltipPromptHistory": "提示词历史",
   "tooltipVoiceInput": "语音输入",
   "tooltipStopRecording": "停止录音",
   "tooltipSendMessage": "发送消息",
   "tooltipRemoveImage": "移除图片",
+  "tooltipRemoveFile": "移除文件",
   "tooltipClearDiff": "清除 diff 选择",
   "messageHistoryCount": "{count} 条消息",
   "@messageHistoryCount": {

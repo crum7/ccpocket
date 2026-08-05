@@ -1432,6 +1432,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pasteFromClipboard => 'Paste from Clipboard';
 
   @override
+  String get selectFiles => 'Choose Files';
+
+  @override
+  String attachmentLimitReached(int max) {
+    return 'You can attach up to $max images and files';
+  }
+
+  @override
+  String fileTooLarge(String name, int max) {
+    return '$name is larger than $max MB and cannot be attached';
+  }
+
+  @override
+  String failedToLoadFile(String name) {
+    return 'Could not read $name';
+  }
+
+  @override
   String get voiceInputLanguage => 'Voice Input Language';
 
   @override
@@ -1499,7 +1517,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tooltipPermissionMode => 'Permission mode';
 
   @override
-  String get tooltipAttachImage => 'Attach image';
+  String get tooltipAttachImage => 'Attach image or file';
 
   @override
   String get tooltipPromptHistory => 'Prompt history';
@@ -1515,6 +1533,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tooltipRemoveImage => 'Remove image';
+
+  @override
+  String get tooltipRemoveFile => 'Remove file';
 
   @override
   String get tooltipClearDiff => 'Clear diff selection';

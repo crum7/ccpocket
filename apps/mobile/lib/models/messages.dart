@@ -700,6 +700,12 @@ sealed class ServerMessage {
                 .whereType<String>()
                 .toList() ??
             const [],
+        attachmentNames:
+            (json['attachments'] as List?)
+                ?.map((e) => (e as Map<String, dynamic>)['name'] as String?)
+                .whereType<String>()
+                .toList() ??
+            const [],
       ),
       'rewind_preview' => RewindPreviewMessage(
         canRewind: json['canRewind'] as bool? ?? false,
@@ -2018,6 +2024,7 @@ class UserInputMessage implements ServerMessage {
 
   /// Image URLs (relative, e.g. "/images/{id}") from the bridge image store.
   final List<String> imageUrls;
+  final List<String> attachmentNames;
   const UserInputMessage({
     required this.text,
     this.userMessageUuid,
@@ -2026,6 +2033,7 @@ class UserInputMessage implements ServerMessage {
     this.imageCount = 0,
     this.timestamp,
     this.imageUrls = const [],
+    this.attachmentNames = const [],
   });
 }
 
@@ -2854,6 +2862,7 @@ class ClientMessage {
     String text, {
     String? sessionId,
     List<Map<String, String>>? images,
+    List<Map<String, String>>? files,
     Map<String, String>? skill,
     List<Map<String, String>>? skills,
     List<Map<String, String>>? mentions,
@@ -2863,6 +2872,7 @@ class ClientMessage {
       'text': text,
       'sessionId': ?sessionId,
       if (images != null && images.isNotEmpty) 'images': images,
+      if (files != null && files.isNotEmpty) 'files': files,
       'skill': ?skill,
       if (skills != null && skills.isNotEmpty) 'skills': skills,
       if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
@@ -3336,6 +3346,7 @@ class UserChatEntry implements ChatEntry {
   final String? sessionId;
   final List<Uint8List> imageBytesList;
   final List<String> imageUrls;
+  final List<String> attachmentNames;
   MessageStatus status;
 
   /// Number of images attached to this user message (from history restoration).
@@ -3351,11 +3362,13 @@ class UserChatEntry implements ChatEntry {
     this.sessionId,
     List<Uint8List>? imageBytesList,
     List<String>? imageUrls,
+    List<String>? attachmentNames,
     this.imageCount = 0,
     this.status = MessageStatus.sending,
     this.messageUuid,
   }) : imageBytesList = imageBytesList ?? const [],
        imageUrls = imageUrls ?? const [],
+       attachmentNames = attachmentNames ?? const [],
        timestamp = timestamp ?? DateTime.now();
 }
 

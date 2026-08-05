@@ -75,6 +75,11 @@ import {
   isPathWithinAllowedDirectory,
   resolvePlatformPath,
 } from "./path-utils.js";
+import {
+  FileAttachmentValidationError,
+  MAX_FILE_ATTACHMENTS,
+  normalizeFileAttachments,
+} from "./file-attachments.js";
 
 type SystemServerMessage = Extract<ServerMessage, { type: "system" }>;
 type ClaudePermissionMode =
@@ -974,6 +979,29 @@ export class BridgeWebSocketServer {
           // Legacy single-image fallback
           images = [{ base64: msg.imageBase64, mimeType: msg.mimeType }];
         }
+        let files: ReturnType<typeof normalizeFileAttachments>;
+        try {
+          files = normalizeFileAttachments(msg.files);
+        } catch (error) {
+          const message =
+            error instanceof FileAttachmentValidationError
+              ? error.message
+              : "Invalid file attachment";
+          this.send(ws, {
+            type: "error",
+            message,
+            errorCode: "invalid_attachment",
+          });
+          break;
+        }
+        if (images.length + files.length > MAX_FILE_ATTACHMENTS) {
+          this.send(ws, {
+            type: "error",
+            message: `A maximum of ${MAX_FILE_ATTACHMENTS} images and files can be attached`,
+            errorCode: "invalid_attachment",
+          });
+          break;
+        }
 
         // Add user_input to in-memory history.
         // The SDK stream does NOT emit user messages, so session.history would
@@ -1003,6 +1031,14 @@ export class BridgeWebSocketServer {
           timestamp: new Date().toISOString(),
           ...(images.length > 0 ? { imageCount: images.length } : {}),
           ...(imageRefs ? { images: imageRefs } : {}),
+          ...(files.length > 0
+            ? {
+                attachments: files.map((file) => ({
+                  name: file.name,
+                  mimeType: file.mimeType,
+                })),
+              }
+            : {}),
         } as ServerMessage);
 
         // Persist images to Gallery Store asynchronously (fire-and-forget)
@@ -1031,9 +1067,10 @@ export class BridgeWebSocketServer {
           const codexProc = session.process as CodexProcess;
           const skills = msg.skills ?? (msg.skill ? [msg.skill] : []);
           const mentions = msg.mentions ?? [];
-          if (images.length > 0) {
+          if (images.length > 0 || files.length > 0) {
             codexProc.sendInputStructured(text, {
               images,
+              files,
               skills,
               mentions,
             });
@@ -1056,8 +1093,12 @@ export class BridgeWebSocketServer {
                 console.error(`[ws] Failed to load image: ${err}`);
                 codexProc.sendInputStructured(text, { skills, mentions });
               });
-          } else if (skills.length > 0 || mentions.length > 0) {
-            codexProc.sendInputStructured(text, { skills, mentions });
+          } else if (
+            skills.length > 0 ||
+            mentions.length > 0 ||
+            files.length > 0
+          ) {
+            codexProc.sendInputStructured(text, { files, skills, mentions });
           } else {
             codexProc.sendInput(text);
           }
@@ -1067,11 +1108,14 @@ export class BridgeWebSocketServer {
         // Claude Code input path — enqueue first, then interrupt if busy
         const claudeProc = session.process as SdkProcess;
         let wasQueued = false;
-        if (images.length > 0) {
+        if (images.length > 0 || files.length > 0) {
           console.log(
-            `[ws] Sending message with ${images.length} inline Base64 image(s)`,
+            `[ws] Sending message with ${images.length} image(s) and ${files.length} file(s)`,
           );
-          const result = claudeProc.sendInputWithImages(text, images);
+          const result = claudeProc.sendInputStructured(text, {
+            images,
+            files,
+          });
           wasQueued =
             typeof result === "boolean" ? result : isAgentBusySnapshot;
         }

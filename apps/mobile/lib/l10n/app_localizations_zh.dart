@@ -1368,6 +1368,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pasteFromClipboard => '从剪贴板粘贴';
 
   @override
+  String get selectFiles => '选择文件';
+
+  @override
+  String attachmentLimitReached(int max) {
+    return '图片和文件合计最多可附加 $max 个';
+  }
+
+  @override
+  String fileTooLarge(String name, int max) {
+    return '$name 超过 $max MB，无法附加';
+  }
+
+  @override
+  String failedToLoadFile(String name) {
+    return '无法读取 $name';
+  }
+
+  @override
   String get voiceInputLanguage => '语音输入语言';
 
   @override
@@ -1433,7 +1451,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tooltipPermissionMode => '权限模式';
 
   @override
-  String get tooltipAttachImage => '附加图片';
+  String get tooltipAttachImage => '附加图片或文件';
 
   @override
   String get tooltipPromptHistory => '提示词历史';
@@ -1449,6 +1467,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get tooltipRemoveImage => '移除图片';
+
+  @override
+  String get tooltipRemoveFile => '移除文件';
 
   @override
   String get tooltipClearDiff => '清除 diff 选择';

@@ -12,9 +12,11 @@ import '../../../utils/platform_helper.dart';
 import '../../../utils/composer_tokens.dart';
 import '../../../hooks/use_list_auto_complete.dart';
 import '../../../hooks/use_voice_input.dart';
+import '../../../models/file_attachment.dart';
 import '../../../models/messages.dart';
 import '../../../providers/bridge_cubits.dart';
 import '../../../services/prompt_history_service.dart';
+import '../../../services/attachment_picker.dart';
 import '../../../utils/diff_parser.dart';
 import '../../../widgets/chat_input_bar.dart';
 import '../../../widgets/file_mention_overlay.dart';
@@ -107,6 +109,7 @@ class ChatInputWithOverlays extends HookWidget {
     final attachedImages = useState<List<({Uint8List bytes, String mimeType})>>(
       [],
     );
+    final attachedFiles = useState<List<FileAttachment>>([]);
 
     // Restore image draft on mount
     useEffect(() {
@@ -114,6 +117,10 @@ class ChatInputWithOverlays extends HookWidget {
       final imageDrafts = draftService.getImageDraft(sessionId);
       if (imageDrafts != null && imageDrafts.isNotEmpty) {
         attachedImages.value = imageDrafts;
+      }
+      final fileDrafts = draftService.getFileDraft(sessionId);
+      if (fileDrafts != null && fileDrafts.isNotEmpty) {
+        attachedFiles.value = fileDrafts;
       }
       return null;
     }, [sessionId]);
@@ -369,10 +376,41 @@ class ChatInputWithOverlays extends HookWidget {
       );
     }
 
+    int currentAttachmentCount() =>
+        attachedImages.value.length + attachedFiles.value.length;
+
+    void showAttachmentLimitReached() {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(
+              context,
+            ).attachmentLimitReached(maxAttachmentCount),
+          ),
+        ),
+      );
+    }
+
+    void showFileTooLarge(String name) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(
+              context,
+            ).fileTooLarge(name, maxFileAttachmentBytes ~/ (1024 * 1024)),
+          ),
+        ),
+      );
+    }
+
     /// Add image bytes to attachment list (shared by paste and drag-and-drop).
     void addImageBytes(Uint8List bytes, String mimeType) {
-      const maxImages = 5;
-      if (attachedImages.value.length >= maxImages) return;
+      if (currentAttachmentCount() >= maxAttachmentCount) {
+        showAttachmentLimitReached();
+        return;
+      }
       final updated = [
         ...attachedImages.value,
         (bytes: bytes, mimeType: mimeType),
@@ -383,11 +421,32 @@ class ChatInputWithOverlays extends HookWidget {
       }
     }
 
+    void addFileAttachment(FileAttachment file) {
+      if (currentAttachmentCount() >= maxAttachmentCount) {
+        showAttachmentLimitReached();
+        return;
+      }
+      if (file.bytes.length > maxFileAttachmentBytes) {
+        showFileTooLarge(file.name);
+        return;
+      }
+      if (file.isSupportedImage) {
+        addImageBytes(file.bytes, file.mimeType);
+        return;
+      }
+      final updated = [...attachedFiles.value, file];
+      attachedFiles.value = updated;
+      if (context.mounted) {
+        context.read<DraftService>().saveFileDraft(sessionId, updated);
+      }
+    }
+
     /// Handle items dropped via OS drag-and-drop (desktop).
     Future<void> handleDroppedItems(PerformDropEvent event) async {
       for (final item in event.session.items) {
         final reader = item.dataReader;
         if (reader == null) continue;
+        var handled = false;
         for (final format in [Formats.png, Formats.jpeg]) {
           if (reader.canProvide(format)) {
             reader.getFile(format, (file) async {
@@ -401,9 +460,46 @@ class ChatInputWithOverlays extends HookWidget {
                 debugPrint('[drop] Failed to read dropped image: $e');
               }
             });
-            break; // Only read one format per item
+            handled = true;
+            break;
           }
         }
+        if (handled) continue;
+
+        final fileFormats = reader
+            .getFormats(Formats.standardFormats)
+            .whereType<FileFormat>()
+            .toList();
+        if (fileFormats.isEmpty) continue;
+        final suggestedName = await reader.getSuggestedName();
+        reader.getFile(fileFormats.first, (file) async {
+          final name = file.fileName ?? suggestedName ?? 'attachment';
+          try {
+            if ((file.fileSize ?? 0) > maxFileAttachmentBytes) {
+              showFileTooLarge(name);
+              return;
+            }
+            final bytes = await file.readAll();
+            addFileAttachment(
+              FileAttachment(
+                name: name,
+                mimeType: mimeTypeForFileName(name),
+                bytes: bytes,
+              ),
+            );
+          } catch (error) {
+            debugPrint('[drop] Failed to read dropped file: $error');
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(context).failedToLoadFile(name),
+                  ),
+                ),
+              );
+            }
+          }
+        });
       }
     }
 
@@ -411,6 +507,7 @@ class ChatInputWithOverlays extends HookWidget {
       final text = inputController.text.trim();
       if (text.isEmpty &&
           attachedImages.value.isEmpty &&
+          attachedFiles.value.isEmpty &&
           attachedDiffSelection.value == null) {
         return;
       }
@@ -423,6 +520,12 @@ class ChatInputWithOverlays extends HookWidget {
       if (attachedImages.value.isNotEmpty) {
         images = List.of(attachedImages.value);
         attachedImages.value = [];
+      }
+
+      List<FileAttachment>? files;
+      if (attachedFiles.value.isNotEmpty) {
+        files = List.of(attachedFiles.value);
+        attachedFiles.value = [];
       }
 
       // Capture and clear diff selection
@@ -442,14 +545,17 @@ class ChatInputWithOverlays extends HookWidget {
         }
       }
 
-      final messageToSend = finalText.isEmpty
-          ? 'What is in this image?'
-          : finalText;
-      cubit.sendMessage(messageToSend, images: images);
+      final messageToSend = finalText.isNotEmpty
+          ? finalText
+          : files != null && files.isNotEmpty
+          ? 'Please inspect the attached file${files.length > 1 ? 's' : ''}.'
+          : 'What is in this image?';
+      cubit.sendMessage(messageToSend, images: images, files: files);
       inputController.clear();
       final draftService = context.read<DraftService>();
       draftService.deleteDraft(sessionId);
       draftService.deleteImageDraft(sessionId);
+      draftService.deleteFileDraft(sessionId);
       onScrollToBottom();
 
       // Record prompt in history (skip auto-generated fallback text)
@@ -463,16 +569,16 @@ class ChatInputWithOverlays extends HookWidget {
     }
 
     Future<void> pickImageFromGallery() async {
-      const maxImages = 5;
-      final currentCount = attachedImages.value.length;
-      final remaining = maxImages - currentCount;
+      final remaining = maxAttachmentCount - currentAttachmentCount();
 
       if (remaining <= 0) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                AppLocalizations.of(context).imageLimitReached(maxImages),
+                AppLocalizations.of(
+                  context,
+                ).attachmentLimitReached(maxAttachmentCount),
               ),
             ),
           );
@@ -513,7 +619,7 @@ class ChatInputWithOverlays extends HookWidget {
             SnackBar(
               content: Text(
                 AppLocalizations.of(context).imageLimitTruncated(
-                  maxImages,
+                  maxAttachmentCount,
                   picked.length - filesToAdd.length,
                 ),
               ),
@@ -523,14 +629,53 @@ class ChatInputWithOverlays extends HookWidget {
       }
     }
 
-    Future<void> pasteFromClipboard() async {
-      const maxImages = 5;
-      if (attachedImages.value.length >= maxImages) {
+    Future<void> pickFiles() async {
+      final remaining = maxAttachmentCount - currentAttachmentCount();
+      if (remaining <= 0) {
+        showAttachmentLimitReached();
+        return;
+      }
+      try {
+        final result = await pickFileAttachments(maxFiles: remaining);
+        if (!context.mounted) return;
+        for (final file in result.files) {
+          addFileAttachment(file);
+        }
+        for (final name in result.tooLargeFileNames) {
+          showFileTooLarge(name);
+        }
+        for (final name in result.failedFileNames) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).failedToLoadFile(name),
+              ),
+            ),
+          );
+        }
+      } catch (error) {
+        debugPrint('[attachment] Failed to pick files: $error');
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                AppLocalizations.of(context).imageLimitReached(maxImages),
+                AppLocalizations.of(context).failedToLoadFile('file'),
+              ),
+            ),
+          );
+        }
+      }
+    }
+
+    Future<void> pasteFromClipboard() async {
+      if (currentAttachmentCount() >= maxAttachmentCount) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(
+                  context,
+                ).attachmentLimitReached(maxAttachmentCount),
               ),
             ),
           );
@@ -564,18 +709,7 @@ class ChatInputWithOverlays extends HookWidget {
                       ? 'image/png'
                       : 'image/jpeg';
 
-                  // Add to list (append, not replace)
-                  final updated = [
-                    ...attachedImages.value,
-                    (bytes: bytes, mimeType: mimeType),
-                  ];
-                  attachedImages.value = updated;
-
-                  // Persist image draft
-                  context.read<DraftService>().saveImageDraft(
-                    sessionId,
-                    updated,
-                  );
+                  addImageBytes(bytes, mimeType);
                 }
               } catch (e) {
                 if (context.mounted) {
@@ -616,8 +750,7 @@ class ChatInputWithOverlays extends HookWidget {
     /// found, false if only text (or nothing) is in the clipboard.
     /// Used by Cmd+V handler to decide whether to fall back to text paste.
     Future<bool> tryPasteImage() async {
-      const maxImages = 5;
-      if (attachedImages.value.length >= maxImages) return false;
+      if (currentAttachmentCount() >= maxAttachmentCount) return false;
       final clipboard = SystemClipboard.instance;
       if (clipboard == null) return false;
       try {
@@ -667,6 +800,16 @@ class ChatInputWithOverlays extends HookWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isMacOSPlatform)
+                ListTile(
+                  key: const ValueKey('attach_files'),
+                  leading: const Icon(Icons.attach_file),
+                  title: Text(AppLocalizations.of(context).selectFiles),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    pickFiles();
+                  },
+                ),
               ListTile(
                 key: const ValueKey('attach_from_gallery'),
                 leading: const Icon(Icons.photo_library),
@@ -718,6 +861,17 @@ class ChatInputWithOverlays extends HookWidget {
       } else {
         attachedImages.value = [];
         context.read<DraftService>().deleteImageDraft(sessionId);
+      }
+    }
+
+    void clearFileAttachment(int index) {
+      if (index >= attachedFiles.value.length) return;
+      final updated = [...attachedFiles.value]..removeAt(index);
+      attachedFiles.value = updated;
+      if (updated.isEmpty) {
+        context.read<DraftService>().deleteFileDraft(sessionId);
+      } else {
+        context.read<DraftService>().saveFileDraft(sessionId, updated);
       }
     }
 
@@ -816,6 +970,7 @@ class ChatInputWithOverlays extends HookWidget {
                 hasInputText:
                     hasInputText.value ||
                     attachedImages.value.isNotEmpty ||
+                    attachedFiles.value.isNotEmpty ||
                     attachedDiffSelection.value != null,
                 isInputEmpty: isInputEmpty.value,
                 isVoiceAvailable:
@@ -838,6 +993,8 @@ class ChatInputWithOverlays extends HookWidget {
                 onAttachImage: showAttachOptions,
                 attachedImages: attachedImages.value,
                 onClearImage: clearAttachment,
+                attachedFiles: attachedFiles.value,
+                onClearFile: clearFileAttachment,
                 attachedDiffSelection: attachedDiffSelection.value,
                 onClearDiffSelection: clearDiffSelection,
                 onTapDiffPreview: onOpenGitScreen != null
@@ -854,8 +1011,7 @@ class ChatInputWithOverlays extends HookWidget {
   }
 }
 
-/// Wraps child with a [DropRegion] for accepting OS-level drag-and-drop
-/// of images on desktop platforms.
+/// Wraps child with a [DropRegion] for accepting OS-level drag-and-drop.
 Widget _wrapWithDropRegion({
   required bool enabled,
   required Future<void> Function(PerformDropEvent) onPerformDrop,
@@ -866,11 +1022,12 @@ Widget _wrapWithDropRegion({
     formats: Formats.standardFormats,
     hitTestBehavior: HitTestBehavior.opaque,
     onDropOver: (event) {
-      // Accept copy if any item has an image
-      final hasImage = event.session.items.any(
-        (item) => item.canProvide(Formats.png) || item.canProvide(Formats.jpeg),
+      final hasAttachment = event.session.items.any(
+        (item) => Formats.standardFormats.any(
+          (format) => format is FileFormat && item.canProvide(format),
+        ),
       );
-      return hasImage ? DropOperation.copy : DropOperation.none;
+      return hasAttachment ? DropOperation.copy : DropOperation.none;
     },
     onPerformDrop: onPerformDrop,
     child: child,

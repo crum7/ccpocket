@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { EventEmitter } from "node:events";
@@ -10,6 +10,12 @@ import {
   type ProcessStatus,
   type PermissionMode,
 } from "./parser.js";
+import {
+  appendFileAttachmentContext,
+  materializeFileAttachmentsSync,
+  stripFileAttachmentContext,
+  type FileAttachmentPayload,
+} from "./file-attachments.js";
 
 // Tools that are auto-approved in acceptEdits mode
 export const ACCEPT_EDITS_AUTO_APPROVE = new Set([
@@ -321,7 +327,11 @@ export function sdkMessageToServerMessage(msg: SDKMessage): ServerMessage | null
       // User text input (first prompt of each turn)
       const texts = content
         .filter((c: unknown) => (c as Record<string, unknown>).type === "text")
-        .map((c: unknown) => (c as Record<string, unknown>).text as string);
+        .map((c: unknown) =>
+          stripFileAttachmentContext(
+            (c as Record<string, unknown>).text as string,
+          ),
+        );
       if (texts.length > 0) {
         return {
           type: "user_input",
@@ -441,6 +451,12 @@ interface SDKUserMsg {
   parent_tool_use_id: null;
 }
 
+interface PendingUserInput {
+  text: string;
+  images?: Array<{ base64: string; mimeType: string }>;
+  files?: FileAttachmentPayload[];
+}
+
 export class SdkProcess extends EventEmitter<SdkProcessEvents> {
   private queryInstance: Query | null = null;
   private _status: ProcessStatus = "idle";
@@ -456,10 +472,11 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
   private sessionEndEmitted = false;
 
   // User message channel
-  private userMessageResolve: ((msg: SDKUserMsg) => void) | null = null;
+  private userMessageResolve: ((input: PendingUserInput) => void) | null = null;
   private stopped = false;
 
-  private pendingInputQueue: Array<{ text: string; images?: Array<{ base64: string; mimeType: string }> }> = [];
+  private pendingInputQueue: PendingUserInput[] = [];
+  private activeAttachmentTempPaths: string[][] = [];
   private _projectPath: string | null = null;
   private toolCallsSinceLastResult = 0;
   private fileEditsSinceLastResult = 0;
@@ -627,6 +644,7 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
     }
     this.stopped = true;
     this.pendingInputQueue = [];
+    this.cleanupAllAttachmentFiles();
     if (this.queryInstance) {
       console.log("[sdk-process] Stopping query");
       this.queryInstance.close();
@@ -667,25 +685,32 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
   }
 
   sendInput(text: string): boolean {
+    return this.sendInputStructured(text);
+  }
+
+  sendInputStructured(
+    text: string,
+    options?: {
+      images?: Array<{ base64: string; mimeType: string }>;
+      files?: FileAttachmentPayload[];
+    },
+  ): boolean {
+    const pendingInput: PendingUserInput = {
+      text,
+      images: options?.images,
+      files: options?.files,
+    };
     if (!this.userMessageResolve) {
       // Queue the message. The async generator (createUserMessageStream)
       // drains pendingInputQueue on each iteration, so it will be
       // delivered once the SDK is ready for the next turn.
-      this.pendingInputQueue.push({ text });
+      this.pendingInputQueue.push(pendingInput);
       console.log(`[sdk-process] Queued input (queue depth: ${this.pendingInputQueue.length})`);
       return true;
     }
     const resolve = this.userMessageResolve;
     this.userMessageResolve = null;
-    resolve({
-      type: "user",
-      session_id: this._sessionId ?? "",
-      message: {
-        role: "user",
-        content: [{ type: "text", text }],
-      },
-      parent_tool_use_id: null,
-    });
+    resolve(pendingInput);
     return false;
   }
 
@@ -695,44 +720,9 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
    * @param images - Array of base64-encoded image data with mime types
    */
   sendInputWithImages(text: string, images: Array<{ base64: string; mimeType: string }>): boolean {
-    if (!this.userMessageResolve) {
-      this.pendingInputQueue.push({ text, images });
-      console.log(`[sdk-process] Queued input with ${images.length} image(s) (queue depth: ${this.pendingInputQueue.length})`);
-      return true;
-    }
-    const resolve = this.userMessageResolve;
-    this.userMessageResolve = null;
-
-    const content: SDKUserMsg["message"]["content"] = [];
-
-    // Add image blocks first (Claude processes images before text)
-    for (const image of images) {
-      content.push({
-        type: "image",
-        source: {
-          type: "base64",
-          media_type: image.mimeType as ImageMediaType,
-          data: image.base64,
-        },
-      });
-    }
-
-    // Add text block
-    content.push({ type: "text", text });
-
     const totalKB = images.reduce((sum, img) => sum + Math.round(img.base64.length / 1024), 0);
     console.log(`[sdk-process] Sending message with ${images.length} image(s) (${totalKB}KB base64 total)`);
-
-    resolve({
-      type: "user",
-      session_id: this._sessionId ?? "",
-      message: {
-        role: "user",
-        content,
-      },
-      parent_tool_use_id: null,
-    });
-    return false;
+    return this.sendInputStructured(text, { images });
   }
 
   /**
@@ -962,40 +952,70 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
 
   private async *createUserMessageStream(): AsyncGenerator<SDKUserMsg> {
     while (!this.stopped) {
-      // Drain queued messages first (FIFO order)
+      let pendingInput: PendingUserInput;
       if (this.pendingInputQueue.length > 0) {
-        const { text, images } = this.pendingInputQueue.shift()!;
-        console.log(`[sdk-process] Sending queued input${images ? ` with ${images.length} image(s)` : ""} (remaining: ${this.pendingInputQueue.length})`);
-        const content: SDKUserMsg["message"]["content"] = [];
-        if (images) {
-          for (const image of images) {
-            content.push({
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: image.mimeType as ImageMediaType,
-                data: image.base64,
-              },
-            });
-          }
-        }
-        content.push({ type: "text", text });
-        yield {
-          type: "user",
-          session_id: this._sessionId ?? "",
-          message: {
-            role: "user",
-            content,
-          },
-          parent_tool_use_id: null,
-        };
-        continue;
+        pendingInput = this.pendingInputQueue.shift()!;
+        console.log(
+          `[sdk-process] Sending queued input${pendingInput.images ? ` with ${pendingInput.images.length} image(s)` : ""}${pendingInput.files ? ` and ${pendingInput.files.length} file(s)` : ""} (remaining: ${this.pendingInputQueue.length})`,
+        );
+      } else {
+        pendingInput = await new Promise<PendingUserInput>((resolve) => {
+          this.userMessageResolve = resolve;
+        });
       }
-      const msg = await new Promise<SDKUserMsg>((resolve) => {
-        this.userMessageResolve = resolve;
-      });
       if (this.stopped) break;
-      yield msg;
+      yield this.createSdkUserMessage(pendingInput);
+    }
+  }
+
+  private createSdkUserMessage(input: PendingUserInput): SDKUserMsg {
+    const materializedFiles = materializeFileAttachmentsSync(
+      input.files ?? [],
+      "claude-file",
+    );
+    this.activeAttachmentTempPaths.push(
+      materializedFiles.map((file) => file.path),
+    );
+
+    const content: SDKUserMsg["message"]["content"] = [];
+    for (const image of input.images ?? []) {
+      content.push({
+        type: "image",
+        source: {
+          type: "base64",
+          media_type: image.mimeType as ImageMediaType,
+          data: image.base64,
+        },
+      });
+    }
+    content.push({
+      type: "text",
+      text: appendFileAttachmentContext(input.text, materializedFiles),
+    });
+    return {
+      type: "user",
+      session_id: this._sessionId ?? "",
+      message: { role: "user", content },
+      parent_tool_use_id: null,
+    };
+  }
+
+  private cleanupCompletedTurnAttachments(): void {
+    const paths = this.activeAttachmentTempPaths.shift() ?? [];
+    for (const path of paths) {
+      try {
+        rmSync(path, { force: true });
+      } catch {}
+    }
+  }
+
+  private cleanupAllAttachmentFiles(): void {
+    for (const paths of this.activeAttachmentTempPaths.splice(0)) {
+      for (const path of paths) {
+        try {
+          rmSync(path, { force: true });
+        } catch {}
+      }
     }
   }
 
@@ -1024,6 +1044,9 @@ export class SdkProcess extends EventEmitter<SdkProcessEvents> {
       }
       if (serverMsg) {
         this.emitMessage(serverMsg);
+      }
+      if (message.type === "result") {
+        this.cleanupCompletedTurnAttachments();
       }
 
       // Extract session ID and model from system/init

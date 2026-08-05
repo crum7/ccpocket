@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/logger.dart';
 import '../../../models/messages.dart';
+import '../../../models/file_attachment.dart';
 import '../../../services/bridge_service.dart';
 import '../../../services/chat_message_handler.dart';
 import '../../../services/tts_service.dart';
@@ -229,6 +230,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
           sessionId: entry.sessionId,
           imageBytesList: entry.imageBytesList,
           imageUrls: entry.imageUrls,
+          attachmentNames: entry.attachmentNames,
           imageCount: entry.imageCount,
           status: targetStatus,
           messageUuid: entry.messageUuid,
@@ -251,6 +253,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
             sessionId: e.sessionId,
             imageBytesList: e.imageBytesList,
             imageUrls: e.imageUrls,
+            attachmentNames: e.attachmentNames,
             imageCount: e.imageCount,
             status: MessageStatus.failed,
             messageUuid: e.messageUuid,
@@ -348,8 +351,10 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
           if (existing == null) continue;
           final needsImages =
               e.imageBytesList.isEmpty && existing.imageBytesList.isNotEmpty;
+          final needsAttachments =
+              e.attachmentNames.isEmpty && existing.attachmentNames.isNotEmpty;
           final needsTimestamp = existing.timestamp != e.timestamp;
-          if (needsImages || needsTimestamp) {
+          if (needsImages || needsAttachments || needsTimestamp) {
             entries[i] = UserChatEntry(
               e.text,
               sessionId: e.sessionId,
@@ -357,6 +362,9 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
                   ? existing.imageBytesList
                   : e.imageBytesList,
               imageUrls: e.imageUrls,
+              attachmentNames: needsAttachments
+                  ? existing.attachmentNames
+                  : e.attachmentNames,
               imageCount: e.imageCount,
               status: e.status,
               messageUuid: e.messageUuid,
@@ -557,16 +565,22 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
   // Commands (Path B: UI → Cubit → Bridge)
   // ---------------------------------------------------------------------------
 
-  /// Send a user message, optionally with image attachments.
+  /// Send a user message, optionally with image and file attachments.
   void sendMessage(
     String text, {
     List<({Uint8List bytes, String mimeType})>? images,
+    List<FileAttachment>? files,
   }) {
-    if (text.trim().isEmpty && (images == null || images.isEmpty)) return;
+    if (text.trim().isEmpty &&
+        (images == null || images.isEmpty) &&
+        (files == null || files.isEmpty)) {
+      return;
+    }
     final entry = UserChatEntry(
       text,
       sessionId: sessionId,
       imageBytesList: images?.map((i) => i.bytes).toList(),
+      attachmentNames: files?.map((file) => file.name).toList(),
     );
     emit(state.copyWith(entries: [...state.entries, entry]));
 
@@ -575,6 +589,19 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
     if (images != null && images.isNotEmpty) {
       imagePayloads = images
           .map((i) => {'base64': base64Encode(i.bytes), 'mimeType': i.mimeType})
+          .toList();
+    }
+
+    List<Map<String, String>>? filePayloads;
+    if (files != null && files.isNotEmpty) {
+      filePayloads = files
+          .map(
+            (file) => {
+              'base64': base64Encode(file.bytes),
+              'name': file.name,
+              'mimeType': file.mimeType,
+            },
+          )
           .toList();
     }
 
@@ -590,6 +617,7 @@ class ChatSessionCubit extends Cubit<ChatSessionState> {
         text,
         sessionId: sessionId,
         images: imagePayloads,
+        files: filePayloads,
         skill: structuredMentions.skills.isNotEmpty
             ? structuredMentions.skills.first
             : null,

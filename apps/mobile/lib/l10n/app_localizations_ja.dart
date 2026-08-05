@@ -1381,6 +1381,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pasteFromClipboard => 'クリップボードから貼付';
 
   @override
+  String get selectFiles => 'ファイルを選択';
+
+  @override
+  String attachmentLimitReached(int max) {
+    return '添付は画像とファイルを合わせて最大$max件までです';
+  }
+
+  @override
+  String fileTooLarge(String name, int max) {
+    return '$name は${max}MBを超えているため添付できません';
+  }
+
+  @override
+  String failedToLoadFile(String name) {
+    return '$name を読み込めませんでした';
+  }
+
+  @override
   String get voiceInputLanguage => '音声入力の言語';
 
   @override
@@ -1447,7 +1465,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get tooltipPermissionMode => 'パーミッションモード';
 
   @override
-  String get tooltipAttachImage => '画像を添付';
+  String get tooltipAttachImage => '画像またはファイルを添付';
 
   @override
   String get tooltipPromptHistory => 'プロンプト履歴';
@@ -1463,6 +1481,9 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get tooltipRemoveImage => '画像を削除';
+
+  @override
+  String get tooltipRemoveFile => 'ファイルを削除';
 
   @override
   String get tooltipClearDiff => 'Diff選択を解除';

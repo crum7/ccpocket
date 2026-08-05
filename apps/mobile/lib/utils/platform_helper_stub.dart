@@ -8,3 +8,6 @@ bool get isDesktopPlatform => false;
 
 /// Whether the current platform is a mobile OS (iOS, Android).
 bool get isMobilePlatform => false;
+
+/// Whether the current platform is macOS.
+bool get isMacOSPlatform => false;

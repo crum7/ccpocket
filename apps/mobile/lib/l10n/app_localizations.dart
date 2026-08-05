@@ -2662,6 +2662,30 @@ abstract class AppLocalizations {
   /// **'クリップボードから貼付'**
   String get pasteFromClipboard;
 
+  /// No description provided for @selectFiles.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルを選択'**
+  String get selectFiles;
+
+  /// No description provided for @attachmentLimitReached.
+  ///
+  /// In ja, this message translates to:
+  /// **'添付は画像とファイルを合わせて最大{max}件までです'**
+  String attachmentLimitReached(int max);
+
+  /// No description provided for @fileTooLarge.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} は{max}MBを超えているため添付できません'**
+  String fileTooLarge(String name, int max);
+
+  /// No description provided for @failedToLoadFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'{name} を読み込めませんでした'**
+  String failedToLoadFile(String name);
+
   /// No description provided for @voiceInputLanguage.
   ///
   /// In ja, this message translates to:
@@ -2791,7 +2815,7 @@ abstract class AppLocalizations {
   /// No description provided for @tooltipAttachImage.
   ///
   /// In ja, this message translates to:
-  /// **'画像を添付'**
+  /// **'画像またはファイルを添付'**
   String get tooltipAttachImage;
 
   /// No description provided for @tooltipPromptHistory.
@@ -2823,6 +2847,12 @@ abstract class AppLocalizations {
   /// In ja, this message translates to:
   /// **'画像を削除'**
   String get tooltipRemoveImage;
+
+  /// No description provided for @tooltipRemoveFile.
+  ///
+  /// In ja, this message translates to:
+  /// **'ファイルを削除'**
+  String get tooltipRemoveFile;
 
   /// No description provided for @tooltipClearDiff.
   ///

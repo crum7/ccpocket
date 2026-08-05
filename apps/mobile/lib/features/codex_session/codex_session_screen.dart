@@ -248,6 +248,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     final explorerHistory = bridge.getExplorerHistory(newId);
     draftService.migrateDraft(oldId, newId);
     draftService.migrateImageDraft(oldId, newId);
+    draftService.migrateFileDraft(oldId, newId);
     setState(() {
       _sessionId = newId;
       _projectPath = msg.projectPath ?? _projectPath;
@@ -272,6 +273,7 @@ class _CodexSessionScreenState extends State<CodexSessionScreen> {
     final draftService = context.read<DraftService>();
     draftService.migrateDraft(oldId, newId);
     draftService.migrateImageDraft(oldId, newId);
+    draftService.migrateFileDraft(oldId, newId);
     setState(() {
       _sessionId = newId;
       _projectPath = msg.projectPath ?? _projectPath;

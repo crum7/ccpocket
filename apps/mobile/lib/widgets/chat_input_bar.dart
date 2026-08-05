@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_localizations.dart';
+import '../models/file_attachment.dart';
 import '../models/messages.dart';
 import '../utils/platform_helper.dart';
 import '../utils/diff_parser.dart';
@@ -37,6 +38,8 @@ class ChatInputBar extends StatelessWidget {
   final VoidCallback? onAttachImage;
   final List<({Uint8List bytes, String mimeType})> attachedImages;
   final void Function([int? index])? onClearImage;
+  final List<FileAttachment> attachedFiles;
+  final void Function(int index)? onClearFile;
   final DiffSelection? attachedDiffSelection;
   final VoidCallback? onClearDiffSelection;
   final VoidCallback? onTapDiffPreview;
@@ -71,6 +74,8 @@ class ChatInputBar extends StatelessWidget {
     this.onAttachImage,
     this.attachedImages = const [],
     this.onClearImage,
+    this.attachedFiles = const [],
+    this.onClearFile,
     this.attachedDiffSelection,
     this.onClearDiffSelection,
     this.onTapDiffPreview,
@@ -109,6 +114,8 @@ class ChatInputBar extends StatelessWidget {
             ),
           if (attachedImages.isNotEmpty)
             _ImagePreview(images: attachedImages, onClearImage: onClearImage),
+          if (attachedFiles.isNotEmpty)
+            _FilePreview(files: attachedFiles, onClearFile: onClearFile),
           _InputTextField(
             controller: inputController,
             status: status,
@@ -145,8 +152,9 @@ class ChatInputBar extends StatelessWidget {
               ],
               const SizedBox(width: 8),
               _AttachButton(
-                hasAttachment: attachedImages.isNotEmpty,
-                imageCount: attachedImages.length,
+                hasAttachment:
+                    attachedImages.isNotEmpty || attachedFiles.isNotEmpty,
+                attachmentCount: attachedImages.length + attachedFiles.length,
                 onTap: onAttachImage,
               ),
               if (onShowPromptHistory != null) ...[
@@ -355,11 +363,11 @@ class _DollarButton extends StatelessWidget {
 class _AttachButton extends StatelessWidget {
   const _AttachButton({
     required this.hasAttachment,
-    required this.imageCount,
+    required this.attachmentCount,
     required this.onTap,
   });
   final bool hasAttachment;
-  final int imageCount;
+  final int attachmentCount;
   final VoidCallback? onTap;
 
   @override
@@ -383,8 +391,12 @@ class _AttachButton extends StatelessWidget {
                 ? Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      Icon(Icons.image, size: 18, color: cs.onPrimaryContainer),
-                      if (imageCount > 1)
+                      Icon(
+                        Icons.attach_file,
+                        size: 18,
+                        color: cs.onPrimaryContainer,
+                      ),
+                      if (attachmentCount > 1)
                         Positioned(
                           top: -6,
                           right: -8,
@@ -398,7 +410,7 @@ class _AttachButton extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '$imageCount',
+                              '$attachmentCount',
                               style: TextStyle(
                                 fontSize: 9,
                                 fontWeight: FontWeight.bold,
@@ -409,7 +421,7 @@ class _AttachButton extends StatelessWidget {
                         ),
                     ],
                   )
-                : Icon(Icons.image_outlined, size: 18, color: cs.primary),
+                : Icon(Icons.attach_file, size: 18, color: cs.primary),
           ),
         ),
       ),
@@ -512,6 +524,84 @@ class _ImagePreview extends StatelessWidget {
       ),
     );
   }
+}
+
+class _FilePreview extends StatelessWidget {
+  const _FilePreview({required this.files, required this.onClearFile});
+
+  final List<FileAttachment> files;
+  final void Function(int index)? onClearFile;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final localizations = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final (index, file) in files.indexed)
+            Container(
+              constraints: const BoxConstraints(maxWidth: 220),
+              padding: const EdgeInsets.fromLTRB(10, 6, 4, 6),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.insert_drive_file_outlined,
+                    size: 18,
+                    color: colors.primary,
+                  ),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          file.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          _formatFileSize(file.bytes.length),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(color: colors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Tooltip(
+                    message: localizations.tooltipRemoveFile,
+                    child: IconButton(
+                      visualDensity: VisualDensity.compact,
+                      iconSize: 16,
+                      onPressed: () => onClearFile?.call(index),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+String _formatFileSize(int bytes) {
+  if (bytes < 1024) return '$bytes B';
+  final kilobytes = bytes / 1024;
+  if (kilobytes < 1024) return '${kilobytes.toStringAsFixed(1)} KB';
+  return '${(kilobytes / 1024).toStringAsFixed(1)} MB';
 }
 
 class _DiffPreview extends StatelessWidget {

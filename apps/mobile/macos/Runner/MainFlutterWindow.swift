@@ -4,6 +4,7 @@ import FlutterMacOS
 class MainFlutterWindow: NSWindow, NSToolbarDelegate {
   private let windowToolbar = NSToolbar(identifier: "ccpocket.mainToolbar")
   private var windowChromeChannel: FlutterMethodChannel?
+  private var filePickerChannel: FlutterMethodChannel?
 
   override func awakeFromNib() {
     titleVisibility = .hidden
@@ -55,6 +56,24 @@ class MainFlutterWindow: NSWindow, NSToolbarDelegate {
     }
     windowChromeChannel = chromeChannel
 
+    let pickerChannel = FlutterMethodChannel(
+      name: "ccpocket/file_picker",
+      binaryMessenger: flutterViewController.engine.binaryMessenger)
+    pickerChannel.setMethodCallHandler { [weak self] call, result in
+      guard call.method == "pickFiles" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+      guard let self else {
+        result([])
+        return
+      }
+      let arguments = call.arguments as? [String: Any]
+      let maxFiles = max(1, arguments?["maxFiles"] as? Int ?? 5)
+      self.pickFiles(maxFiles: maxFiles, result: result)
+    }
+    filePickerChannel = pickerChannel
+
     let windowFrame = self.frame
     self.contentViewController = flutterViewController
     self.setFrame(windowFrame, display: true)
@@ -78,6 +97,21 @@ class MainFlutterWindow: NSWindow, NSToolbarDelegate {
 
   @objc private func handleWillExitFullScreen(_ notification: Notification) {
     toolbar?.isVisible = true
+  }
+
+  private func pickFiles(maxFiles: Int, result: @escaping FlutterResult) {
+    let panel = NSOpenPanel()
+    panel.canChooseFiles = true
+    panel.canChooseDirectories = false
+    panel.allowsMultipleSelection = maxFiles > 1
+    panel.resolvesAliases = true
+    panel.beginSheetModal(for: self) { response in
+      guard response == .OK else {
+        result([])
+        return
+      }
+      result(Array(panel.urls.prefix(maxFiles)).map(\.path))
+    }
   }
 
   deinit {

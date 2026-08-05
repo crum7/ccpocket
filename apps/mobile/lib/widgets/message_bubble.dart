@@ -82,6 +82,7 @@ class ChatEntryWidget extends StatelessWidget {
             httpBaseUrl: httpBaseUrl,
             imageBytesList: user.imageBytesList,
             imageCount: user.imageCount,
+            attachmentNames: user.attachmentNames,
           ),
           StreamingChatEntry(:final text) => StreamingBubble(text: text),
         },

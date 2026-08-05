@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ccpocket/l10n/app_localizations.dart';
+import 'package:ccpocket/models/file_attachment.dart';
 import 'package:ccpocket/models/messages.dart';
 import 'package:ccpocket/utils/diff_parser.dart';
 import 'package:ccpocket/widgets/chat_input_bar.dart';
@@ -36,6 +39,7 @@ void main() {
     bool isInMentionContext = false,
     bool showDollarButton = false,
     DiffSelection? attachedDiffSelection,
+    List<FileAttachment> attachedFiles = const [],
   }) {
     return MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -62,12 +66,30 @@ void main() {
           isInMentionContext: isInMentionContext,
           showDollarButton: showDollarButton,
           attachedDiffSelection: attachedDiffSelection,
+          attachedFiles: attachedFiles,
         ),
       ),
     );
   }
 
   group('ChatInputBar', () {
+    testWidgets('shows attached file name', (tester) async {
+      await tester.pumpWidget(
+        buildSubject(
+          attachedFiles: [
+            FileAttachment(
+              name: 'notes.txt',
+              mimeType: 'text/plain',
+              bytes: Uint8List.fromList([1, 2, 3]),
+            ),
+          ],
+        ),
+      );
+
+      expect(find.text('notes.txt'), findsOneWidget);
+      expect(find.text('3 B'), findsOneWidget);
+    });
+
     testWidgets('shows send button when text is present', (tester) async {
       await tester.pumpWidget(buildSubject(hasInputText: true));
 

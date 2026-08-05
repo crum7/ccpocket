@@ -3,6 +3,7 @@ import { createReadStream, type Dirent } from "node:fs";
 import { createInterface } from "node:readline";
 import { basename, join } from "node:path";
 import { homedir } from "node:os";
+import { stripFileAttachmentContext } from "./file-attachments.js";
 
 export interface SessionIndexEntry {
   sessionId: string;
@@ -1900,7 +1901,12 @@ export async function getSessionHistory(
         const ts = entry.timestamp as string | undefined;
         messages.push({
           role,
-          content: [{ type: "text" as const, text: message.content }],
+          content: [
+            {
+              type: "text" as const,
+              text: stripFileAttachmentContext(message.content),
+            },
+          ],
           ...(uuid ? { uuid } : {}),
           ...(ts ? { timestamp: ts } : {}),
           ...(isMeta ? { isMeta } : {}),
@@ -1920,7 +1926,10 @@ export async function getSessionHistory(
       const contentType = item.type as string;
 
       if (contentType === "text" && item.text) {
-        content.push({ type: "text", text: item.text as string });
+        content.push({
+          type: "text",
+          text: stripFileAttachmentContext(item.text as string),
+        });
       } else if (contentType === "tool_use") {
         content.push({
           type: "tool_use",

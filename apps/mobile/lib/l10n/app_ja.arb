@@ -635,6 +635,26 @@
   },
   "selectFromGallery": "ギャラリーから選択",
   "pasteFromClipboard": "クリップボードから貼付",
+  "selectFiles": "ファイルを選択",
+  "attachmentLimitReached": "添付は画像とファイルを合わせて最大{max}件までです",
+  "@attachmentLimitReached": {
+    "placeholders": {
+      "max": {"type": "int"}
+    }
+  },
+  "fileTooLarge": "{name} は{max}MBを超えているため添付できません",
+  "@fileTooLarge": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "max": {"type": "int"}
+    }
+  },
+  "failedToLoadFile": "{name} を読み込めませんでした",
+  "@failedToLoadFile": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
 
   "voiceInputLanguage": "音声入力の言語",
   "hideVoiceInput": "音声入力ボタンを非表示",
@@ -664,12 +684,13 @@
   "tooltipSlashCommand": "スラッシュコマンド",
   "tooltipMention": "ファイルをメンション",
   "tooltipPermissionMode": "パーミッションモード",
-  "tooltipAttachImage": "画像を添付",
+  "tooltipAttachImage": "画像またはファイルを添付",
   "tooltipPromptHistory": "プロンプト履歴",
   "tooltipVoiceInput": "音声入力",
   "tooltipStopRecording": "録音を停止",
   "tooltipSendMessage": "メッセージを送信",
   "tooltipRemoveImage": "画像を削除",
+  "tooltipRemoveFile": "ファイルを削除",
   "tooltipClearDiff": "Diff選択を解除",
 
   "showMore": "もっと見る",

@@ -15,6 +15,7 @@ class UserBubble extends StatelessWidget {
   final List<String> imageUrls;
   final String? httpBaseUrl;
   final List<Uint8List> imageBytesList;
+  final List<String> attachmentNames;
 
   /// Number of images attached (from history restoration when actual data is unavailable).
   final int imageCount;
@@ -28,6 +29,7 @@ class UserBubble extends StatelessWidget {
     this.imageUrls = const [],
     this.httpBaseUrl,
     this.imageBytesList = const [],
+    this.attachmentNames = const [],
     this.imageCount = 0,
   });
 
@@ -54,6 +56,7 @@ class UserBubble extends StatelessWidget {
       imageBytesList: imageBytesList,
       imageUrls: imageUrls,
       httpBaseUrl: httpBaseUrl,
+      attachmentNames: attachmentNames,
       onShowContextMenu: () => _showContextMenu(context),
     );
   }
@@ -131,6 +134,7 @@ class _StandardBubble extends StatelessWidget {
   final List<Uint8List> imageBytesList;
   final List<String> imageUrls;
   final String? httpBaseUrl;
+  final List<String> attachmentNames;
   final VoidCallback onShowContextMenu;
 
   const _StandardBubble({
@@ -141,6 +145,7 @@ class _StandardBubble extends StatelessWidget {
     required this.imageBytesList,
     required this.imageUrls,
     required this.httpBaseUrl,
+    required this.attachmentNames,
     required this.onShowContextMenu,
   });
 
@@ -222,6 +227,54 @@ class _StandardBubble extends StatelessWidget {
                                       ),
                                 ),
                               ),
+                        ],
+                      ),
+                    ),
+                  if (attachmentNames.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: [
+                          for (final name in attachmentNames)
+                            Container(
+                              constraints: const BoxConstraints(maxWidth: 220),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: appColors.userBubbleText.withValues(
+                                  alpha: 0.1,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.insert_drive_file_outlined,
+                                    size: 16,
+                                    color: appColors.userBubbleText,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: appColors.userBubbleText,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),

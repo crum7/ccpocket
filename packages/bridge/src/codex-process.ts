@@ -6,6 +6,10 @@ import { rm, writeFile } from "node:fs/promises";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import type { ServerMessage, ProcessStatus } from "./parser.js";
 import { resolvePlatformPath } from "./path-utils.js";
+import {
+  materializeFileAttachments,
+  type FileAttachmentPayload,
+} from "./file-attachments.js";
 
 export interface CodexStartOptions {
   threadId?: string;
@@ -31,6 +35,7 @@ interface PendingInput {
     base64: string;
     mimeType: string;
   }>;
+  files?: FileAttachmentPayload[];
   skills?: Array<{
     name: string;
     path: string;
@@ -533,6 +538,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     text: string,
     options?: {
       images?: Array<{ base64: string; mimeType: string }>;
+      files?: FileAttachmentPayload[];
       skills?: Array<{ name: string; path: string }>;
       mentions?: Array<{ name: string; path: string }>;
     },
@@ -548,6 +554,7 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
     resolve({
       text,
       images: options?.images,
+      files: options?.files,
       skills: options?.skills,
       mentions: options?.mentions,
     });
@@ -2019,6 +2026,16 @@ export class CodexProcess extends EventEmitter<CodexProcessEvents> {
         name: mention.name,
         path: mention.path,
       });
+    }
+    if (pendingInput.files && pendingInput.files.length > 0) {
+      const materializedFiles = await materializeFileAttachments(
+        pendingInput.files,
+        "codex-file",
+      );
+      for (const file of materializedFiles) {
+        tempPaths.push(file.path);
+        input.push({ type: "mention", name: file.name, path: file.path });
+      }
     }
     input.push({ type: "text", text: pendingInput.text });
 
